@@ -14,7 +14,7 @@ export default function StockClient() {
     dispatch({ type: "GET_STOCK_DAILY_ALL" });
   }, [dispatch]);
 
-  if (loading && !dailyAll) {
+  if (!dailyAll) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

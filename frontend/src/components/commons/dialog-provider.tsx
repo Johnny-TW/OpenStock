@@ -51,9 +51,6 @@ export default function DialogProvider({ children }: { children: React.ReactNode
     <>
       {children}
 
-      {/* 全域 Loading 遮罩 */}
-      {loading > 0 && <Loading full text="Loading..." />}
-
       {/* Success Dialog */}
       <AlertDialog open={!!success}>
         <AlertDialogContent>
