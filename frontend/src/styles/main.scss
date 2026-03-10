@@ -1,0 +1,7 @@
+// common
+@use "./_variables.module.scss" as variables;
+@use "./_layout.scss" as layout;
+@use "./_globals.scss" as globals;
+
+// package
+@import "bootstrap/dist/css/bootstrap.min.css";

@@ -1,0 +1,16 @@
+{
+  "name": "nextjs-course-main",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\"",
+    "dev:frontend": "cd frontend && pnpm dev",
+    "dev:backend": "cd backend && pnpm run start:dev",
+    "build:frontend": "cd frontend && pnpm build",
+    "build:backend": "cd backend && pnpm run build",
+    "install:all": "cd frontend && pnpm install && cd ../backend && pnpm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
