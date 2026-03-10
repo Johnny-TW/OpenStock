@@ -25,6 +25,19 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+### Swagger API docs
+
+This project now exposes a Swagger/OpenAPI UI at `/api/docs` when the server is
+running. View the interactive documentation by visiting:
+
+```
+http://localhost:3001/api/docs
+```
+
+Dependencies are pulled in automatically; you can re‑generate the spec by
+restarting the server.
+
+
 ## Project setup
 
 ```bash
