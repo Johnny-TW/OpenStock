@@ -3,7 +3,7 @@ import { API_METHOD, call } from "../api/apiService"
 import _ from "lodash"
 import { importAll } from "@utils/import"
 import Cookies from "js-cookie"
-import store from "../store"
+import { getSession } from "next-auth/react"
 import { login } from "@/providers/LoginHandler"
 
 export function* setLoading(loading, path, params = null) {
@@ -40,10 +40,11 @@ export function* fetchApi({
     method = API_METHOD.POST
   } else data = variables
 
+  const session = yield globalThis?.window ? getSession() : Promise.resolve(null)
   params = {
     ...params,
     headers: {
-      Authorization: `Bearer ${store.getState().auth?.token ?? ""}`,
+      Authorization: `Bearer ${session?.accessToken ?? ""}`,
     },
   }
 

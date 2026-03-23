@@ -1,4 +1,12 @@
 import store from "./store"
+import type {
+  StockDailyAllResponse,
+  StockValuationResponse,
+  MarketIndexResponse,
+  TopVolumeResponse,
+  IntradayResponse,
+  IndexHistoryResponse,
+} from "@/type/stock"
 
 // require.context 動態載入的 reducer 無法自動推斷型別，需手動宣告
 export interface RootState {
@@ -10,41 +18,12 @@ export interface RootState {
     deleted: unknown
   }
   stock: {
-    dailyAll: {
-      date: string
-      title: string
-      notes: string[]
-      fields: string[]
-      data: {
-        code: string
-        name: string
-        tradeVolume: string
-        tradeValue: string
-        openingPrice: string
-        highestPrice: string
-        lowestPrice: string
-        closingPrice: string
-        change: string
-        transaction: string
-      }[]
-      total: number
-    } | null
-    valuation: {
-      date: string
-      title: string
-      notes: string[]
-      fields: string[]
-      data: {
-        code: string
-        name: string
-        dividendYield: string
-        dividendYear: string
-        peRatio: string
-        pbRatio: string
-        financialYear: string
-      }[]
-      total: number
-    } | null
+    dailyAll: StockDailyAllResponse | null
+    valuation: StockValuationResponse | null
+    marketIndex: MarketIndexResponse | null
+    topVolume: TopVolumeResponse | null
+    intraday: IntradayResponse | null
+    indexHistory: IndexHistoryResponse | null
   }
 }
 

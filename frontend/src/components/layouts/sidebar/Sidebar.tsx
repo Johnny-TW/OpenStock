@@ -14,7 +14,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 
-import { NavMain } from "@/components/layouts/sidebar/nav-main"
+import { NavMain } from "@/components/layouts/sidebar/NavMain"
 import { NavProjects } from "@/components/layouts/sidebar/NavProjects"
 import { NavUser } from "@/components/layouts/sidebar/NavUser"
 import { TeamSwitcher } from "@/components/layouts/sidebar/team-switcher"
@@ -55,6 +55,10 @@ const data = {
       items: [
         { title: "當日成交總覽", url: "/stock" },
         { title: "本益比/殖利率", url: "/stock/valuation" },
+        { title: "大盤指數", url: "/stock/market-index" },
+        { title: "成交排行", url: "/stock/top-volume" },
+        { title: "盤中走勢", url: "/stock/intraday" },
+        { title: "指數歷史", url: "/stock/index-history" },
       ],
     },
     {

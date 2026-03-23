@@ -1,0 +1,35 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Portfolio {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  stockNo   String
+  stockName String
+  buyPrice  Float
+  buyDate   DateTime
+  shares    Int
+  memo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Watchlist {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  stockNo   String
+  stockName String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, stockNo])
+  @@index([userId])
+}

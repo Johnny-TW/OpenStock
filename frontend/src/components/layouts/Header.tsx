@@ -14,13 +14,19 @@ import {
 
 const breadcrumbMap: Record<string, { category: string; page: string }> = {
   "/stock": { category: "股票資訊", page: "當日成交總覽" },
+  "/stock/valuation": { category: "股票資訊", page: "本益比/殖利率" },
+  "/stock/market-index": { category: "股票資訊", page: "大盤指數" },
+  "/stock/top-volume": { category: "股票資訊", page: "成交排行" },
+  "/stock/intraday": { category: "股票資訊", page: "盤中走勢" },
+  "/stock/index-history": { category: "股票資訊", page: "指數歷史" },
   "/post": { category: "文章", page: "文章列表" },
 };
 
 function getBreadcrumb(pathname: string) {
-  const match = Object.entries(breadcrumbMap).find(([prefix]) =>
-    pathname.startsWith(prefix)
-  );
+  // Sort by longest prefix first to avoid partial matches
+  const match = Object.entries(breadcrumbMap)
+    .sort((a, b) => b[0].length - a[0].length)
+    .find(([prefix]) => pathname.startsWith(prefix));
   return match ? match[1] : { category: "首頁", page: "總覽" };
 }
 

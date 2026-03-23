@@ -1,3 +1,6 @@
+/* eslint-disable @next/next/no-page-custom-font */
+/* eslint-disable @next/next/google-font-display */
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/globals.css";
@@ -6,8 +9,9 @@ import { Header, Sidebar, Footer } from "@/components/layouts";
 import ReduxProvider from "@/providers/ReduxProvider";
 import QueryProvider from "@/providers/QueryProvider";
 import DialogProvider from "@/components/commons/dialog-provider";
-// TODO: next-auth 的 /api/auth/[...nextauth] route 設定完成後再啟用
-// import SessionProvider from "@/providers/SessionProvider";
+import SessionProvider from "@/providers/SessionProvider";
+import PermissionGuard from "@/providers/PermissionGuard";
+import AuthSync from "@/providers/AuthSync";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,24 +42,38 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Icons"
+          rel="stylesheet"
+        />
+        <link rel="icon" href="/enbglogo.svg" />
+        <link rel="shortcut icon" href="/enbglogo.svg" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
         suppressHydrationWarning
       >
-        <QueryProvider>
-          <ReduxProvider>
-            <DialogProvider>
-            <SidebarProvider>
-              <Sidebar />
-              <SidebarInset>
-                <Header />
-                {children}
-                <Footer />
-              </SidebarInset>
-            </SidebarProvider>
-            </DialogProvider>
-          </ReduxProvider>
-        </QueryProvider>
+        <SessionProvider>
+          <QueryProvider>
+            <ReduxProvider>
+              <AuthSync />
+              <DialogProvider>
+                <PermissionGuard>
+                  <SidebarProvider>
+                  <Sidebar />
+                  <SidebarInset>
+                    <Header />
+                    <div className="flex-1 pb-16">{children}</div>
+                    {/* Footer */}
+                    <Footer />
+                  </SidebarInset>
+                </SidebarProvider>
+                </PermissionGuard>
+              </DialogProvider>
+            </ReduxProvider>
+          </QueryProvider>
+        </SessionProvider>
       </body>
     </html>
   );

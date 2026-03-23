@@ -21,7 +21,7 @@ export default function ValuationClient() {
     dispatch({ type: "GET_STOCK_VALUATION" })
   }, [dispatch])
 
-  if (loading && !valuation) {
+  if (!valuation) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

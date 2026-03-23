@@ -22,3 +22,7 @@ export const API_RFQ = "rfq/"
 // stock
 export const API_STOCK_DAILY_ALL = "stock/daily-all"
 export const API_STOCK_VALUATION = "stock/valuation"
+export const API_STOCK_MARKET_INDEX = "stock/market-index"
+export const API_STOCK_TOP_VOLUME = "stock/top-volume"
+export const API_STOCK_INTRADAY = "stock/intraday"
+export const API_STOCK_INDEX_HISTORY = "stock/index-history"
