@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsString, IsNumber, IsDateString, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsDateString,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export class CreatePortfolioDto {
   @ApiProperty({ description: '使用者 ID' })

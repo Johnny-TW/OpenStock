@@ -15,19 +15,21 @@ interface ExtendedSession {
 
 const AuthSync = () => {
   const dispatch = useDispatch()
-  // 使用 useSession 取得 NextAuth session 和認證狀態
   const { data: session, status } = useSession()
   const pathname = usePathname()
-  // TypeScript 強制類型轉換,因為 NextAuth 的 session 可能包含自定義欄位
   const extSession = session as ExtendedSession | null
 
   useEffect(() => {
     // 載入中,不處理
     if (status === "loading" || pathname === "/forbidden") return
 
-    // 未認證,不處理(middleware 會處理重定向)
+    const isPublic = pathname.startsWith("/login") || pathname.startsWith("/auth")
+
+    // 未認證：公開頁面不處理，其他頁面由 PermissionGuard 導向 /login
     if (status === "unauthenticated" || !extSession?.accessToken) {
-      signIn("azure-ad")
+      if (!isPublic) {
+        signIn("azure-ad")
+      }
       return
     }
 

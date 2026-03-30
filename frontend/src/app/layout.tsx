@@ -64,7 +64,9 @@ export default function RootLayout({
                   <Sidebar />
                   <SidebarInset>
                     <Header />
-                    <div className="flex-1 pb-16">{children}</div>
+                    <main className="main-content">
+                      <div className="flex-1 pb-16">{children}</div>
+                    </main>
                     {/* Footer */}
                     <Footer />
                   </SidebarInset>

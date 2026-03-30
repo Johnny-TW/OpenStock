@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWatchlistDto } from './dto/watchlist.dto';
 
@@ -18,11 +22,28 @@ export class WatchlistService {
       where: { userId_stockNo: { userId: dto.userId, stockNo: dto.stockNo } },
     });
     if (exists) throw new ConflictException('該股票已在自選清單中');
-    return this.prisma.watchlist.create({ data: dto });
+    return this.prisma.watchlist.create({
+      data: {
+        userId: dto.userId,
+        stockNo: dto.stockNo,
+        stockName: dto.stockName,
+        groupName: dto.groupName ?? '未分類',
+      },
+    });
+  }
+
+  async updateGroup(id: number, userId: string, groupName: string) {
+    const item = await this.prisma.watchlist.findFirst({
+      where: { id, userId },
+    });
+    if (!item) throw new NotFoundException('找不到該自選股紀錄');
+    return this.prisma.watchlist.update({ where: { id }, data: { groupName } });
   }
 
   async remove(id: number, userId: string) {
-    const item = await this.prisma.watchlist.findFirst({ where: { id, userId } });
+    const item = await this.prisma.watchlist.findFirst({
+      where: { id, userId },
+    });
     if (!item) throw new NotFoundException('找不到該自選股紀錄');
     return this.prisma.watchlist.delete({ where: { id } });
   }

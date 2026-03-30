@@ -33,6 +33,9 @@ import {
   IconLayoutColumns,
   IconTrendingUp,
   IconTrendingDown,
+  IconHeart,
+  IconHeartFilled,
+  IconX,
 } from "@tabler/icons-react"
 import {
   flexRender,
@@ -52,6 +55,7 @@ import {
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useAppDispatch } from "@/hooks/use-redux"
 import { Badge } from "@/components/commons/badge"
 import { Button } from "@/components/commons/button"
 import {
@@ -101,8 +105,16 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/commons/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/commons/dialog"
 
-import type { StockDailyDto } from "@/type/stock"
+import type { StockDailyDto, WatchlistItem } from "@/type/stock"
 
 function parseNumber(value: string): number {
   const cleaned = value.replace(/,/g, "")
@@ -117,6 +129,358 @@ function getChangeColor(change: string): string {
 }
 
 export type StockRow = StockDailyDto & { _rowId: number }
+
+function WatchlistButton({
+  item,
+  watchlist,
+  dispatch,
+  userId,
+}: {
+  item: StockRow
+  watchlist: WatchlistItem[]
+  dispatch: ReturnType<typeof useAppDispatch>
+  userId: string
+}) {
+  const watchlistItem = watchlist.find((w) => w.stockNo === item.code)
+  const isInWatchlist = !!watchlistItem
+  const [dialogOpen, setDialogOpen] = React.useState(false)
+  const [selectedGroup, setSelectedGroup] = React.useState("未分類")
+  const [isCreatingNew, setIsCreatingNew] = React.useState(false)
+  const [newGroupName, setNewGroupName] = React.useState("")
+
+  const allGroupNames = React.useMemo(() => {
+    const groups = new Set<string>(watchlist.map((w) => w.groupName || "未分類"))
+    groups.add("未分類")
+    return Array.from(groups)
+  }, [watchlist])
+
+  function handleClick(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (isInWatchlist && watchlistItem) {
+      dispatch({ type: "REMOVE_WATCHLIST", id: watchlistItem.id, userId })
+    } else {
+      const defaultGroup = allGroupNames[0] ?? "未分類"
+      setSelectedGroup(defaultGroup)
+      setIsCreatingNew(false)
+      setNewGroupName("")
+      setDialogOpen(true)
+    }
+  }
+
+  function handleConfirm() {
+    const groupName = isCreatingNew
+      ? newGroupName.trim() || "未分類"
+      : selectedGroup
+    dispatch({
+      type: "ADD_WATCHLIST",
+      data: { userId, stockNo: item.code, stockName: item.name, groupName },
+    })
+    setDialogOpen(false)
+  }
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        className={`flex items-center justify-center size-7 rounded hover:bg-muted transition-colors ${
+          isInWatchlist
+            ? "text-red-500"
+            : "text-muted-foreground hover:text-red-400"
+        }`}
+      >
+        {isInWatchlist ? (
+          <IconHeartFilled className="size-4" />
+        ) : (
+          <IconHeart className="size-4" />
+        )}
+      </button>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>加入自選股</DialogTitle>
+            <DialogDescription>
+              {item.code} {item.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <Label>選擇群組</Label>
+            {!isCreatingNew ? (
+              <Select
+                value={selectedGroup}
+                onValueChange={(v) => {
+                  if (v === "__new__") {
+                    setIsCreatingNew(true)
+                    setNewGroupName("")
+                  } else {
+                    setSelectedGroup(v)
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {allGroupNames.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__new__">＋ 新增群組</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
+                  placeholder="輸入群組名稱"
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsCreatingNew(false)}
+                >
+                  <IconX className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleConfirm}>加入</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+function WatchlistGroupSelect({
+  currentGroup,
+  watchlistItem,
+  dispatch,
+  userId,
+  allGroupNames,
+}: {
+  currentGroup: string
+  watchlistItem: WatchlistItem
+  dispatch: ReturnType<typeof useAppDispatch>
+  userId: string
+  allGroupNames: string[]
+}) {
+  const [isCreatingNew, setIsCreatingNew] = React.useState(false)
+  const [newName, setNewName] = React.useState("")
+
+  function handleGroupChange(value: string) {
+    if (value === "__new__") {
+      setIsCreatingNew(true)
+      setNewName("")
+      return
+    }
+    dispatch({
+      type: "UPDATE_WATCHLIST_GROUP",
+      id: watchlistItem.id,
+      groupName: value,
+      userId,
+    })
+  }
+
+  function handleNewGroupSubmit() {
+    const name = newName.trim()
+    if (!name) return
+    dispatch({
+      type: "UPDATE_WATCHLIST_GROUP",
+      id: watchlistItem.id,
+      groupName: name,
+      userId,
+    })
+    setIsCreatingNew(false)
+    setNewName("")
+  }
+
+  if (isCreatingNew) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleNewGroupSubmit()}
+          placeholder="群組名稱"
+          className="h-7 text-xs w-28"
+          autoFocus
+        />
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-xs" onClick={handleNewGroupSubmit}>
+          ✓
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setIsCreatingNew(false)}>
+          <IconX className="size-3" />
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Select value={currentGroup} onValueChange={handleGroupChange}>
+      <SelectTrigger className="h-7 text-xs w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {allGroupNames.map((g) => (
+          <SelectItem key={g} value={g} className="text-xs">
+            {g}
+          </SelectItem>
+        ))}
+        <SelectItem value="__new__" className="text-xs text-muted-foreground">
+          ＋ 新增群組
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  )
+}
+
+type GroupedItem = { stock: StockRow; wItem: WatchlistItem }
+
+type WatchlistSortKey = "code" | "name" | "closingPrice" | "change" | "openingPrice" | "highestPrice" | "lowestPrice" | "tradeVolume" | "tradeValue" | "transaction"
+
+function SortableHead({
+  label,
+  sortKey,
+  currentKey,
+  direction,
+  onSort,
+  className = "",
+}: {
+  label: string
+  sortKey: WatchlistSortKey
+  currentKey: WatchlistSortKey | null
+  direction: "asc" | "desc"
+  onSort: (key: WatchlistSortKey) => void
+  className?: string
+}) {
+  const isActive = currentKey === sortKey
+  return (
+    <TableHead className={className}>
+      <button
+        className="flex items-center gap-1 hover:text-foreground cursor-pointer select-none"
+        onClick={() => onSort(sortKey)}
+      >
+        {label}
+        {isActive ? (
+          direction === "asc" ? <IconArrowUp className="size-4" /> : <IconArrowDown className="size-4" />
+        ) : (
+          <IconArrowsUpDown className="size-4 text-muted-foreground/50" />
+        )}
+      </button>
+    </TableHead>
+  )
+}
+
+function WatchlistGroupSection({
+  groupName,
+  items,
+  dispatch,
+  userId,
+  allGroupNames,
+}: {
+  groupName: string
+  items: GroupedItem[]
+  dispatch: ReturnType<typeof useAppDispatch>
+  userId: string
+  allGroupNames: string[]
+}) {
+  const [sortKey, setSortKey] = React.useState<WatchlistSortKey | null>(null)
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc")
+
+  function handleSort(key: WatchlistSortKey) {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"))
+    } else {
+      setSortKey(key)
+      setSortDir("asc")
+    }
+  }
+
+  const sortedItems = React.useMemo(() => {
+    if (!sortKey) return items
+    return [...items].sort((a, b) => {
+      const valA = a.stock[sortKey]
+      const valB = b.stock[sortKey]
+      const numA = parseNumber(valA)
+      const numB = parseNumber(valB)
+      const isNum = numA !== 0 || numB !== 0 || valA === "0" || valB === "0"
+      const cmp = isNum ? numA - numB : String(valA).localeCompare(String(valB))
+      return sortDir === "asc" ? cmp : -cmp
+    })
+  }, [items, sortKey, sortDir])
+
+  const headProps = { currentKey: sortKey, direction: sortDir, onSort: handleSort }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 px-1">
+        <span className="font-semibold text-sm">{groupName}</span>
+        <Badge variant="secondary" className="text-xs">{items.length}</Badge>
+      </div>
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader className="bg-muted">
+            <TableRow>
+              <TableHead className="w-10"></TableHead>
+              <SortableHead label="代號" sortKey="code" className="w-24" {...headProps} />
+              <SortableHead label="名稱" sortKey="name" {...headProps} />
+              <SortableHead label="收盤價" sortKey="closingPrice" className="text-right" {...headProps} />
+              <SortableHead label="漲跌價差" sortKey="change" className="text-right" {...headProps} />
+              <SortableHead label="開盤價" sortKey="openingPrice" className="text-right" {...headProps} />
+              <SortableHead label="最高價" sortKey="highestPrice" className="text-right" {...headProps} />
+              <SortableHead label="最低價" sortKey="lowestPrice" className="text-right" {...headProps} />
+              <SortableHead label="成交股數" sortKey="tradeVolume" className="text-right" {...headProps} />
+              <SortableHead label="成交金額" sortKey="tradeValue" className="text-right" {...headProps} />
+              <SortableHead label="成交筆數" sortKey="transaction" className="text-right" {...headProps} />
+              <TableHead className="w-44">群組</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedItems.map(({ stock, wItem }) => (
+              <TableRow key={stock.code}>
+                <TableCell>
+                  <button
+                    onClick={() => dispatch({ type: "REMOVE_WATCHLIST", id: wItem.id, userId })}
+                    className="flex items-center justify-center size-7 rounded hover:bg-muted transition-colors text-red-500 hover:text-red-600"
+                  >
+                    <IconHeartFilled className="size-4" />
+                  </button>
+                </TableCell>
+                <TableCell><TableCellViewer item={stock} /></TableCell>
+                <TableCell>{stock.name}</TableCell>
+                <TableCell className="text-right font-mono">{stock.closingPrice}</TableCell>
+                <TableCell className={`text-right font-mono ${getChangeColor(stock.change)}`}>{stock.change}</TableCell>
+                <TableCell className="text-right font-mono">{stock.openingPrice}</TableCell>
+                <TableCell className="text-right font-mono">{stock.highestPrice}</TableCell>
+                <TableCell className="text-right font-mono">{stock.lowestPrice}</TableCell>
+                <TableCell className="text-right font-mono">{stock.tradeVolume}</TableCell>
+                <TableCell className="text-right font-mono">{stock.tradeValue}</TableCell>
+                <TableCell className="text-right font-mono">{stock.transaction}</TableCell>
+                <TableCell>
+                  <WatchlistGroupSelect
+                    currentGroup={groupName}
+                    watchlistItem={wItem}
+                    dispatch={dispatch}
+                    userId={userId}
+                    allGroupNames={allGroupNames}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
 
 function DragHandle({ id }: { id: number }) {
   const { attributes, listeners } = useSortable({ id })
@@ -296,10 +660,16 @@ function DraggableRow({ row }: { row: Row<StockRow> }) {
 export function StockDataTable({
   data: initialData,
   title,
+  watchlist,
+  userId,
 }: {
   data: StockDailyDto[]
   title?: string
+  watchlist: WatchlistItem[]
+  userId: string
 }) {
+  const dispatch = useAppDispatch()
+
   // 加上 _rowId 供拖曳排序使用
   const [data, setData] = React.useState<StockRow[]>(() =>
     initialData.map((d, i) => ({ ...d, _rowId: i }))
@@ -310,6 +680,7 @@ export function StockDataTable({
     setData(initialData.map((d, i) => ({ ...d, _rowId: i })))
   }, [initialData])
 
+  const [activeTab, setActiveTab] = React.useState<"all" | "watchlist" | "summary">("all")
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -323,6 +694,53 @@ export function StockDataTable({
     pageSize: 50,
   })
 
+  const watchlistCodes = React.useMemo(
+    () => new Set(watchlist.map((w) => w.stockNo)),
+    [watchlist]
+  )
+
+  const groupedDisplayData = React.useMemo(() => {
+    const groups: Record<string, GroupedItem[]> = {}
+    const keyword = (globalFilter ?? "").trim().toLowerCase()
+    for (const wItem of watchlist) {
+      const group = wItem.groupName || "未分類"
+      const stock = data.find((s) => s.code === wItem.stockNo)
+      if (!stock) continue
+      if (keyword && !stock.code.toLowerCase().includes(keyword) && !stock.name.toLowerCase().includes(keyword)) continue
+      if (!groups[group]) groups[group] = []
+      groups[group].push({ stock, wItem })
+    }
+    return groups
+  }, [watchlist, data, globalFilter])
+
+  const displayData = React.useMemo(() => {
+    if (activeTab === "watchlist") {
+      return data.filter((s) => watchlistCodes.has(s.code))
+    }
+    return data
+  }, [data, activeTab, watchlistCodes])
+
+  const allColumns = React.useMemo<ColumnDef<StockRow>[]>(
+    () => [
+      {
+        id: "watchlist",
+        header: () => null,
+        cell: ({ row }) => (
+          <WatchlistButton
+            item={row.original}
+            watchlist={watchlist}
+            dispatch={dispatch}
+            userId={userId}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      ...columns,
+    ],
+    [dispatch, watchlist, userId]
+  )
+
   const sortableId = React.useId()
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -331,13 +749,13 @@ export function StockDataTable({
   )
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ _rowId }) => _rowId) || [],
-    [data]
+    () => displayData?.map(({ _rowId }) => _rowId) || [],
+    [displayData]
   )
 
   const table = useReactTable({
-    data,
-    columns,
+    data: displayData,
+    columns: allColumns,
     state: {
       sorting,
       columnVisibility,
@@ -366,8 +784,9 @@ export function StockDataTable({
     const { active, over } = event
     if (active && over && active.id !== over.id) {
       setData((prev) => {
-        const oldIndex = dataIds.indexOf(active.id)
-        const newIndex = dataIds.indexOf(over.id)
+        const oldIndex = prev.findIndex((item) => item._rowId === active.id)
+        const newIndex = prev.findIndex((item) => item._rowId === over.id)
+        if (oldIndex === -1 || newIndex === -1) return prev
         return arrayMove(prev, oldIndex, newIndex)
       })
     }
@@ -375,14 +794,24 @@ export function StockDataTable({
 
   return (
     <Tabs
-      defaultValue="table"
+      value={activeTab}
+      onValueChange={(v) => {
+        setActiveTab(v as "all" | "watchlist" | "summary")
+        table.setPageIndex(0)
+      }}
       className="w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
         <Label htmlFor="view-selector" className="sr-only">
           檢視
         </Label>
-        <Select defaultValue="table">
+        <Select
+          value={activeTab}
+          onValueChange={(v) => {
+            setActiveTab(v as "all" | "watchlist" | "summary")
+            table.setPageIndex(0)
+          }}
+        >
           <SelectTrigger
             className="flex w-fit @4xl/main:hidden"
             size="sm"
@@ -391,12 +820,20 @@ export function StockDataTable({
             <SelectValue placeholder="選擇檢視" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="table">日成交總覽</SelectItem>
+            <SelectItem value="all">全部</SelectItem>
+            <SelectItem value="watchlist">我的最愛</SelectItem>
             <SelectItem value="summary">統計摘要</SelectItem>
           </SelectContent>
         </Select>
         <TabsList className="hidden @4xl/main:flex">
-          <TabsTrigger value="table">日成交總覽</TabsTrigger>
+          <TabsTrigger value="all">全部</TabsTrigger>
+          <TabsTrigger value="watchlist">
+            <IconHeartFilled className="size-3.5 text-red-500" />
+            我的最愛
+            {watchlist.length > 0 && (
+              <Badge variant="secondary">{watchlist.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="summary">
             統計摘要 <Badge variant="secondary">{data.length}</Badge>
           </TabsTrigger>
@@ -442,7 +879,7 @@ export function StockDataTable({
       </div>
 
       <TabsContent
-        value="table"
+        value="all"
         className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
       >
         {title && (
@@ -503,7 +940,7 @@ export function StockDataTable({
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={columns.length}
+                      colSpan={allColumns.length}
                       className="h-24 text-center"
                     >
                       無資料
@@ -591,6 +1028,38 @@ export function StockDataTable({
             </div>
           </div>
         </div>
+      </TabsContent>
+
+      <TabsContent
+        value="watchlist"
+        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+      >
+        {watchlist.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 gap-3 text-muted-foreground">
+            <IconHeart className="size-10" />
+            <p className="text-sm">還沒有加入任何自選股</p>
+            <p className="text-xs">點擊表格中的 ♡ 來新增</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {Object.keys(groupedDisplayData).length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+                <p className="text-sm">找不到符合的自選股</p>
+              </div>
+            ) : (
+              Object.entries(groupedDisplayData).map(([groupName, items]) => (
+                <WatchlistGroupSection
+                  key={groupName}
+                  groupName={groupName}
+                  items={items}
+                  dispatch={dispatch}
+                  userId={userId}
+                  allGroupNames={Object.keys(groupedDisplayData)}
+                />
+              ))
+            )}
+          </div>
+        )}
       </TabsContent>
 
       <TabsContent

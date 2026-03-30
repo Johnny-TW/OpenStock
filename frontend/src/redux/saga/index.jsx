@@ -52,7 +52,7 @@ export function* fetchApi({
     const { data: response } = yield call({ method, path, params, data })
 
     // NestJS / v2 API 直接回傳資料，不包 { status, result }
-    if (path.startsWith("v2") || path.startsWith("stock")) {
+    if (path.startsWith("v2") || path.startsWith("stock") || path.startsWith("watchlist") || path.startsWith("portfolio") || path.startsWith("analysis")) {
       success = true
       result = response
     } else {

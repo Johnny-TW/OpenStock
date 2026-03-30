@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -10,7 +11,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { WatchlistService } from './watchlist.service';
-import { CreateWatchlistDto } from './dto/watchlist.dto';
+import {
+  CreateWatchlistDto,
+  UpdateWatchlistGroupDto,
+} from './dto/watchlist.dto';
 
 @ApiTags('自選股')
 @Controller('watchlist')
@@ -28,6 +32,15 @@ export class WatchlistController {
   @Post()
   create(@Body() dto: CreateWatchlistDto) {
     return this.watchlistService.create(dto);
+  }
+
+  @ApiOperation({ summary: '更新自選股群組' })
+  @Patch(':id/group')
+  updateGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateWatchlistGroupDto,
+  ) {
+    return this.watchlistService.updateGroup(id, dto.userId, dto.groupName);
   }
 
   @ApiOperation({ summary: '移除自選股' })

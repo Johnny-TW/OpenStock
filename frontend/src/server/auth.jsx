@@ -8,6 +8,11 @@ export const authOptions = (req) => ({
       clientId: process.env.AZURE_AD_CLIENT_ID,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
       tenantId: process.env.AZURE_AD_TENANT_ID,
+      authorization: {
+        params: {
+          scope: "openid profile email User.Read",
+        },
+      },
     }),
   ],
   secret: process.env.SECRET,
@@ -33,15 +38,38 @@ export const authOptions = (req) => ({
   },
   debug: false,
   pages: {
-    error: "/",
+    signIn: "/login",
+    error: "/login",
   },
   callbacks: {
-    async jwt({ token, account }) {
+    async jwt({ token, account, profile }) {
       if (account) {
         token.accessToken = account?.access_token
+
+        const decoded = jwt.decode(account.access_token)
+        const email =
+          profile?.email ??
+          decoded?.unique_name ??
+          decoded?.upn ??
+          decoded?.email ??
+          decoded?.preferred_username ??
+          ""
+        const enName = email
+          ? email.split("@")[0].replace("_", " ")
+          : "User"
+
+        token.userProfile = {
+          email,
+          name: profile?.name ?? decoded?.name ?? enName,
+          enName,
+          oid: profile?.oid ?? decoded?.oid ?? "",
+          sub: profile?.sub ?? decoded?.sub ?? "",
+          iss: decoded?.iss ?? "",
+        }
       }
       return {
         accessToken: token.accessToken,
+        userProfile: token.userProfile,
       }
     },
     async session({ session, token }) {
@@ -49,16 +77,38 @@ export const authOptions = (req) => ({
       let error
 
       const handle = async () => {
-        if (token?.accessToken) {
+        const profile = token?.userProfile
+        if (profile) {
+          session.user = {
+            email: profile.email,
+            name: profile.name,
+            enName: profile.enName,
+            iss: profile.iss,
+            sub: profile.sub,
+            oid: profile.oid,
+          }
+
+          accessToken = jwt.sign(session.user, process.env.JWT_SECRET, {
+            expiresIn: "3h",
+          })
+        } else if (!token?.accessToken) {
+          error = "No access token, please login again."
+        } else {
           const decoded = jwt.decode(token.accessToken)
           if (decoded) {
-            const email = decoded.unique_name ?? decoded.upn ?? decoded.email ?? decoded.preferred_username
-            const name = email ? email.split("@")[0].replace("_", " ") : "User"
+            const email =
+              decoded.unique_name ??
+              decoded.upn ??
+              decoded.email ??
+              decoded.preferred_username
+            const enName = email
+              ? email.split("@")[0].replace("_", " ")
+              : "User"
 
             session.user = {
               email,
-              name,
-              enName: name,
+              name: decoded.name || enName,
+              enName,
               iss: decoded.iss,
               sub: decoded.sub,
               oid: decoded.oid,
@@ -67,9 +117,9 @@ export const authOptions = (req) => ({
             accessToken = jwt.sign(session.user, process.env.JWT_SECRET, {
               expiresIn: "3h",
             })
+          } else {
+            error = "Unable to decode token, please login again."
           }
-        } else {
-          error = "No access token, please login again."
         }
       }
 

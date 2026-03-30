@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import {
   AudioWaveform,
   BookOpen,
@@ -34,11 +35,6 @@ const EnbgIconLogo = ({ className }: { className?: string }) => (
 )
 
 const data = {
-  user: {
-    name: "Johnny Yeh",
-    email: "johnny43607@gmail.com",
-    avatar: enbg_icon.src,
-  },
   teams: [
     {
       name: "ee39-stocksmart-system",
@@ -59,49 +55,7 @@ const data = {
         { title: "成交排行", url: "/stock/top-volume" },
         { title: "盤中走勢", url: "/stock/intraday" },
         { title: "指數歷史", url: "/stock/index-history" },
-      ],
-    },
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        { title: "History", url: "#" },
-        { title: "Starred", url: "#" },
-        { title: "Settings", url: "#" },
-      ],
-    },
-    {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        { title: "Genesis", url: "#" },
-        { title: "Explorer", url: "#" },
-        { title: "Quantum", url: "#" },
-      ],
-    },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        { title: "Introduction", url: "#" },
-        { title: "Get Started", url: "#" },
-        { title: "Tutorials", url: "#" },
-        { title: "Changelog", url: "#" },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        { title: "General", url: "#" },
-        { title: "Team", url: "#" },
-        { title: "Billing", url: "#" },
-        { title: "Limits", url: "#" },
+        { title: "✨ AI 分析", url: "/stock/analysis" },
       ],
     },
   ],
@@ -113,6 +67,18 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { data: session } = useSession()
+
+  const sessionUser = session?.user as
+    | (Record<string, unknown> & { name?: string; email?: string })
+    | undefined
+
+  const user = {
+    name: sessionUser?.name ?? "使用者",
+    email: sessionUser?.email ?? "",
+    avatar: sessionUser ? "/api/me/photo" : enbg_icon.src,
+  }
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -123,7 +89,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

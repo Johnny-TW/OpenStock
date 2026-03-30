@@ -28,6 +28,7 @@ model Watchlist {
   userId    String
   stockNo   String
   stockName String
+  groupName String   @default("未分類")
   createdAt DateTime @default(now())
 
   @@unique([userId, stockNo])

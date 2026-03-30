@@ -19,6 +19,7 @@ const breadcrumbMap: Record<string, { category: string; page: string }> = {
   "/stock/top-volume": { category: "股票資訊", page: "成交排行" },
   "/stock/intraday": { category: "股票資訊", page: "盤中走勢" },
   "/stock/index-history": { category: "股票資訊", page: "指數歷史" },
+  "/stock/analysis": { category: "股票資訊", page: "AI 分析" },
   "/post": { category: "文章", page: "文章列表" },
 };
 

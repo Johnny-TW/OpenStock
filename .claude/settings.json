@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Bash(pnpm *)",
+      "Bash(cd frontend && pnpm *)",
+      "Bash(cd backend && pnpm *)",
+      "Bash(npx prisma *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(grep *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(git force *)",
+      "Bash(DROP TABLE *)",
+      "Bash(npx prisma migrate reset *)"
+    ]
+  }
+}

@@ -2,17 +2,26 @@
 
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { StockDataTable } from "@/components/data-table/stock/data-table";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 
 export default function StockClient() {
   const dispatch = useAppDispatch();
+  const { data: session } = useSession();
   const dailyAll = useAppSelector((state) => state.stock?.dailyAll);
-  const loading = useAppSelector((state) => state.api?.loading);
+  const watchlist = useAppSelector((state) => (state as any).watchlist?.list ?? []);
+  const userId = (session?.user as any)?.email ?? "";
 
   useEffect(() => {
     dispatch({ type: "GET_STOCK_DAILY_ALL" });
   }, [dispatch]);
+
+  useEffect(() => {
+    if (userId) {
+      dispatch({ type: "GET_WATCHLIST" });
+    }
+  }, [dispatch, userId]);
 
   if (!dailyAll) {
     return (
@@ -36,7 +45,7 @@ export default function StockClient() {
           共 {stockList.length} 檔
         </p>
       </div>
-      <StockDataTable data={stockList} title={stockTitle} />
+      <StockDataTable data={stockList} title={stockTitle} watchlist={watchlist} userId={userId} />
     </div>
   );
 }
