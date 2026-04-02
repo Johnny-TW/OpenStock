@@ -54,7 +54,7 @@ export function* fetchApi({
     // NestJS / v2 API 直接回傳資料，不包 { status, result }
     if (path.startsWith("v2") || path.startsWith("stock") || path.startsWith("watchlist") || path.startsWith("portfolio") || path.startsWith("analysis")) {
       success = true
-      result = response
+      result = response?.data !== undefined ? response.data : response
     } else {
       const status = response?.status ?? 0
       if (status === 1) {
@@ -73,12 +73,28 @@ export function* fetchApi({
   } catch (error) {
     console.log(error)
     let statusCode = error?.response?.status
-    //未驗證 前往驗證
-    if (typeof error?.response === "undefined" || statusCode === 401) {
+
+    // 網路逾時或連線失敗（非 401），顯示逾時提示而非要求重新登入
+    if (typeof error?.response === "undefined" && statusCode !== 401) {
+      const isTimeout = error?.code === "ECONNABORTED" || error?.message?.includes("timeout")
       yield put({
         type: "SET_API_ERROR",
         data: {
-          message: "Please login again.",
+          message: isTimeout
+            ? "請求逾時，AI 分析需要較長時間，請稍後再試。"
+            : "網路連線異常，請確認網路狀態後重試。",
+        },
+      })
+      yield setLoading(false, path)
+      return
+    }
+
+    //未驗證 前往驗證
+    if (statusCode === 401) {
+      yield put({
+        type: "SET_API_ERROR",
+        data: {
+          message: "登入已過期，請重新登入。",
           action: () => login(),
         },
       })

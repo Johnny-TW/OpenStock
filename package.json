@@ -13,7 +13,7 @@
   },
   "lint-staged": {
     "frontend/**/*.{js,ts,jsx,tsx}": [
-      "pnpm --filter ee39-stocksmart-system lint"
+      "pnpm --filter ee39-stocksmart-system exec eslint --fix"
     ],
     "backend/**/*.ts": [
       "pnpm --filter backend lint"

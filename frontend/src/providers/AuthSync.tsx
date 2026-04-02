@@ -1,8 +1,8 @@
 "use client"
 import { useEffect } from "react"
 import { useDispatch } from "react-redux"
-import { useSession, signOut, signIn } from "next-auth/react"
-import { usePathname } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
+import { usePathname, useRouter } from "next/navigation"
 
 interface ExtendedSession {
   accessToken?: string
@@ -17,6 +17,7 @@ const AuthSync = () => {
   const dispatch = useDispatch()
   const { data: session, status } = useSession()
   const pathname = usePathname()
+  const router = useRouter()
   const extSession = session as ExtendedSession | null
 
   useEffect(() => {
@@ -25,10 +26,10 @@ const AuthSync = () => {
 
     const isPublic = pathname.startsWith("/login") || pathname.startsWith("/auth")
 
-    // 未認證：公開頁面不處理，其他頁面由 PermissionGuard 導向 /login
+    // 未認證：公開頁面不處理，其他頁面導向 /login 讓使用者選擇登入方式
     if (status === "unauthenticated" || !extSession?.accessToken) {
       if (!isPublic) {
-        signIn("azure-ad")
+        router.push("/login")
       }
       return
     }

@@ -19,6 +19,7 @@ export interface StockDailyDto {
   closingPrice: string;
   change: string;
   transaction: string;
+  industry: string;
 }
 
 export interface StockDailyAllResponse {
@@ -50,8 +51,7 @@ export interface StockValuationResponse {
   total: number;
 }
 
-// ===== TWSE OpenAPI Types =====
-
+// TWSE OpenAPI Types
 /** 大盤/類股指數 */
 export interface MarketIndexDto {
   date: string;
@@ -113,4 +113,110 @@ export interface IndexHistoryDto {
 export interface IndexHistoryResponse {
   data: IndexHistoryDto[];
   total: number;
+}
+
+// Ranking Types
+export interface RevenueRankingDto {
+  code: string;
+  name: string;
+  industry: string;
+  revenue: number;
+  operatingIncome: number;
+  netIncome: number;
+  eps: number;
+}
+
+export interface RevenueRankingResponse {
+  data: RevenueRankingDto[];
+  total: number;
+  year: string;
+  quarter: string;
+}
+
+export interface GrossMarginRankingDto {
+  code: string;
+  name: string;
+  industry: string;
+  revenue: number;
+  cost: number;
+  grossProfit: number;
+  grossMarginRate: number;
+}
+
+export interface GrossMarginRankingResponse {
+  data: GrossMarginRankingDto[];
+  total: number;
+  year: string;
+  quarter: string;
+}
+
+export interface DividendYieldRankingDto {
+  code: string;
+  name: string;
+  industry: string;
+  dividendYield: number;
+  peRatio: number;
+  pbRatio: number;
+}
+
+export interface DividendYieldRankingResponse {
+  data: DividendYieldRankingDto[];
+  total: number;
+}
+
+export interface PeRatioRankingDto {
+  code: string;
+  name: string;
+  industry: string;
+  peRatio: number;
+  dividendYield: number;
+  pbRatio: number;
+}
+
+export interface PeRatioRankingResponse {
+  data: PeRatioRankingDto[];
+  total: number;
+}
+
+// News Types
+export interface NewsDto {
+  title: string;
+  url: string;
+  date: string;
+  summary?: string;
+  source?: string;
+}
+
+export interface NewsResponse {
+  data: NewsDto[];
+  total: number;
+}
+
+export interface AllNewsResponse {
+  twStock: NewsResponse;
+  usStock: NewsResponse;
+  international: NewsResponse;
+  twse: NewsResponse;
+}
+
+// Heatmap Types
+export interface HeatmapStockDto {
+  code: string;
+  name: string;
+  changePercent: number;
+  closingPrice: number;
+  change: string;
+  tradeVolume: number;
+}
+
+export interface HeatmapIndustryDto {
+  industry: string;
+  avgChangePercent: number;
+  stocks: HeatmapStockDto[];
+}
+
+export interface HeatmapResponse {
+  data: HeatmapIndustryDto[];
+  total: number;
+  date: string;
 }

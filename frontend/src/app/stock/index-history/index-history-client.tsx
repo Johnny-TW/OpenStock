@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
+import { PageHeader } from "@/components/commons/page-header"
 import {
   Table,
   TableBody,
@@ -34,10 +35,10 @@ export default function IndexHistoryClient() {
 
   return (
     <div className="space-y-4 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">每日收盤指數歷史</h1>
-        <p className="text-sm text-muted-foreground">共 {list.length} 筆紀錄</p>
-      </div>
+      <PageHeader
+        title="每日收盤指數歷史"
+        subtitle={<>共 {list.length} 筆紀錄</>}
+      />
 
       <div className="rounded-md border max-h-[600px] overflow-auto">
         <Table>

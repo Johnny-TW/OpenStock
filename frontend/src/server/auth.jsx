@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import AzureAdProvider from "next-auth/providers/azure-ad"
+import GoogleProvider from "next-auth/providers/google"
 import jwt from "jsonwebtoken"
 
 export const authOptions = (req) => ({
@@ -11,6 +12,17 @@ export const authOptions = (req) => ({
       authorization: {
         params: {
           scope: "openid profile email User.Read",
+        },
+      },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          scope: "openid profile email",
+          prompt: "consent",
+          access_type: "offline",
         },
       },
     }),
@@ -45,31 +57,54 @@ export const authOptions = (req) => ({
     async jwt({ token, account, profile }) {
       if (account) {
         token.accessToken = account?.access_token
+        token.provider = account.provider
 
-        const decoded = jwt.decode(account.access_token)
-        const email =
-          profile?.email ??
-          decoded?.unique_name ??
-          decoded?.upn ??
-          decoded?.email ??
-          decoded?.preferred_username ??
-          ""
-        const enName = email
-          ? email.split("@")[0].replace("_", " ")
-          : "User"
+        if (account.provider === "azure-ad") {
+          token.azureAccessToken = account?.access_token
+        }
 
-        token.userProfile = {
-          email,
-          name: profile?.name ?? decoded?.name ?? enName,
-          enName,
-          oid: profile?.oid ?? decoded?.oid ?? "",
-          sub: profile?.sub ?? decoded?.sub ?? "",
-          iss: decoded?.iss ?? "",
+        if (account.provider === "google") {
+          const email = profile?.email ?? ""
+          const enName = email
+            ? email.split("@")[0].replace("_", " ")
+            : "User"
+
+          token.userProfile = {
+            email,
+            name: profile?.name ?? enName,
+            enName,
+            oid: profile?.sub ?? "",
+            sub: profile?.sub ?? "",
+            iss: "accounts.google.com",
+          }
+        } else {
+          const decoded = jwt.decode(account.access_token)
+          const email =
+            profile?.email ??
+            decoded?.unique_name ??
+            decoded?.upn ??
+            decoded?.email ??
+            decoded?.preferred_username ??
+            ""
+          const enName = email
+            ? email.split("@")[0].replace("_", " ")
+            : "User"
+
+          token.userProfile = {
+            email,
+            name: profile?.name ?? decoded?.name ?? enName,
+            enName,
+            oid: profile?.oid ?? decoded?.oid ?? "",
+            sub: profile?.sub ?? decoded?.sub ?? "",
+            iss: decoded?.iss ?? "",
+          }
         }
       }
       return {
         accessToken: token.accessToken,
+        azureAccessToken: token.azureAccessToken,
         userProfile: token.userProfile,
+        provider: token.provider,
       }
     },
     async session({ session, token }) {
@@ -131,6 +166,8 @@ export const authOptions = (req) => ({
 
       if (error) session.error = error
       session.accessToken = accessToken
+      session.azureAccessToken = token?.azureAccessToken
+      session.provider = token?.provider
       return session
     },
   },

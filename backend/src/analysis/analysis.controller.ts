@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AnalysisService } from './analysis.service';
 import { AnalyzeMarketDto, AnalysisResultDto } from './dto/analysis.dto';
@@ -7,6 +7,12 @@ import { AnalyzeMarketDto, AnalysisResultDto } from './dto/analysis.dto';
 @Controller('analysis')
 export class AnalysisController {
   constructor(private readonly analysisService: AnalysisService) {}
+
+  @ApiOperation({ summary: '取得今日快取分析結果' })
+  @Get('market')
+  getCached(): Promise<AnalysisResultDto | null> {
+    return this.analysisService.getCachedAnalysis();
+  }
 
   @ApiOperation({ summary: 'AI 分析台股市場並推薦關注標的' })
   @Post('market')

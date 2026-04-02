@@ -30,5 +30,18 @@ export const API_STOCK_TOP_VOLUME = "stock/top-volume"
 export const API_STOCK_INTRADAY = "stock/intraday"
 export const API_STOCK_INDEX_HISTORY = "stock/index-history"
 
+// ranking
+export const API_STOCK_RANKING_REVENUE = "stock/ranking/revenue"
+export const API_STOCK_RANKING_GROSS_MARGIN = "stock/ranking/gross-margin"
+export const API_STOCK_RANKING_DIVIDEND_YIELD = "stock/ranking/dividend-yield"
+export const API_STOCK_RANKING_PE_RATIO = "stock/ranking/pe-ratio"
+
+// news
+export const API_STOCK_NEWS = "stock/news"
+export const API_STOCK_NEWS_ALL = "stock/news/all"
+
+// heatmap
+export const API_STOCK_HEATMAP = "stock/heatmap"
+
 // analysis
 export const API_ANALYSIS_MARKET = "analysis/market"

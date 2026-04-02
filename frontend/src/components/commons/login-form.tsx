@@ -3,7 +3,7 @@
 import { signIn } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import Image from "next/image"
-import { azure_ad } from "@/images"
+import { azure_ad, google } from "@/images"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/commons/button"
 import {
@@ -33,6 +33,10 @@ export function LoginForm({
 
   const handleAzureLogin = () => {
     signIn("azure-ad", { callbackUrl: "/" })
+  }
+
+  const handleGoogleLogin = () => {
+    signIn("google", { callbackUrl: "/" })
   }
 
   return (
@@ -89,6 +93,15 @@ export function LoginForm({
               >
                 <Image src={azure_ad} alt="Azure AD" width={20} height={20} />
                 使用 Azure AD 登入
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-3"
+                onClick={handleGoogleLogin}
+              >
+                <Image src={google} alt="Google" width={20} height={20} />
+                使用 Google 帳號登入
               </Button>
             </div>
           </form>

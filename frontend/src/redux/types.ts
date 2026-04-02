@@ -6,6 +6,11 @@ import type {
   TopVolumeResponse,
   IntradayResponse,
   IndexHistoryResponse,
+  RevenueRankingResponse,
+  GrossMarginRankingResponse,
+  DividendYieldRankingResponse,
+  PeRatioRankingResponse,
+  HeatmapResponse,
 } from "@/type/stock"
 
 // require.context 動態載入的 reducer 無法自動推斷型別，需手動宣告
@@ -24,6 +29,15 @@ export interface RootState {
     topVolume: TopVolumeResponse | null
     intraday: IntradayResponse | null
     indexHistory: IndexHistoryResponse | null
+  }
+  ranking: {
+    revenue: RevenueRankingResponse | null
+    grossMargin: GrossMarginRankingResponse | null
+    dividendYield: DividendYieldRankingResponse | null
+    peRatio: PeRatioRankingResponse | null
+  }
+  heatmap: {
+    data: HeatmapResponse | null
   }
 }
 

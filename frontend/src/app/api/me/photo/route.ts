@@ -12,17 +12,18 @@ export async function GET() {
     }
 
     const decoded = jwt.verify(tokenCookie.value, process.env.SECRET!) as {
-      accessToken?: string
+      azureAccessToken?: string
+      provider?: string
     }
 
-    if (!decoded?.accessToken) {
-      return new NextResponse(null, { status: 401 })
+    if (decoded?.provider === "google" || !decoded?.azureAccessToken) {
+      return new NextResponse(null, { status: 404 })
     }
 
     const photoRes = await fetch(
       "https://graph.microsoft.com/v1.0/me/photo/$value",
       {
-        headers: { Authorization: `Bearer ${decoded.accessToken}` },
+        headers: { Authorization: `Bearer ${decoded.azureAccessToken}` },
       }
     )
 

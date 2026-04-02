@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
+import { PageHeader } from "@/components/commons/page-header"
 import { StockValuationTable } from "@/components/data-table/stock/valuation-table"
 import {
   Card,
@@ -41,12 +42,10 @@ export default function ValuationClient() {
 
   return (
     <div className="space-y-6 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">本益比 / 殖利率 / 淨值比</h1>
-        <p className="text-sm text-muted-foreground">
-          {title} {date && `· 資料日期：${date}`}
-        </p>
-      </div>
+      <PageHeader
+        title="本益比 / 殖利率 / 淨值比"
+        subtitle={<>{title} {date && `· 資料日期：${date}`}</>}
+      />
 
       {/* 統計卡片 */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

@@ -1,7 +1,9 @@
 import { signIn, signOut } from "next-auth/react"
 
-export function login(): void {
-  signIn("azure-ad", { callbackUrl: "/" })
+export type AuthProvider = "azure-ad" | "google"
+
+export function login(provider: AuthProvider = "azure-ad"): void {
+  signIn(provider, { callbackUrl: "/" })
 }
 
 export function logout(): void {

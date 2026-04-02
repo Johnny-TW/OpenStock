@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
+import { PageHeader } from "@/components/commons/page-header"
 import {
   Table,
   TableBody,
@@ -41,10 +42,10 @@ export default function MarketIndexClient() {
 
   return (
     <div className="space-y-4 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">大盤 / 類股指數總覽</h1>
-        <p className="text-sm text-muted-foreground">共 {list.length} 項指數</p>
-      </div>
+      <PageHeader
+        title="大盤 / 類股指數總覽"
+        subtitle={<>共 {list.length} 項指數</>}
+      />
 
       <div className="rounded-md border">
         <Table>

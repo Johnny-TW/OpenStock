@@ -55,7 +55,18 @@ const data = {
         { title: "成交排行", url: "/stock/top-volume" },
         { title: "盤中走勢", url: "/stock/intraday" },
         { title: "指數歷史", url: "/stock/index-history" },
-        { title: "✨ AI 分析", url: "/stock/analysis" },
+        { title: "排行榜", url: "/stock/ranking" },
+      ],
+    },
+    {
+      title: "產業熱力圖",
+      url: "/stock",
+      icon: TrendingUp,
+      isActive: true,
+      items: [
+        { title: "產業熱力圖", url: "/stock/heatmap" },
+        { title: "新聞", url: "/stock/news" },
+        { title: "AI 分析", url: "/stock/analysis" },
       ],
     },
   ],
@@ -76,7 +87,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const user = {
     name: sessionUser?.name ?? "使用者",
     email: sessionUser?.email ?? "",
-    avatar: sessionUser ? "/api/me/photo" : enbg_icon.src,
+    avatar:
+      sessionUser && (session as any)?.provider === "azure-ad"
+        ? "/api/me/photo"
+        : enbg_icon.src,
   }
 
   return (

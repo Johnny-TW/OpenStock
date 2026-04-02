@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
+import { PageHeader } from "@/components/commons/page-header"
 import {
   Table,
   TableBody,
@@ -40,10 +41,10 @@ export default function TopVolumeClient() {
 
   return (
     <div className="space-y-4 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">成交量前 20 名</h1>
-        <p className="text-sm text-muted-foreground">共 {list.length} 檔</p>
-      </div>
+      <PageHeader
+        title="成交量前 20 名"
+        subtitle={<>共 {list.length} 檔</>}
+      />
 
       <div className="rounded-md border">
         <Table>

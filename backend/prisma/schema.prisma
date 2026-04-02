@@ -34,3 +34,29 @@ model Watchlist {
   @@unique([userId, stockNo])
   @@index([userId])
 }
+
+model AnalysisCache {
+  id        Int      @id @default(autoincrement())
+  date      String
+  result    Json
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+  @@index([date])
+}
+
+model DailyStockPrice {
+  id           Int      @id @default(autoincrement())
+  date         String
+  code         String
+  name         String
+  closingPrice Float
+  change       Float
+  tradeVolume  Int
+  industry     String
+  createdAt    DateTime @default(now())
+
+  @@unique([date, code])
+  @@index([date])
+  @@index([code])
+}

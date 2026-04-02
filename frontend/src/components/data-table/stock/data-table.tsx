@@ -130,7 +130,7 @@ function getChangeColor(change: string): string {
 
 export type StockRow = StockDailyDto & { _rowId: number }
 
-function WatchlistButton({
+const WatchlistButton = React.memo(function WatchlistButton({
   item,
   watchlist,
   dispatch,
@@ -257,7 +257,7 @@ function WatchlistButton({
       </Dialog>
     </>
   )
-}
+})
 
 function WatchlistGroupSelect({
   currentGroup,
@@ -672,12 +672,12 @@ export function StockDataTable({
 
   // 加上 _rowId 供拖曳排序使用
   const [data, setData] = React.useState<StockRow[]>(() =>
-    initialData.map((d, i) => ({ ...d, _rowId: i }))
+    (initialData ?? []).map((d, i) => ({ ...d, _rowId: i }))
   )
 
   // 當外部資料變更時同步
   React.useEffect(() => {
-    setData(initialData.map((d, i) => ({ ...d, _rowId: i })))
+    setData((initialData ?? []).map((d, i) => ({ ...d, _rowId: i })))
   }, [initialData])
 
   const [activeTab, setActiveTab] = React.useState<"all" | "watchlist" | "summary">("all")
@@ -689,14 +689,25 @@ export function StockDataTable({
   )
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = React.useState("")
+  const [selectedIndustry, setSelectedIndustry] = React.useState("all")
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 50,
   })
 
+  const industries = React.useMemo(() => {
+    const set = new Set(data.map((s) => s.industry).filter(Boolean))
+    return Array.from(set).sort()
+  }, [data])
+
   const watchlistCodes = React.useMemo(
     () => new Set(watchlist.map((w) => w.stockNo)),
     [watchlist]
+  )
+
+  const stockMap = React.useMemo(
+    () => new Map(data.map((s) => [s.code, s])),
+    [data]
   )
 
   const groupedDisplayData = React.useMemo(() => {
@@ -704,21 +715,25 @@ export function StockDataTable({
     const keyword = (globalFilter ?? "").trim().toLowerCase()
     for (const wItem of watchlist) {
       const group = wItem.groupName || "未分類"
-      const stock = data.find((s) => s.code === wItem.stockNo)
+      const stock = stockMap.get(wItem.stockNo)
       if (!stock) continue
       if (keyword && !stock.code.toLowerCase().includes(keyword) && !stock.name.toLowerCase().includes(keyword)) continue
       if (!groups[group]) groups[group] = []
       groups[group].push({ stock, wItem })
     }
     return groups
-  }, [watchlist, data, globalFilter])
+  }, [watchlist, stockMap, globalFilter])
 
   const displayData = React.useMemo(() => {
+    let list = data
     if (activeTab === "watchlist") {
-      return data.filter((s) => watchlistCodes.has(s.code))
+      list = list.filter((s) => watchlistCodes.has(s.code))
     }
-    return data
-  }, [data, activeTab, watchlistCodes])
+    if (selectedIndustry !== "all") {
+      list = list.filter((s) => s.industry === selectedIndustry)
+    }
+    return list
+  }, [data, activeTab, watchlistCodes, selectedIndustry])
 
   const allColumns = React.useMemo<ColumnDef<StockRow>[]>(
     () => [
@@ -738,7 +753,7 @@ export function StockDataTable({
       },
       ...columns,
     ],
-    [dispatch, watchlist, userId]
+    [watchlist, userId]
   )
 
   const sortableId = React.useId()
@@ -839,6 +854,17 @@ export function StockDataTable({
           </TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-2">
+          <Select value={selectedIndustry} onValueChange={(v) => { setSelectedIndustry(v); table.setPageIndex(0) }}>
+            <SelectTrigger className="w-40 h-8 text-sm">
+              <SelectValue placeholder="全部產業" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部產業</SelectItem>
+              {industries.map((ind) => (
+                <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             placeholder="搜尋代號或名稱..."
             value={globalFilter ?? ""}
@@ -882,10 +908,6 @@ export function StockDataTable({
         value="all"
         className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
       >
-        {title && (
-          <h2 className="text-lg font-semibold">{title}</h2>
-        )}
-
         <div className="overflow-hidden rounded-lg border">
           <DndContext
             collisionDetection={closestCenter}
@@ -1081,12 +1103,22 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-function TableCellViewer({ item }: { item: StockRow }) {
+const TableCellViewer = React.memo(function TableCellViewer({ item }: { item: StockRow }) {
   const isMobile = useIsMobile()
 
   const change = parseNumber(item.change)
   const isUp = change > 0
   const isDown = change < 0
+
+  const chartData = React.useMemo(
+    () => [
+      { label: "最低", value: parseNumber(item.lowestPrice) },
+      { label: "開盤", value: parseNumber(item.openingPrice) },
+      { label: "收盤", value: parseNumber(item.closingPrice) },
+      { label: "最高", value: parseNumber(item.highestPrice) },
+    ],
+    [item.lowestPrice, item.openingPrice, item.closingPrice, item.highestPrice]
+  )
 
   return (
     <Drawer direction={isMobile ? "bottom" : "right"}>
@@ -1115,12 +1147,7 @@ function TableCellViewer({ item }: { item: StockRow }) {
               <ChartContainer config={chartConfig}>
                 <AreaChart
                   accessibilityLayer
-                  data={[
-                    { label: "最低", value: parseNumber(item.lowestPrice) },
-                    { label: "開盤", value: parseNumber(item.openingPrice) },
-                    { label: "收盤", value: parseNumber(item.closingPrice) },
-                    { label: "最高", value: parseNumber(item.highestPrice) },
-                  ]}
+                  data={chartData}
                   margin={{ left: 0, right: 10 }}
                 >
                   <CartesianGrid vertical={false} />
@@ -1192,4 +1219,4 @@ function TableCellViewer({ item }: { item: StockRow }) {
       </DrawerContent>
     </Drawer>
   )
-}
+})

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { StockModule } from './stock/stock.module';
@@ -10,6 +11,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,

@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { StockDataTable } from "@/components/data-table/stock/data-table";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { PageHeader } from "@/components/commons/page-header";
 
 export default function StockClient() {
   const dispatch = useAppDispatch();
@@ -37,14 +38,10 @@ export default function StockClient() {
 
   return (
     <div className="space-y-4 p-4">
-      <div>
-        <h1 className="text-2xl font-bold">
-          {stockTitle || "當日日成交資訊"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          共 {stockList.length} 檔
-        </p>
-      </div>
+      <PageHeader
+        title={stockTitle || "當日日成交資訊"}
+        subtitle={<>共 {stockList.length} 檔</>}
+      />
       <StockDataTable data={stockList} title={stockTitle} watchlist={watchlist} userId={userId} />
     </div>
   );
