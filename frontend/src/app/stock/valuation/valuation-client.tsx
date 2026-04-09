@@ -16,7 +16,6 @@ import {
 export default function ValuationClient() {
   const dispatch = useAppDispatch()
   const valuation = useAppSelector((state) => state.stock?.valuation)
-  const loading = useAppSelector((state) => state.api?.loading)
 
   useEffect(() => {
     dispatch({ type: "GET_STOCK_VALUATION" })

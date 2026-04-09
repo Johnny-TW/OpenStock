@@ -91,8 +91,8 @@ export function LoginForm({
                 className="w-full gap-3"
                 onClick={handleAzureLogin}
               >
-                <Image src={azure_ad} alt="Azure AD" width={20} height={20} />
-                使用 Azure AD 登入
+                <Image src={azure_ad} alt="Azure AD" width={24} height={24} />
+                使用 Microsoft 帳號登入
               </Button>
               <Button
                 type="button"

@@ -17,6 +17,7 @@ function* analyzeMarket(action) {
     path: API_ANALYSIS_MARKET,
     reducer: "SET_ANALYSIS_RESULT",
     data: action.data ?? {},
+    timeout: 180000,
   })
 }
 

@@ -1,19 +1,14 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { Loader2, ExternalLink, Newspaper } from "lucide-react"
+import Image from "next/image"
+import { Loader2, ExternalLink, Newspaper, ChevronLeft, ChevronRight } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
 import { PageHeader } from "@/components/commons/page-header"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/commons/table"
-import type { NewsDto, AllNewsResponse } from "@/type/stock"
+import type { NewsDto } from "@/type/stock"
 import styles from "./page.module.scss"
+
+const PAGE_SIZE = 10
 
 type TabKey = "twStock" | "usStock" | "international" | "twse"
 
@@ -27,10 +22,11 @@ const TABS: { key: TabKey; label: string; }[] = [
 export default function NewsClient() {
   const dispatch = useAppDispatch()
   const allNews = useAppSelector(
-    (state) => (state as any).news?.allNews
-  ) as AllNewsResponse | null
+    (state) => state.news?.allNews ?? null
+  )
   const [activeTab, setActiveTab] = useState<TabKey>("twStock")
   const [keyword, setKeyword] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     dispatch({ type: "GET_ALL_NEWS" })
@@ -50,6 +46,16 @@ export default function NewsClient() {
         (n.summary && n.summary.toLowerCase().includes(kw))
     )
   }, [currentList, keyword])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paged = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, keyword])
 
   if (!allNews) {
     return (
@@ -102,61 +108,80 @@ export default function NewsClient() {
         })}
       </div>
 
-      <div className={styles.tableWrapper}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-28">日期</TableHead>
-              <TableHead>標題</TableHead>
-              {activeTab !== "twse" && (
-                <TableHead className="w-24">來源</TableHead>
-              )}
-              <TableHead className="w-16 text-center">連結</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((row, i) => (
-              <TableRow key={`${row.url}-${i}`} className={styles.newsRow}>
-                <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {row.date}
-                </TableCell>
-                <TableCell>
-                  <div className={styles.newsTitle}>{row.title}</div>
-                  {row.summary && (
-                    <div className={styles.newsSummary}>{row.summary}</div>
-                  )}
-                </TableCell>
-                {activeTab !== "twse" && (
-                  <TableCell className="text-muted-foreground text-xs">
-                    {row.source}
-                  </TableCell>
-                )}
-                <TableCell className="text-center">
-                  <a
-                    href={row.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.linkIcon}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filtered.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={activeTab !== "twse" ? 4 : 3}
-                  className="text-center text-muted-foreground py-12"
-                >
-                  <Newspaper className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  找不到符合的新聞
-                </TableCell>
-              </TableRow>
+      <div className={styles.newsList}>
+        {paged.map((row, i) => (
+          <a
+            key={`${row.url}-${i}`}
+            href={row.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.newsCard}
+          >
+            {row.image && (
+              <div className={styles.newsImageWrapper}>
+                <Image
+                  src={row.image}
+                  alt=""
+                  className={styles.newsImage}
+                  width={120}
+                  height={80}
+                  unoptimized
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none"
+                  }}
+                />
+              </div>
             )}
-          </TableBody>
-        </Table>
+            <div className={styles.newsContent}>
+              <div className={styles.newsMeta}>
+                <span className={styles.newsDate}>{row.date}</span>
+                {row.source && (
+                  <span className={styles.newsSource}>{row.source}</span>
+                )}
+              </div>
+              <div className={styles.newsTitle}>{row.title}</div>
+              {row.summary && (
+                <div className={styles.newsSummary}>{row.summary}</div>
+              )}
+            </div>
+            <ExternalLink className={styles.newsLinkIcon} />
+          </a>
+        ))}
+        {filtered.length === 0 && (
+          <div className={styles.emptyState}>
+            <Newspaper className="h-8 w-8 opacity-40" />
+            <span>找不到符合的新聞</span>
+          </div>
+        )}
       </div>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button
+            className={styles.pageBtn}
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              className={`${styles.pageBtn} ${currentPage === page ? styles.pageBtnActive : ""}`}
+              onClick={() => setCurrentPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            className={styles.pageBtn}
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -115,12 +115,7 @@ import {
 } from "@/components/commons/dialog"
 
 import type { StockDailyDto, WatchlistItem } from "@/type/stock"
-
-function parseNumber(value: string): number {
-  const cleaned = value.replace(/,/g, "")
-  const num = parseFloat(cleaned)
-  return isNaN(num) ? 0 : num
-}
+import { parseNumber } from "@/components/data-table/shared"
 
 function getChangeColor(change: string): string {
   if (change.startsWith("+")) return "text-red-500"

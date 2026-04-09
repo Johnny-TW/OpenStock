@@ -398,6 +398,13 @@ export class NewsDto {
     required: false,
   })
   source?: string;
+
+  @ApiProperty({
+    example: 'https://example.com/image.jpg',
+    description: '新聞縮圖',
+    required: false,
+  })
+  image?: string;
 }
 
 export class NewsResponse {

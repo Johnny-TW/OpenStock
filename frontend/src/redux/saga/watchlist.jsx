@@ -1,12 +1,10 @@
-import { put, takeLatest } from "redux-saga/effects"
-import { getSession } from "next-auth/react"
+import { put, select, takeLatest } from "redux-saga/effects"
 import { API_METHOD } from "../api/apiService"
 import { API_WATCHLIST } from "../api/API"
 import { fetchApi } from "."
 
 function* getWatchlist() {
-  const session = yield getSession()
-  const userId = session?.user?.email ?? ""
+  const userId = yield select((state) => state.auth?.user?.email ?? "")
   if (!userId) return
   yield fetchApi({
     method: API_METHOD.GET,

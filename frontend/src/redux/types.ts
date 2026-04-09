@@ -11,16 +11,22 @@ import type {
   DividendYieldRankingResponse,
   PeRatioRankingResponse,
   HeatmapResponse,
+  AllNewsResponse,
+  WatchlistItem,
 } from "@/type/stock"
 
-// require.context 動態載入的 reducer 無法自動推斷型別，需手動宣告
 export interface RootState {
   api: {
     loading: number
     loadingStack: { path: string; loading: boolean }[]
     error: { message: string; action?: () => void } | null
     success: { message: string; action?: () => void } | null
-    deleted: unknown
+    deleted: { message?: string; action?: () => void } | null
+  }
+  auth: {
+    session: { accessToken?: string; user?: Record<string, unknown> } | null
+    token: string | null
+    user: Record<string, unknown> | null
   }
   stock: {
     dailyAll: StockDailyAllResponse | null
@@ -38,6 +44,16 @@ export interface RootState {
   }
   heatmap: {
     data: HeatmapResponse | null
+  }
+  watchlist: {
+    list: WatchlistItem[]
+  }
+  news: {
+    data: unknown
+    allNews: AllNewsResponse | null
+  }
+  analysis: {
+    result: unknown
   }
 }
 

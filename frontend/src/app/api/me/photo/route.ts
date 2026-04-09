@@ -2,18 +2,39 @@ import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import jwt from "jsonwebtoken"
 
+function getSessionToken(
+  cookieStore: Awaited<ReturnType<typeof cookies>>
+): string | undefined {
+  const baseName = process.env.SESSION_TOKEN_NAME ?? "next-auth.session-token"
+
+  const single = cookieStore.get(baseName)
+  if (single?.value) return single.value
+
+  const chunks: string[] = []
+  for (let i = 0; ; i++) {
+    const chunk = cookieStore.get(`${baseName}.${i}`)
+    if (!chunk?.value) break
+    chunks.push(chunk.value)
+  }
+
+  return chunks.length > 0 ? chunks.join("") : undefined
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies()
-    const tokenCookie = cookieStore.get(process.env.SESSION_TOKEN_NAME ?? "")
+    const tokenValue = getSessionToken(cookieStore)
 
-    if (!tokenCookie?.value) {
+    if (!tokenValue) {
       return new NextResponse(null, { status: 401 })
     }
 
-    const decoded = jwt.verify(tokenCookie.value, process.env.SECRET!) as {
-      azureAccessToken?: string
-      provider?: string
+    let decoded: { azureAccessToken?: string; provider?: string }
+
+    try {
+      decoded = jwt.verify(tokenValue, process.env.SECRET!) as typeof decoded
+    } catch {
+      return new NextResponse(null, { status: 401 })
     }
 
     if (decoded?.provider === "google" || !decoded?.azureAccessToken) {
@@ -28,11 +49,6 @@ export async function GET() {
     )
 
     if (!photoRes.ok) {
-      const errorBody = await photoRes.text().catch(() => "")
-      console.error(
-        `[photo] Graph API error: ${photoRes.status}`,
-        errorBody.slice(0, 500)
-      )
       return new NextResponse(null, {
         status: photoRes.status === 404 ? 404 : 502,
       })

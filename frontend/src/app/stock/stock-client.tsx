@@ -11,7 +11,7 @@ export default function StockClient() {
   const dispatch = useAppDispatch();
   const { data: session } = useSession();
   const dailyAll = useAppSelector((state) => state.stock?.dailyAll);
-  const watchlist = useAppSelector((state) => (state as any).watchlist?.list ?? []);
+  const watchlist = useAppSelector((state) => state.watchlist?.list ?? []);
   const userId = (session?.user as any)?.email ?? "";
 
   useEffect(() => {

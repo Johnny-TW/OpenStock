@@ -25,10 +25,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Next.js Course",
-    template: "Next.js Course | %s",
+    default: "EE39 StockSmart System",
+    template: "EE39 StockSmart System | %s",
   },
-  description: "Next.js Course Application",
+  description: "EE39 StockSmart System Application",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",

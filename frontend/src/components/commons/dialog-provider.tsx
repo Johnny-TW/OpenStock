@@ -24,7 +24,7 @@ interface ApiState {
 export default function DialogProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch()
   const { loading, error, success, deleted } = useSelector(
-    (state: any) => (state.api ?? {}) as ApiState,
+    (state: { api: ApiState }) => state.api ?? ({} as ApiState),
   )
 
   // Success: 自動 2 秒後關閉

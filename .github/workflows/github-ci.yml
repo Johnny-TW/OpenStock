@@ -77,6 +77,10 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: backend
 
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+        working-directory: backend
+
       - name: Run ESLint
         run: pnpm lint
         working-directory: backend
@@ -131,6 +135,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: backend
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
         working-directory: backend
 
       - name: Run unit tests
@@ -194,3 +202,40 @@ jobs:
       - name: Build
         run: pnpm build
         working-directory: backend
+
+  # 合併保護：所有必要 job 都通過才允許合併
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - frontend-lint
+      - frontend-typecheck
+      - frontend-build
+      - backend-lint
+      - backend-test
+      - backend-build
+    steps:
+      - name: Check all jobs
+        run: |
+          echo "frontend-lint: ${{ needs.frontend-lint.result }}"
+          echo "frontend-typecheck: ${{ needs.frontend-typecheck.result }}"
+          echo "frontend-build: ${{ needs.frontend-build.result }}"
+          echo "backend-lint: ${{ needs.backend-lint.result }}"
+          echo "backend-test: ${{ needs.backend-test.result }}"
+          echo "backend-build: ${{ needs.backend-build.result }}"
+
+          # skipped 也算通過（表示該模組沒變更）
+          for result in \
+            "${{ needs.frontend-lint.result }}" \
+            "${{ needs.frontend-typecheck.result }}" \
+            "${{ needs.frontend-build.result }}" \
+            "${{ needs.backend-lint.result }}" \
+            "${{ needs.backend-test.result }}" \
+            "${{ needs.backend-build.result }}"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "❌ CI failed"
+              exit 1
+            fi
+          done
+          echo "✅ All checks passed"

@@ -1,0 +1,49 @@
+# 功能規格模板
+# 複製此檔案到 .specs/<feature-name>.yaml 使用
+
+feature: ""                    # 功能名稱
+status: draft                  # draft → in-progress → review → completed
+created: ""                    # YYYY-MM-DD
+updated: ""
+
+# 需求描述
+description: |
+  簡述功能的目標與使用情境。
+
+# 影響範圍
+scope:
+  database: false              # 是否需要修改 schema
+  backend: false               # 是否需要新增/修改 API
+  frontend: false              # 是否需要新增/修改頁面
+
+# 資料庫變更（若 scope.database = true）
+database:
+  models: []
+  # - name: ModelName
+  #   fields:
+  #     - { name: id, type: Int, attributes: "@id @default(autoincrement())" }
+  #   indexes: []
+
+# 後端 API（若 scope.backend = true）
+api:
+  endpoints: []
+  # - method: GET
+  #   path: /resource
+  #   auth: true
+  #   description: ""
+  #   request: {}
+  #   response: {}
+
+# 前端頁面（若 scope.frontend = true）
+frontend:
+  pages: []
+  # - route: /stock/<page-name>
+  #   components: []
+  #   state:
+  #     actions: []
+  #     reducers: []
+
+# 驗收標準
+acceptance:
+  - description: ""
+    status: pending            # pending → passed → failed

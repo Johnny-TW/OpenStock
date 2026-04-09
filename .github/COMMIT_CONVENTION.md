@@ -38,7 +38,7 @@
 | ♻️ | `refactor` | 重構，不新增功能也不修 bug |
 | 🎨 | `style` | 調整 UI 樣式、CSS、排版（不影響邏輯） |
 | 📝 | `docs` | 文件新增或修改 |
-| 🧪 | `test` | 新增或修正測試 |
+| 🧪 | `test` | 新增或修正測試 |  
 | 🚀 | `perf` | 效能優化 |
 | 🏗️ | `build` | 建置系統、依賴套件變更（如 package.json） |
 | 🤖 | `ci` | CI/CD 設定（GitHub Actions、Dockerfile 等） |

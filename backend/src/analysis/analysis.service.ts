@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import Anthropic from '@anthropic-ai/sdk';
 import { StockService } from '../stock/stock.service';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AnalyzeMarketDto,
@@ -108,6 +109,7 @@ export class AnalysisService {
   private readonly logger = new Logger(AnalysisService.name);
   private readonly anthropic: Anthropic;
 
+  // TWSE API 的免費端點，偶爾可能會不穩定或有資料延遲，實際使用時可考慮替換為其他資料來源或自行爬取
   private readonly TWSE_DAILY_ALL_URL =
     'https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=json';
   private readonly TWSE_VALUATION_URL =
@@ -115,6 +117,7 @@ export class AnalysisService {
   private readonly TWSE_MARKET_INDEX_URL =
     'https://openapi.twse.com.tw/v1/exchangeReport/MI_INDEX';
 
+  // 預設的 prompt 範本，實際使用時可根據需求進行調整
   constructor(
     private readonly httpService: HttpService,
     private readonly stockService: StockService,
@@ -195,11 +198,11 @@ export class AnalysisService {
         .upsert({
           where: { date: today },
           update: {
-            result: JSON.parse(JSON.stringify(result)) as typeof result,
+            result: JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue,
           },
           create: {
             date: today,
-            result: JSON.parse(JSON.stringify(result)) as typeof result,
+            result: JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue,
           },
         })
         .catch((e: unknown) => this.logger.warn('快取儲存失敗', e));

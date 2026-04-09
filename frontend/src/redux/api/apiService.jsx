@@ -6,11 +6,11 @@ const APIKIT = axios.create({
   timeout: 60000,
 })
 
-export const call = ({ method, path, params: originParams = {}, data }) => {
+export const call = ({ method, path, params: originParams = {}, data, timeout }) => {
   let controller = new AbortController()
 
   const signal = controller.signal
-  const params = { ...originParams, signal }
+  const params = { ...originParams, signal, ...(timeout ? { timeout } : {}) }
   const promise =
     method === API_METHOD.GET || method === API_METHOD.DELETE
       ? APIKIT[method](path, params)

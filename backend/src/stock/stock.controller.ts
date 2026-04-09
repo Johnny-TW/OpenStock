@@ -182,7 +182,7 @@ export class StockController {
     summary: '產業漲跌熱力圖',
     description:
       '取得全部上市股票依產業分組的漲跌幅資料，用於繪製 Treemap 熱力圖。\n\n' +
-      '支援期間：1d（當日）、1w（一週）、1m（一月）、3m（三月）、1y（一年）\n\n' +
+      '支援期間:1d(當日)、1w(一週)、1m(一月)、3m(三月)、1y(一年)\n\n' +
       '資料來源：TWSE `exchangeReport/STOCK_DAY_ALL` + `opendata/t187ap14_L`',
   })
   @ApiQuery({

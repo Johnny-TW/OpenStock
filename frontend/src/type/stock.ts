@@ -185,6 +185,7 @@ export interface NewsDto {
   date: string;
   summary?: string;
   source?: string;
+  image?: string;
 }
 
 export interface NewsResponse {

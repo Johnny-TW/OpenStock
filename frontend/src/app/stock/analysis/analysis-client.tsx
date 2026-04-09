@@ -446,13 +446,13 @@ const StockRankCard = React.memo(function StockRankCard({
 
 export default function AnalysisClient() {
   const dispatch = useAppDispatch()
-  const result: AnalysisResult | null = useAppSelector((state: any) => state.analysis?.result ?? null)
-  const loading = useAppSelector((state: any) => {
+  const result = useAppSelector((state) => state.analysis?.result ?? null) as AnalysisResult | null
+  const loading = useAppSelector((state) => {
     const loadingStack = state.api?.loadingStack ?? []
-    return loadingStack.some((item: any) => item.path?.startsWith("analysis") && item.loading)
+    return loadingStack.some((item) => item.path?.startsWith("analysis") && item.loading)
   })
   const [watchlistOnly, setWatchlistOnly] = useState(false)
-  const watchlist = useAppSelector((state: any) => state.watchlist?.list ?? [])
+  const watchlist = useAppSelector((state) => state.watchlist?.list ?? [])
 
   const handleAnalyze = useCallback(() => {
     const data = watchlistOnly && watchlist.length > 0

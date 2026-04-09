@@ -1,9 +1,8 @@
-import { all, put } from "redux-saga/effects"
+import { all, put, select } from "redux-saga/effects"
 import { API_METHOD, call } from "../api/apiService"
 import _ from "lodash"
 import { importAll } from "@utils/import"
 import Cookies from "js-cookie"
-import { getSession } from "next-auth/react"
 import { login } from "@/providers/LoginHandler"
 
 export function* setLoading(loading, path, params = null) {
@@ -21,6 +20,7 @@ export function* fetchApi({
   failValue = null,
   params = {},
   useFormData = false,
+  timeout,
 }) {
   yield setLoading(true, path, params)
   let result = failValue
@@ -40,16 +40,16 @@ export function* fetchApi({
     method = API_METHOD.POST
   } else data = variables
 
-  const session = yield globalThis?.window ? getSession() : Promise.resolve(null)
+  const token = yield select((state) => state.auth?.token)
   params = {
     ...params,
     headers: {
-      Authorization: `Bearer ${session?.accessToken ?? ""}`,
+      Authorization: `Bearer ${token ?? ""}`,
     },
   }
 
   try {
-    const { data: response } = yield call({ method, path, params, data })
+    const { data: response } = yield call({ method, path, params, data, timeout })
 
     // NestJS / v2 API 直接回傳資料，不包 { status, result }
     if (path.startsWith("v2") || path.startsWith("stock") || path.startsWith("watchlist") || path.startsWith("portfolio") || path.startsWith("analysis")) {
@@ -101,7 +101,7 @@ export function* fetchApi({
       return
     }
 
-    if (statusCode === 502 || statusCode === 400) {
+    if (statusCode === 502) {
       if (!Cookies.get(process.env.NEXT_PUBLIC_TRY_RELOAD_KEY)) {
         Object.keys(Cookies.get()).forEach(function (cookieName) {
           if (cookieName !== process.env.NEXT_PUBLIC_TRY_RELOAD_KEY)

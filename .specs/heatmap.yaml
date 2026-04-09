@@ -1,0 +1,72 @@
+feature: "產業漲跌熱力圖"
+status: completed
+created: "2026-03-20"
+updated: "2026-04-07"
+
+description: |
+  以 D3 Treemap 視覺化呈現台股各產業的漲跌分布，
+  色塊大小代表成交量，顏色深淺反映漲跌幅度。
+  支援期間切換（1日/1週/1月/3月/1年）與產業篩選。
+
+scope:
+  database: true
+  backend: true
+  frontend: true
+
+database:
+  models:
+    - name: DailyStockPrice
+      fields:
+        - { name: id, type: Int, attributes: "@id @default(autoincrement())" }
+        - { name: date, type: String }
+        - { name: code, type: String }
+        - { name: name, type: String }
+        - { name: closingPrice, type: Float }
+        - { name: change, type: Float }
+        - { name: tradeVolume, type: Int }
+        - { name: industry, type: String }
+      indexes:
+        - "@@unique([date, code])"
+
+api:
+  endpoints:
+    - method: GET
+      path: /stock/heatmap
+      auth: false
+      description: "取得產業漲跌熱力圖資料"
+      request:
+        query:
+          period: { type: string, enum: [1d, 1w, 1m, 3m, 1y], default: "1d" }
+      response:
+        data: "HeatmapIndustryDto[]"
+        total: number
+        date: string
+    - method: POST
+      path: /stock/heatmap/save-daily
+      auth: false
+      description: "手動觸發儲存每日收盤資料"
+      response:
+        count: number
+
+frontend:
+  pages:
+    - route: /stock/heatmap
+      components:
+        - D3Treemap
+        - IndustryFilter
+        - PageHeader
+      state:
+        actions: [GET_HEATMAP]
+        reducers: [SET_HEATMAP]
+
+acceptance:
+  - description: "熱力圖能正確顯示產業分組與個股色塊"
+    status: passed
+  - description: "期間切換（1d/1w/1m/3m/1y）能正確反映不同時段漲跌"
+    status: passed
+  - description: "產業篩選能多選並即時更新圖表"
+    status: passed
+  - description: "小色塊也能顯示文字資訊"
+    status: passed
+  - description: "每日排程自動儲存收盤資料"
+    status: passed

@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { Cron } from '@nestjs/schedule';
 import { firstValueFrom } from 'rxjs';
 import type { AxiosRequestConfig } from 'axios';
+import * as https from 'https';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   TwseResponse,
@@ -35,7 +36,7 @@ import {
 } from './dto/stock.dto';
 
 @Injectable()
-export class StockService {
+export class StockService implements OnModuleInit {
   private readonly logger = new Logger(StockService.name);
 
   private readonly TWSE_DAILY_ALL_URL =
@@ -50,11 +51,42 @@ export class StockService {
   private industryMapCacheTime = 0;
   private readonly INDUSTRY_CACHE_TTL = 30 * 60 * 1000;
   private readonly RSS_CONFIG: AxiosRequestConfig = { responseType: 'text' };
+  private readonly GOOGLE_RSS_CONFIG: AxiosRequestConfig = {
+    responseType: 'text',
+    httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+  };
 
   constructor(
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
   ) {}
+
+  async onModuleInit() {
+    const today = new Date();
+    const day = today.getDay();
+    if (day === 0 || day === 6) return;
+
+    const hour = today.getHours();
+    if (hour < 14) {
+      this.logger.log('啟動補存：尚未收盤，跳過');
+      return;
+    }
+
+    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+
+    const existing = await this.prisma.dailyStockPrice.findFirst({
+      where: { date: dateStr },
+    });
+
+    if (existing) {
+      this.logger.log(`啟動補存：${dateStr} 資料已存在，跳過`);
+      return;
+    }
+
+    this.logger.log(`啟動補存：${dateStr} 資料缺失，開始補存...`);
+    const count = await this.saveDailyStockPrices();
+    this.logger.log(`啟動補存：已補存 ${count} 筆`);
+  }
 
   async getDailyAll(): Promise<StockDailyAllResponse> {
     this.logger.log('Fetching TWSE daily stock data...');
@@ -446,18 +478,30 @@ export class StockService {
         .replace(/\s*-\s*[\w.-]+\.(com|tw|net|org)(\.\w+)*\s*$/i, '')
         .trim();
 
+      const rawDesc = description
+        ? description.replace(/<!\[CDATA\[|\]\]>/g, '')
+        : '';
+
+      const imgMatch = rawDesc.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const image = imgMatch?.[1] || undefined;
+
+      const enclosure = block.match(/<enclosure[^>]+url=["']([^"']+)["']/i);
+      const mediaContent = block.match(
+        /<media:content[^>]+url=["']([^"']+)["']/i,
+      );
+
       items.push({
         title: cleanTitle,
         url: link.trim(),
         date,
-        summary: description
-          ? description
-              .replace(/<!\[CDATA\[|\]\]>/g, '')
+        summary: rawDesc
+          ? rawDesc
               .replace(/<[^>]*>/g, '')
               .trim()
               .substring(0, 200)
           : undefined,
         source,
+        image: image || enclosure?.[1] || mediaContent?.[1] || undefined,
       });
     }
 
@@ -499,7 +543,7 @@ export class StockService {
     try {
       const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
       const { data } = await firstValueFrom(
-        this.httpService.get<string>(url, this.RSS_CONFIG),
+        this.httpService.get<string>(url, this.GOOGLE_RSS_CONFIG),
       );
       const items = this.parseRssXml(data, source);
       return { data: items.slice(0, 30), total: Math.min(items.length, 30) };
@@ -623,7 +667,7 @@ export class StockService {
       this.getIndustryMap(),
     ]);
 
-    if (data.stat !== 'OK') {
+    if (data.stat !== 'OK' || !Array.isArray(data.data)) {
       return { data: [], total: 0, date: '' };
     }
 

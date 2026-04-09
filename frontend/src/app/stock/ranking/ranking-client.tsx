@@ -1,8 +1,19 @@
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
+import { Button } from "@/components/commons/button"
 import {
   Table,
   TableBody,
@@ -21,17 +32,14 @@ import {
   SelectValue,
 } from "@/components/commons/select"
 import { PageHeader } from "@/components/commons/page-header"
+import { Badge } from "@/components/commons/badge"
 import type {
   RevenueRankingDto,
   GrossMarginRankingDto,
   DividendYieldRankingDto,
   PeRatioRankingDto,
 } from "@/type/stock"
-
-function formatNumber(num: number): string {
-  if (num >= 1e8) return `${(num / 1e4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} 千元`
-  return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-}
+import { SortHeader, Pagination } from "@/components/data-table/shared"
 
 function formatCurrency(num: number): string {
   if (Math.abs(num) >= 1e8) {
@@ -43,7 +51,206 @@ function formatCurrency(num: number): string {
   return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 }
 
-const PAGE_SIZE = 50
+const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
+  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
+  { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
+  {
+    accessorKey: "revenue",
+    header: "營業收入",
+    cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.revenue)}</div>,
+    sortingFn: (a, b) => a.original.revenue - b.original.revenue,
+    size: 120,
+  },
+  {
+    accessorKey: "operatingIncome",
+    header: "營業利益",
+    cell: ({ row }) => <div className={`text-right ${row.original.operatingIncome < 0 ? "text-green-500" : ""}`}>{formatCurrency(row.original.operatingIncome)}</div>,
+    sortingFn: (a, b) => a.original.operatingIncome - b.original.operatingIncome,
+    size: 120,
+  },
+  {
+    accessorKey: "netIncome",
+    header: "稅後淨利",
+    cell: ({ row }) => <div className={`text-right ${row.original.netIncome < 0 ? "text-green-500" : ""}`}>{formatCurrency(row.original.netIncome)}</div>,
+    sortingFn: (a, b) => a.original.netIncome - b.original.netIncome,
+    size: 120,
+  },
+  {
+    accessorKey: "eps",
+    header: "EPS",
+    cell: ({ row }) => <div className={`text-right font-medium ${row.original.eps < 0 ? "text-green-500" : "text-red-500"}`}>{row.original.eps.toFixed(2)}</div>,
+    sortingFn: (a, b) => a.original.eps - b.original.eps,
+    size: 80,
+  },
+]
+
+const grossMarginColumns: ColumnDef<GrossMarginRankingDto>[] = [
+  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
+  { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
+  {
+    accessorKey: "grossMarginRate",
+    header: "毛利率",
+    cell: ({ row }) => <div className={`text-right font-bold ${row.original.grossMarginRate >= 50 ? "text-red-500" : row.original.grossMarginRate < 0 ? "text-green-500" : ""}`}>{row.original.grossMarginRate.toFixed(2)}%</div>,
+    sortingFn: (a, b) => a.original.grossMarginRate - b.original.grossMarginRate,
+    size: 100,
+  },
+  {
+    accessorKey: "revenue",
+    header: "營業收入",
+    cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.revenue)}</div>,
+    sortingFn: (a, b) => a.original.revenue - b.original.revenue,
+    size: 120,
+  },
+  {
+    accessorKey: "cost",
+    header: "營業成本",
+    cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.cost)}</div>,
+    sortingFn: (a, b) => a.original.cost - b.original.cost,
+    size: 120,
+  },
+  {
+    accessorKey: "grossProfit",
+    header: "營業毛利",
+    cell: ({ row }) => <div className={`text-right ${row.original.grossProfit < 0 ? "text-green-500" : ""}`}>{formatCurrency(row.original.grossProfit)}</div>,
+    sortingFn: (a, b) => a.original.grossProfit - b.original.grossProfit,
+    size: 120,
+  },
+]
+
+const dividendYieldColumns: ColumnDef<DividendYieldRankingDto>[] = [
+  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
+  { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
+  {
+    accessorKey: "dividendYield",
+    header: "殖利率",
+    cell: ({ row }) => <div className={`text-right font-bold ${row.original.dividendYield >= 5 ? "text-red-500" : ""}`}>{row.original.dividendYield.toFixed(2)}%</div>,
+    sortingFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
+    size: 100,
+  },
+  {
+    accessorKey: "peRatio",
+    header: "本益比",
+    cell: ({ row }) => <div className="text-right">{row.original.peRatio > 0 ? row.original.peRatio.toFixed(2) : "-"}</div>,
+    sortingFn: (a, b) => a.original.peRatio - b.original.peRatio,
+    size: 100,
+  },
+  {
+    accessorKey: "pbRatio",
+    header: "股價淨值比",
+    cell: ({ row }) => <div className="text-right">{row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}</div>,
+    sortingFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
+    size: 110,
+  },
+]
+
+const peRatioColumns: ColumnDef<PeRatioRankingDto>[] = [
+  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
+  { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
+  {
+    accessorKey: "peRatio",
+    header: "本益比",
+    cell: ({ row }) => <div className={`text-right font-bold ${row.original.peRatio <= 10 ? "text-red-500" : row.original.peRatio >= 50 ? "text-green-500" : ""}`}>{row.original.peRatio.toFixed(2)}</div>,
+    sortingFn: (a, b) => a.original.peRatio - b.original.peRatio,
+    size: 100,
+  },
+  {
+    accessorKey: "dividendYield",
+    header: "殖利率",
+    cell: ({ row }) => <div className="text-right">{row.original.dividendYield > 0 ? `${row.original.dividendYield.toFixed(2)}%` : "-"}</div>,
+    sortingFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
+    size: 100,
+  },
+  {
+    accessorKey: "pbRatio",
+    header: "股價淨值比",
+    cell: ({ row }) => <div className="text-right">{row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}</div>,
+    sortingFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
+    size: 110,
+  },
+]
+
+function RankingTable<T>({
+  data,
+  columns,
+  globalFilter,
+  defaultSorting,
+}: {
+  data: T[]
+  columns: ColumnDef<T, unknown>[]
+  globalFilter: string
+  defaultSorting: SortingState
+}) {
+  const [sorting, setSorting] = useState<SortingState>(defaultSorting)
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: { sorting, globalFilter },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: { pageSize: 50 },
+    },
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <Badge variant="outline">共 {table.getFilteredRowModel().rows.length} 筆</Badge>
+      </div>
+      <div className="rounded-md border overflow-auto">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} style={{ width: header.getSize() }}>
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <SortHeader
+                        column={header.column as any}
+                        label={String(header.column.columnDef.header)}
+                        className="justify-end"
+                      />
+                    ) : (
+                      flexRender(header.column.columnDef.header, header.getContext())
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className="hover:bg-muted/50">
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                  沒有符合的資料
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination table={table} />
+    </div>
+  )
+}
 
 export default function RankingClient() {
   const dispatch = useAppDispatch()
@@ -51,7 +258,6 @@ export default function RankingClient() {
   const [activeTab, setActiveTab] = useState("revenue")
   const [search, setSearch] = useState("")
   const [selectedIndustry, setSelectedIndustry] = useState("all")
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   useEffect(() => {
     if (activeTab === "revenue" && !ranking?.revenue) {
@@ -69,65 +275,17 @@ export default function RankingClient() {
     setActiveTab(value)
     setSearch("")
     setSelectedIndustry("all")
-    setVisibleCount(PAGE_SIZE)
   }, [])
 
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value)
-    setVisibleCount(PAGE_SIZE)
-  }, [])
+  const filterByIndustry = useCallback(<T extends { industry: string }>(list: T[]) => {
+    if (selectedIndustry === "all") return list
+    return list.filter((r) => r.industry === selectedIndustry)
+  }, [selectedIndustry])
 
-  const handleLoadMore = useCallback(() => {
-    setVisibleCount((prev) => prev + PAGE_SIZE)
-  }, [])
-
-  const revenueData = useMemo(() => {
-    const list: RevenueRankingDto[] = ranking?.revenue?.data ?? []
-    const q = search.toLowerCase()
-    return list
-      .filter((r) => {
-        if (selectedIndustry !== "all" && r.industry !== selectedIndustry) return false
-        if (!q) return true
-        return r.code.includes(q) || r.name.toLowerCase().includes(q) || r.industry.toLowerCase().includes(q)
-      })
-      .slice(0, visibleCount)
-  }, [ranking?.revenue, search, selectedIndustry, visibleCount])
-
-  const grossMarginData = useMemo(() => {
-    const list: GrossMarginRankingDto[] = ranking?.grossMargin?.data ?? []
-    const q = search.toLowerCase()
-    return list
-      .filter((r) => {
-        if (selectedIndustry !== "all" && r.industry !== selectedIndustry) return false
-        if (!q) return true
-        return r.code.includes(q) || r.name.toLowerCase().includes(q) || r.industry.toLowerCase().includes(q)
-      })
-      .slice(0, visibleCount)
-  }, [ranking?.grossMargin, search, selectedIndustry, visibleCount])
-
-  const dividendYieldData = useMemo(() => {
-    const list: DividendYieldRankingDto[] = ranking?.dividendYield?.data ?? []
-    const q = search.toLowerCase()
-    return list
-      .filter((r) => {
-        if (selectedIndustry !== "all" && r.industry !== selectedIndustry) return false
-        if (!q) return true
-        return r.code.includes(q) || r.name.toLowerCase().includes(q) || r.industry.toLowerCase().includes(q)
-      })
-      .slice(0, visibleCount)
-  }, [ranking?.dividendYield, search, selectedIndustry, visibleCount])
-
-  const peRatioData = useMemo(() => {
-    const list: PeRatioRankingDto[] = ranking?.peRatio?.data ?? []
-    const q = search.toLowerCase()
-    return list
-      .filter((r) => {
-        if (selectedIndustry !== "all" && r.industry !== selectedIndustry) return false
-        if (!q) return true
-        return r.code.includes(q) || r.name.toLowerCase().includes(q) || r.industry.toLowerCase().includes(q)
-      })
-      .slice(0, visibleCount)
-  }, [ranking?.peRatio, search, selectedIndustry, visibleCount])
+  const revenueData = useMemo(() => filterByIndustry(ranking?.revenue?.data ?? []), [ranking?.revenue, filterByIndustry])
+  const grossMarginData = useMemo(() => filterByIndustry(ranking?.grossMargin?.data ?? []), [ranking?.grossMargin, filterByIndustry])
+  const dividendYieldData = useMemo(() => filterByIndustry(ranking?.dividendYield?.data ?? []), [ranking?.dividendYield, filterByIndustry])
+  const peRatioData = useMemo(() => filterByIndustry(ranking?.peRatio?.data ?? []), [ranking?.peRatio, filterByIndustry])
 
   const industries = useMemo(() => {
     let list: { industry: string }[] = []
@@ -140,16 +298,6 @@ export default function RankingClient() {
     const set = new Set(list.map((r) => r.industry).filter(Boolean))
     return Array.from(set).sort()
   }, [activeTab, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio])
-
-  const getTotal = () => {
-    switch (activeTab) {
-      case "revenue": return ranking?.revenue?.total ?? 0
-      case "gross-margin": return ranking?.grossMargin?.total ?? 0
-      case "dividend-yield": return ranking?.dividendYield?.total ?? 0
-      case "pe-ratio": return ranking?.peRatio?.total ?? 0
-      default: return 0
-    }
-  }
 
   const getPeriod = () => {
     switch (activeTab) {
@@ -181,7 +329,7 @@ export default function RankingClient() {
     <div className="space-y-4 p-4">
       <PageHeader
         title="排行榜"
-        subtitle={<>共 {getTotal()} 筆 {getPeriod() && `· ${getPeriod()}`}</>}
+        subtitle={<>{getPeriod() && `${getPeriod()}`}</>}
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -193,7 +341,7 @@ export default function RankingClient() {
             <TabsTrigger value="pe-ratio">本益比排行</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
-            <Select value={selectedIndustry} onValueChange={(v) => { setSelectedIndustry(v); setVisibleCount(PAGE_SIZE) }}>
+            <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="全部產業" />
               </SelectTrigger>
@@ -207,7 +355,7 @@ export default function RankingClient() {
             <Input
               placeholder="搜尋代號、名稱..."
               value={search}
-              onChange={handleSearchChange}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full sm:w-64"
             />
           </div>
@@ -221,165 +369,37 @@ export default function RankingClient() {
         ) : (
           <>
             <TabsContent value="revenue">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>代號</TableHead>
-                      <TableHead>名稱</TableHead>
-                      <TableHead>產業別</TableHead>
-                      <TableHead className="text-right">營業收入</TableHead>
-                      <TableHead className="text-right">營業利益</TableHead>
-                      <TableHead className="text-right">稅後淨利</TableHead>
-                      <TableHead className="text-right">EPS</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {revenueData.map((row, idx) => (
-                      <TableRow key={row.code}>
-                        <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                        <TableCell className="font-medium">{row.code}</TableCell>
-                        <TableCell>{row.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.industry}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.revenue)}</TableCell>
-                        <TableCell className={`text-right ${row.operatingIncome < 0 ? "text-green-500" : ""}`}>
-                          {formatCurrency(row.operatingIncome)}
-                        </TableCell>
-                        <TableCell className={`text-right ${row.netIncome < 0 ? "text-green-500" : ""}`}>
-                          {formatCurrency(row.netIncome)}
-                        </TableCell>
-                        <TableCell className={`text-right font-medium ${row.eps < 0 ? "text-green-500" : "text-red-500"}`}>
-                          {row.eps.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <RankingTable
+                data={revenueData}
+                columns={revenueColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "revenue", desc: true }]}
+              />
             </TabsContent>
-
             <TabsContent value="gross-margin">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>代號</TableHead>
-                      <TableHead>名稱</TableHead>
-                      <TableHead>產業別</TableHead>
-                      <TableHead className="text-right">毛利率</TableHead>
-                      <TableHead className="text-right">營業收入</TableHead>
-                      <TableHead className="text-right">營業成本</TableHead>
-                      <TableHead className="text-right">營業毛利</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {grossMarginData.map((row, idx) => (
-                      <TableRow key={row.code}>
-                        <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                        <TableCell className="font-medium">{row.code}</TableCell>
-                        <TableCell>{row.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.industry}</TableCell>
-                        <TableCell className={`text-right font-bold ${row.grossMarginRate >= 50 ? "text-red-500" : row.grossMarginRate < 0 ? "text-green-500" : ""}`}>
-                          {row.grossMarginRate.toFixed(2)}%
-                        </TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.revenue)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.cost)}</TableCell>
-                        <TableCell className={`text-right ${row.grossProfit < 0 ? "text-green-500" : ""}`}>
-                          {formatCurrency(row.grossProfit)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <RankingTable
+                data={grossMarginData}
+                columns={grossMarginColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "grossMarginRate", desc: true }]}
+              />
             </TabsContent>
-
             <TabsContent value="dividend-yield">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>代號</TableHead>
-                      <TableHead>名稱</TableHead>
-                      <TableHead>產業別</TableHead>
-                      <TableHead className="text-right">殖利率</TableHead>
-                      <TableHead className="text-right">本益比</TableHead>
-                      <TableHead className="text-right">股價淨值比</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dividendYieldData.map((row, idx) => (
-                      <TableRow key={row.code}>
-                        <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                        <TableCell className="font-medium">{row.code}</TableCell>
-                        <TableCell>{row.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.industry}</TableCell>
-                        <TableCell className={`text-right font-bold ${row.dividendYield >= 5 ? "text-red-500" : ""}`}>
-                          {row.dividendYield.toFixed(2)}%
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {row.peRatio > 0 ? row.peRatio.toFixed(2) : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {row.pbRatio > 0 ? row.pbRatio.toFixed(2) : "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <RankingTable
+                data={dividendYieldData}
+                columns={dividendYieldColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "dividendYield", desc: true }]}
+              />
             </TabsContent>
-
             <TabsContent value="pe-ratio">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>代號</TableHead>
-                      <TableHead>名稱</TableHead>
-                      <TableHead>產業別</TableHead>
-                      <TableHead className="text-right">本益比</TableHead>
-                      <TableHead className="text-right">殖利率</TableHead>
-                      <TableHead className="text-right">股價淨值比</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {peRatioData.map((row, idx) => (
-                      <TableRow key={row.code}>
-                        <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
-                        <TableCell className="font-medium">{row.code}</TableCell>
-                        <TableCell>{row.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{row.industry}</TableCell>
-                        <TableCell className={`text-right font-bold ${row.peRatio <= 10 ? "text-red-500" : row.peRatio >= 50 ? "text-green-500" : ""}`}>
-                          {row.peRatio.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {row.dividendYield > 0 ? `${row.dividendYield.toFixed(2)}%` : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {row.pbRatio > 0 ? row.pbRatio.toFixed(2) : "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <RankingTable
+                data={peRatioData}
+                columns={peRatioColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "peRatio", desc: false }]}
+              />
             </TabsContent>
-
-            {visibleCount < getTotal() && (
-              <div className="flex justify-center pt-4">
-                <button
-                  onClick={handleLoadMore}
-                  className="rounded-md border px-6 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
-                >
-                  載入更多（已顯示 {visibleCount} / {getTotal()}）
-                </button>
-              </div>
-            )}
           </>
         )}
       </Tabs>

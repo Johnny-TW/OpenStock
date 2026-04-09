@@ -1,0 +1,85 @@
+# 專案開發慣例
+# 所有 AI Agent 與開發者應遵守的共用約定
+
+project:
+  name: "EE39 StockSmart System"
+  type: monorepo
+  package_manager: pnpm
+  node_version: "20"
+
+# 開發環境
+dev:
+  frontend_port: 3003
+  backend_port: 3004
+  database_port: 5435
+  database: postgresql
+
+# 命名慣例
+naming:
+  components: PascalCase           # StockService, DataTable
+  functions: camelCase             # findAll, stockName
+  constants: UPPER_SNAKE_CASE      # TWSE_API_URL
+  files: kebab-case                # stock-service.ts
+  css_modules: camelCase           # styles.mainContent
+  db_models: PascalCase            # DailyStockPrice
+  db_fields: camelCase             # closingPrice
+  migrations: snake_case           # add_daily_stock_price
+  redux_actions: UPPER_SNAKE_CASE  # GET_HEATMAP, SET_HEATMAP
+
+# 語言設定
+locale:
+  ui_text: "zh-TW"                 # 所有 UI 文案使用繁體中文
+  commit_message: "zh-TW"          # commit subject 使用繁體中文
+  code_comments: none              # 不寫註解
+  variable_names: "en"             # 變數名稱用英文
+
+# 前端慣例
+frontend:
+  framework: "Next.js 15 + React 19"
+  styling:
+    primary: scss_modules
+    secondary: tailwind
+  ui_library: shadcn/ui
+  state: "Redux Toolkit + Redux-Saga"
+  forms: react-hook-form
+  tables: tanstack-react-table
+  immutable: useImmer
+  page_structure:
+    - page.tsx                     # Server Component 路由入口
+    - "*-client.tsx"               # Client Component 頁面邏輯
+    - page.module.scss             # 頁面樣式
+  new_pages_under: /stock
+
+# 後端慣例
+backend:
+  framework: "NestJS 11"
+  orm: prisma
+  validation: "class-validator + class-transformer"
+  auth: "@nestjs/jwt + AuthGuard"
+  docs: "Swagger at /api/docs"
+  module_structure:
+    - "*.module.ts"
+    - "*.controller.ts"
+    - "*.service.ts"
+    - "*.service.spec.ts"
+    - "dto/*.dto.ts"
+  global_pipes:
+    - "ValidationPipe(whitelist: true, transform: true)"
+  response_format: "{ success, data, timestamp }"
+
+# Git 慣例
+git:
+  branch_naming: "type/short-description"  # feat/heatmap-filter
+  commit_format: "emoji type(scope): 繁體中文描述"
+  protected_branches: [main, develop]
+  pr_required: true
+  ci_must_pass: true
+
+# 禁止事項
+forbidden:
+  - "提交 .env 檔案"
+  - "提交 node_modules/"
+  - "提交 dist/"
+  - "使用模糊 commit 描述（如 update files, fix bug）"
+  - "從 query 帶入 userId"
+  - "在前端硬編碼 API URL"

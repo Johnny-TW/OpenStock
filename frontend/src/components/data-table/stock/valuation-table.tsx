@@ -13,9 +13,6 @@ import {
   type SortingState,
 } from "@tanstack/react-table"
 import {
-  IconArrowDown,
-  IconArrowUp,
-  IconArrowsUpDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
@@ -41,39 +38,7 @@ import {
 } from "@/components/commons/table"
 import { Badge } from "@/components/commons/badge"
 import type { StockValuationDto } from "@/type/stock"
-
-function parseNumber(value: string): number {
-  if (!value || value === "-" || value === "--") return 0
-  return parseFloat(value.replace(/,/g, "")) || 0
-}
-
-function SortHeader({
-  column,
-  label,
-}: {
-  column: ReturnType<ReturnType<typeof useReactTable>["getColumn"]>
-  label: string
-}) {
-  if (!column) return <span>{label}</span>
-  const sorted = column.getIsSorted()
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 h-8"
-      onClick={() => column.toggleSorting(sorted === "asc")}
-    >
-      {label}
-      {sorted === "asc" ? (
-        <IconArrowUp className="ml-1 size-3" />
-      ) : sorted === "desc" ? (
-        <IconArrowDown className="ml-1 size-3" />
-      ) : (
-        <IconArrowsUpDown className="ml-1 size-3 opacity-40" />
-      )}
-    </Button>
-  )
-}
+import { parseNumber, SortHeader } from "@/components/data-table/shared"
 
 function getDividendYieldColor(value: string): string {
   const num = parseNumber(value)
