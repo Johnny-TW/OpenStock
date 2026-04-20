@@ -1,5 +1,5 @@
-import IntradayClient from "./intraday-client"
+import { redirect } from "next/navigation"
 
 export default function IntradayPage() {
-  return <IntradayClient />
+  redirect("/stock/market-overview")
 }

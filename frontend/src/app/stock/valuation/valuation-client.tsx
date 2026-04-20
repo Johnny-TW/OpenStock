@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header"
+import { PageHeader } from "@/components/commons/page-header/page-header"
 import { StockValuationTable } from "@/components/data-table/stock/valuation-table"
 import {
   Card,
@@ -25,7 +25,7 @@ export default function ValuationClient() {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">載入評價資料中...</span>
+        <span className="ml-2 text-muted-foreground">載入資料中...</span>
       </div>
     )
   }

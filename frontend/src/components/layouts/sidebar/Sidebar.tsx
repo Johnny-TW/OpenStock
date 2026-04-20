@@ -50,11 +50,8 @@ const data = {
       isActive: true,
       items: [
         { title: "當日成交總覽", url: "/stock" },
+        { title: "大盤總覽", url: "/stock/market-overview" },
         { title: "本益比/殖利率", url: "/stock/valuation" },
-        { title: "大盤指數", url: "/stock/market-index" },
-        { title: "成交排行", url: "/stock/top-volume" },
-        { title: "盤中走勢", url: "/stock/intraday" },
-        { title: "指數歷史", url: "/stock/index-history" },
         { title: "排行榜", url: "/stock/ranking" },
       ],
     },

@@ -62,17 +62,29 @@ export class StockService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const today = new Date();
-    const day = today.getDay();
-    if (day === 0 || day === 6) return;
+    const taipei = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      weekday: 'short',
+      hour12: false,
+    }).formatToParts(new Date());
 
-    const hour = today.getHours();
-    if (hour < 14) {
+    const get = (type: string) =>
+      taipei.find((p) => p.type === type)?.value ?? '';
+    const weekday = get('weekday');
+    if (weekday === 'Sat' || weekday === 'Sun') return;
+
+    const hour = Number(get('hour'));
+    if (hour < 15) {
       this.logger.log('啟動補存：尚未收盤，跳過');
       return;
     }
 
-    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+    const dateStr = `${get('year')}${get('month')}${get('day')}`;
 
     const existing = await this.prisma.dailyStockPrice.findFirst({
       where: { date: dateStr },
@@ -98,8 +110,10 @@ export class StockService implements OnModuleInit {
       this.getIndustryMap(),
     ]);
 
-    if (data.stat !== 'OK') {
-      this.logger.warn(`TWSE API returned stat: ${data.stat}`);
+    if (data.stat !== 'OK' || !Array.isArray(data.data)) {
+      this.logger.warn(
+        `TWSE API returned stat: ${data.stat}, data: ${typeof data.data}`,
+      );
       return {
         date: '',
         title: '',
@@ -580,8 +594,8 @@ export class StockService implements OnModuleInit {
     return { twStock, usStock, international, twse };
   }
 
-  /** 每日收盤排程：週一至週五 14:30 (UTC+8 = 06:30 UTC) */
-  @Cron('0 30 6 * * 1-5')
+  /** 每日收盤排程：台北時間週一至週五 15:00 */
+  @Cron('0 0 15 * * 1-5', { timeZone: 'Asia/Taipei' })
   async saveDailyStockPrices(): Promise<number> {
     this.logger.log('排程：開始儲存每日收盤資料...');
 

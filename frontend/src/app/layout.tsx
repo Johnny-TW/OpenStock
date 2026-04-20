@@ -6,6 +6,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/globals.css";
 import { SidebarInset, SidebarProvider } from "@/components/commons/sidebar";
 import { Header, Sidebar, Footer } from "@/components/layouts";
+import AuthLayout from "@/components/layouts/AuthLayout";
 import ReduxProvider from "@/providers/ReduxProvider";
 import QueryProvider from "@/providers/QueryProvider";
 import DialogProvider from "@/components/commons/dialog-provider";
@@ -60,17 +61,9 @@ export default function RootLayout({
               <AuthSync />
               <DialogProvider>
                 <PermissionGuard>
-                  <SidebarProvider>
-                  <Sidebar />
-                  <SidebarInset>
-                    <Header />
-                    <main className="main-content">
-                      <div className="flex-1 pb-16">{children}</div>
-                    </main>
-                    {/* Footer */}
-                    <Footer />
-                  </SidebarInset>
-                </SidebarProvider>
+                  <AuthLayout>
+                    {children}
+                  </AuthLayout>
                 </PermissionGuard>
               </DialogProvider>
             </ReduxProvider>

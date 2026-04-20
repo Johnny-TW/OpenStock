@@ -3,9 +3,20 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from "react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
 import * as d3 from "d3"
+import {
+  Label,
+  PolarGrid,
+  PolarRadiusAxis,
+  RadialBar,
+  RadialBarChart,
+} from "recharts"
 import { Info, X, ChevronDown, Check } from "lucide-react"
 import type { HeatmapIndustryDto, HeatmapStockDto } from "@/type/stock"
-import { PageHeader } from "@/components/commons/page-header"
+import { PageHeader } from "@/components/commons/page-header/page-header"
+import {
+  ChartContainer,
+  type ChartConfig,
+} from "@/components/commons/chart"
 import {
   Dialog,
   DialogContent,
@@ -531,7 +542,7 @@ export default function HeatmapClient() {
             onStockLeave={handleStockLeave}
           />
         ) : (
-          <div className={styles.loading}>載入中...</div>
+          <div className={styles.loading}>載入資料中...</div>
         )}
       </div>
 
@@ -592,25 +603,74 @@ export default function HeatmapClient() {
           <span className={styles.titleBar} />
           <h2>產業分類總覽</h2>
         </div>
-        <div className={styles.industryCards}>
-          {visibleIndustries.map((ind) => (
-            <button
-              key={ind.industry}
-              className={`${styles.industryCard} ${selectedIndustry === ind.industry ? styles.industryCardActive : ""}`}
-              onClick={() => handleIndustryClick(ind.industry)}
-            >
-              <span className={styles.industryName}>{ind.industry}</span>
-              <span
-                className={`${styles.industryChange} ${ind.avgChangePercent >= 0 ? styles.up : styles.down}`}
+        <div className={styles.industryRadialCards}>
+          {visibleIndustries.map((ind) => {
+            const pct = Math.abs(ind.avgChangePercent)
+            const maxAngle = Math.min(pct * 36, 340)
+            const isUp = ind.avgChangePercent > 0
+            const isDown = ind.avgChangePercent < 0
+            const color = isDown ? "#22c55e" : isUp ? "#ef4444" : "#6b7280"
+            const chartData = [{ value: pct, fill: color }]
+            const config = { value: { label: ind.industry, color } } satisfies ChartConfig
+
+            return (
+              <button
+                key={ind.industry}
+                className={`${styles.industryRadialCard} ${selectedIndustry === ind.industry ? styles.industryCardActive : ""}`}
+                onClick={() => handleIndustryClick(ind.industry)}
               >
-                {ind.avgChangePercent > 0 ? "+" : ""}
-                {ind.avgChangePercent.toFixed(2)}%
-              </span>
-              <span className={styles.industryCount}>
-                {ind.stocks.length} 檔
-              </span>
-            </button>
-          ))}
+                <ChartContainer
+                  config={config}
+                  className={styles.radialChartContainer}
+                >
+                  <RadialBarChart
+                    data={chartData}
+                    endAngle={isDown ? -maxAngle : maxAngle}
+                    innerRadius={32}
+                    outerRadius={48}
+                  >
+                    <PolarGrid
+                      gridType="circle"
+                      radialLines={false}
+                      stroke="none"
+                      className="first:fill-muted last:fill-background"
+                      polarRadius={[44, 38]}
+                    />
+                    <RadialBar dataKey="value" background cornerRadius={4} />
+                    <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                      <Label
+                        content={({ viewBox }) => {
+                          if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                            return (
+                              <text
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                              >
+                                <tspan
+                                  x={viewBox.cx}
+                                  y={viewBox.cy}
+                                  className="fill-foreground text-sm font-bold"
+                                >
+                                  {isUp ? "+" : isDown ? "-" : ""}
+                                  {pct.toFixed(1)}%
+                                </tspan>
+                              </text>
+                            )
+                          }
+                        }}
+                      />
+                    </PolarRadiusAxis>
+                  </RadialBarChart>
+                </ChartContainer>
+                <span className={styles.industryName}>{ind.industry}</span>
+                <span className={styles.industryCount}>
+                  {ind.stocks.length} 檔
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 

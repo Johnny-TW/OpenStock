@@ -19,7 +19,7 @@ import {
 } from "@tabler/icons-react"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header"
+import { PageHeader } from "@/components/commons/page-header/page-header"
 import { Button } from "@/components/commons/button"
 import { Input } from "@/components/commons/input"
 import {
@@ -151,7 +151,7 @@ export default function TopVolumeClient() {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">載入成交排行中...</span>
+        <span className="ml-2 text-muted-foreground">載入資料中...</span>
       </div>
     )
   }

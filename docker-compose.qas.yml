@@ -1,0 +1,67 @@
+# docker-compose.qas.yml — QAS 測試環境
+# 使用方式：docker compose -f docker-compose.qas.yml --env-file .env.qas up -d
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: stocksmart-db-qas
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-stocksmart_qas}
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata_qas:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stocksmart-backend-qas
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3004
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-stocksmart_qas}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    ports:
+      - "4004:3004"
+    command: >
+      sh -c "npx prisma migrate deploy && node dist/main"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST:-http://localhost:4004}
+    container_name: stocksmart-frontend-qas
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:4000}
+      SECRET: ${SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      SESSION_TOKEN_NAME: ${SESSION_TOKEN_NAME:-stocksmart.next-auth.session-token}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+    ports:
+      - "4000:3000"
+
+volumes:
+  pgdata_qas:

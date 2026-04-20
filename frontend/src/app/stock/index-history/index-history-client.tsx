@@ -1,6 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  XAxis,
+  YAxis,
+} from "recharts"
 import {
   flexRender,
   getCoreRowModel,
@@ -17,9 +25,9 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
 } from "@tabler/icons-react"
-import { Loader2 } from "lucide-react"
+import { Loader2, TrendingUp, TrendingDown } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header"
+import { PageHeader } from "@/components/commons/page-header/page-header"
 import { Button } from "@/components/commons/button"
 import { Input } from "@/components/commons/input"
 import {
@@ -38,8 +46,28 @@ import {
   TableRow,
 } from "@/components/commons/table"
 import { Badge } from "@/components/commons/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/commons/card"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/commons/chart"
 import type { IndexHistoryDto } from "@/type/stock"
 import { parseNumber, SortHeader } from "@/components/data-table/shared"
+
+const chartConfig = {
+  closingIndex: { label: "收盤指數", color: "hsl(var(--chart-1))" },
+  highLow: { label: "高低區間", color: "hsl(var(--chart-2))" },
+  openingIndex: { label: "開盤指數", color: "hsl(var(--chart-3))" },
+} satisfies ChartConfig
 
 const columns: ColumnDef<IndexHistoryDto>[] = [
   {
@@ -58,21 +86,21 @@ const columns: ColumnDef<IndexHistoryDto>[] = [
   {
     accessorKey: "highestIndex",
     header: "最高指數",
-    cell: ({ row }) => <div className="text-right">{row.original.highestIndex}</div>,
+    cell: ({ row }) => <div className="text-right text-red-500">{row.original.highestIndex}</div>,
     sortingFn: (a, b) => parseNumber(a.original.highestIndex) - parseNumber(b.original.highestIndex),
     size: 120,
   },
   {
     accessorKey: "lowestIndex",
     header: "最低指數",
-    cell: ({ row }) => <div className="text-right">{row.original.lowestIndex}</div>,
+    cell: ({ row }) => <div className="text-right text-green-500">{row.original.lowestIndex}</div>,
     sortingFn: (a, b) => parseNumber(a.original.lowestIndex) - parseNumber(b.original.lowestIndex),
     size: 120,
   },
   {
     accessorKey: "closingIndex",
     header: "收盤指數",
-    cell: ({ row }) => <div className="text-right">{row.original.closingIndex}</div>,
+    cell: ({ row }) => <div className="text-right font-semibold">{row.original.closingIndex}</div>,
     sortingFn: (a, b) => parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
     size: 120,
   },
@@ -89,6 +117,30 @@ export default function IndexHistoryClient() {
   }, [dispatch])
 
   const list: IndexHistoryDto[] = indexHistory?.data ?? []
+
+  const chartData = useMemo(() => {
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date))
+    return sorted.map((item) => ({
+      date: item.date,
+      closingIndex: parseNumber(item.closingIndex),
+      openingIndex: parseNumber(item.openingIndex),
+      highestIndex: parseNumber(item.highestIndex),
+      lowestIndex: parseNumber(item.lowestIndex),
+      range: [parseNumber(item.lowestIndex), parseNumber(item.highestIndex)] as [number, number],
+    }))
+  }, [list])
+
+  const stats = useMemo(() => {
+    if (chartData.length === 0) return null
+    const closes = chartData.map((d) => d.closingIndex)
+    const latest = closes[closes.length - 1]
+    const first = closes[0]
+    const high = Math.max(...chartData.map((d) => d.highestIndex))
+    const low = Math.min(...chartData.map((d) => d.lowestIndex))
+    const change = latest - first
+    const changePercent = ((change / first) * 100).toFixed(2)
+    return { latest, high, low, change, changePercent, isUp: change >= 0 }
+  }, [chartData])
 
   const table = useReactTable({
     data: list,
@@ -109,17 +161,150 @@ export default function IndexHistoryClient() {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">載入歷史指數中...</span>
+        <span className="ml-2 text-muted-foreground">載入資料中...</span>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-6 p-4">
       <PageHeader
         title="每日收盤指數歷史"
         subtitle={<>共 {list.length} 筆紀錄</>}
       />
+
+      {stats && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>最新收盤</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{stats.latest.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>區間漲跌</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className={`text-2xl font-bold ${stats.isUp ? "text-red-500" : "text-green-500"}`}>
+                {stats.isUp ? "+" : ""}{stats.change.toFixed(2)} ({stats.changePercent}%)
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>區間最高</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-red-500">{stats.high.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>區間最低</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-green-500">{stats.low.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {chartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>指數走勢圖</CardTitle>
+            <CardDescription>收盤指數趨勢與每日高低區間</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-80 w-full">
+              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="fillHighLow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-highLow)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--color-highLow)" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(v) => {
+                    const parts = v.split("/")
+                    return parts.length >= 2 ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}` : v
+                  }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  domain={["auto", "auto"]}
+                  tickFormatter={(v) => v.toLocaleString()}
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(label) => `日期：${label}`}
+                      formatter={(value, name) => {
+                        const labels: Record<string, string> = {
+                          closingIndex: "收盤",
+                          openingIndex: "開盤",
+                          highestIndex: "最高",
+                          lowestIndex: "最低",
+                        }
+                        return `${labels[name as string] || name}：${Number(value).toLocaleString()}`
+                      }}
+                    />
+                  }
+                />
+                <Area
+                  dataKey="highestIndex"
+                  type="monotone"
+                  fill="url(#fillHighLow)"
+                  stroke="none"
+                  stackId="range"
+                />
+                <Area
+                  dataKey="lowestIndex"
+                  type="monotone"
+                  fill="transparent"
+                  stroke="none"
+                  stackId="range-base"
+                />
+                <Line
+                  dataKey="closingIndex"
+                  type="monotone"
+                  stroke="var(--color-closingIndex)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  dataKey="openingIndex"
+                  type="monotone"
+                  stroke="var(--color-openingIndex)"
+                  strokeWidth={1}
+                  dot={false}
+                  strokeDasharray="4 4"
+                />
+              </ComposedChart>
+            </ChartContainer>
+          </CardContent>
+          <CardFooter className="gap-2 text-sm">
+            {stats?.isUp ? (
+              <TrendingUp className="size-4 text-red-500" />
+            ) : (
+              <TrendingDown className="size-4 text-green-500" />
+            )}
+            <span className="text-muted-foreground">
+              期間 {stats?.isUp ? "上漲" : "下跌"} {Math.abs(Number(stats?.changePercent))}%
+            </span>
+          </CardFooter>
+        </Card>
+      )}
 
       <div className="flex items-center justify-between gap-2">
         <Input

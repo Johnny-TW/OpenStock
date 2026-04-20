@@ -1,5 +1,5 @@
-import MarketIndexClient from "./market-index-client"
+import { redirect } from "next/navigation"
 
 export default function MarketIndexPage() {
-  return <MarketIndexClient />
+  redirect("/stock/market-overview")
 }

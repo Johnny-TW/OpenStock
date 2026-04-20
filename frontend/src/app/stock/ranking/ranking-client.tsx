@@ -13,7 +13,6 @@ import {
 } from "@tanstack/react-table"
 import { Loader2 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { Button } from "@/components/commons/button"
 import {
   Table,
   TableBody,
@@ -31,15 +30,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/commons/select"
-import { PageHeader } from "@/components/commons/page-header"
+import { PageHeader } from "@/components/commons/page-header/page-header"
 import { Badge } from "@/components/commons/badge"
 import type {
   RevenueRankingDto,
   GrossMarginRankingDto,
   DividendYieldRankingDto,
   PeRatioRankingDto,
+  TopVolumeDto,
 } from "@/type/stock"
-import { SortHeader, Pagination } from "@/components/data-table/shared"
+import { parseNumber, SortHeader, Pagination } from "@/components/data-table/shared"
 
 function formatCurrency(num: number): string {
   if (Math.abs(num) >= 1e8) {
@@ -50,6 +50,85 @@ function formatCurrency(num: number): string {
   }
   return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
 }
+
+function getChangeColor(direction: string) {
+  if (direction === "-") return "text-green-500"
+  if (direction === "+") return "text-red-500"
+  return ""
+}
+
+const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
+  {
+    accessorKey: "rank",
+    header: "排名",
+    cell: ({ row }) => <span>{row.original.rank}</span>,
+    sortingFn: (a, b) => parseNumber(a.original.rank) - parseNumber(b.original.rank),
+    size: 60,
+  },
+  {
+    accessorKey: "code",
+    header: "代號",
+    cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+    size: 80,
+    enableSorting: false,
+  },
+  {
+    accessorKey: "name",
+    header: "名稱",
+    size: 100,
+    enableSorting: false,
+  },
+  {
+    accessorKey: "tradeVolume",
+    header: "成交量",
+    cell: ({ row }) => <div className="text-right">{row.original.tradeVolume}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.tradeVolume) - parseNumber(b.original.tradeVolume),
+    size: 120,
+  },
+  {
+    accessorKey: "openingPrice",
+    header: "開盤",
+    cell: ({ row }) => <div className="text-right">{row.original.openingPrice}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.openingPrice) - parseNumber(b.original.openingPrice),
+    size: 90,
+  },
+  {
+    accessorKey: "highestPrice",
+    header: "最高",
+    cell: ({ row }) => <div className="text-right">{row.original.highestPrice}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.highestPrice) - parseNumber(b.original.highestPrice),
+    size: 90,
+  },
+  {
+    accessorKey: "lowestPrice",
+    header: "最低",
+    cell: ({ row }) => <div className="text-right">{row.original.lowestPrice}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.lowestPrice) - parseNumber(b.original.lowestPrice),
+    size: 90,
+  },
+  {
+    accessorKey: "closingPrice",
+    header: "收盤",
+    cell: ({ row }) => <div className="text-right">{row.original.closingPrice}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
+    size: 90,
+  },
+  {
+    accessorKey: "change",
+    header: "漲跌",
+    cell: ({ row }) => (
+      <div className={`text-right ${getChangeColor(row.original.direction)}`}>
+        {row.original.direction}{row.original.change}
+      </div>
+    ),
+    sortingFn: (a, b) => {
+      const aVal = parseNumber(a.original.change) * (a.original.direction === "-" ? -1 : 1)
+      const bVal = parseNumber(b.original.change) * (b.original.direction === "-" ? -1 : 1)
+      return aVal - bVal
+    },
+    size: 90,
+  },
+]
 
 const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
   { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
@@ -255,12 +334,15 @@ function RankingTable<T>({
 export default function RankingClient() {
   const dispatch = useAppDispatch()
   const ranking = useAppSelector((state) => state.ranking)
-  const [activeTab, setActiveTab] = useState("revenue")
+  const topVolume = useAppSelector((state) => state.stock?.topVolume)
+  const [activeTab, setActiveTab] = useState("top-volume")
   const [search, setSearch] = useState("")
   const [selectedIndustry, setSelectedIndustry] = useState("all")
 
   useEffect(() => {
-    if (activeTab === "revenue" && !ranking?.revenue) {
+    if (activeTab === "top-volume" && !topVolume) {
+      dispatch({ type: "GET_STOCK_TOP_VOLUME" })
+    } else if (activeTab === "revenue" && !ranking?.revenue) {
       dispatch({ type: "GET_RANKING_REVENUE" })
     } else if (activeTab === "gross-margin" && !ranking?.grossMargin) {
       dispatch({ type: "GET_RANKING_GROSS_MARGIN" })
@@ -269,7 +351,7 @@ export default function RankingClient() {
     } else if (activeTab === "pe-ratio" && !ranking?.peRatio) {
       dispatch({ type: "GET_RANKING_PE_RATIO" })
     }
-  }, [activeTab, dispatch, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio])
+  }, [activeTab, dispatch, topVolume, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio])
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value)
@@ -282,18 +364,20 @@ export default function RankingClient() {
     return list.filter((r) => r.industry === selectedIndustry)
   }, [selectedIndustry])
 
-  const revenueData = useMemo(() => filterByIndustry(ranking?.revenue?.data ?? []), [ranking?.revenue, filterByIndustry])
-  const grossMarginData = useMemo(() => filterByIndustry(ranking?.grossMargin?.data ?? []), [ranking?.grossMargin, filterByIndustry])
-  const dividendYieldData = useMemo(() => filterByIndustry(ranking?.dividendYield?.data ?? []), [ranking?.dividendYield, filterByIndustry])
-  const peRatioData = useMemo(() => filterByIndustry(ranking?.peRatio?.data ?? []), [ranking?.peRatio, filterByIndustry])
+  const topVolumeRaw = topVolume?.data
+  const topVolumeData: TopVolumeDto[] = Array.isArray(topVolumeRaw) ? topVolumeRaw : []
+  const revenueData = useMemo(() => filterByIndustry(Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : []), [ranking?.revenue, filterByIndustry])
+  const grossMarginData = useMemo(() => filterByIndustry(Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : []), [ranking?.grossMargin, filterByIndustry])
+  const dividendYieldData = useMemo(() => filterByIndustry(Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : []), [ranking?.dividendYield, filterByIndustry])
+  const peRatioData = useMemo(() => filterByIndustry(Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : []), [ranking?.peRatio, filterByIndustry])
 
   const industries = useMemo(() => {
     let list: { industry: string }[] = []
     switch (activeTab) {
-      case "revenue": list = ranking?.revenue?.data ?? []; break
-      case "gross-margin": list = ranking?.grossMargin?.data ?? []; break
-      case "dividend-yield": list = ranking?.dividendYield?.data ?? []; break
-      case "pe-ratio": list = ranking?.peRatio?.data ?? []; break
+      case "revenue": list = Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : []; break
+      case "gross-margin": list = Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : []; break
+      case "dividend-yield": list = Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : []; break
+      case "pe-ratio": list = Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : []; break
     }
     const set = new Set(list.map((r) => r.industry).filter(Boolean))
     return Array.from(set).sort()
@@ -301,6 +385,7 @@ export default function RankingClient() {
 
   const getPeriod = () => {
     switch (activeTab) {
+      case "top-volume": return "即時成交量排行"
       case "revenue": {
         const y = ranking?.revenue?.year
         const q = ranking?.revenue?.quarter
@@ -317,6 +402,7 @@ export default function RankingClient() {
 
   const isLoading = () => {
     switch (activeTab) {
+      case "top-volume": return !topVolume
       case "revenue": return !ranking?.revenue
       case "gross-margin": return !ranking?.grossMargin
       case "dividend-yield": return !ranking?.dividendYield
@@ -335,23 +421,26 @@ export default function RankingClient() {
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList>
+            <TabsTrigger value="top-volume">成交排行</TabsTrigger>
             <TabsTrigger value="revenue">營收排行</TabsTrigger>
             <TabsTrigger value="gross-margin">毛利率排行</TabsTrigger>
             <TabsTrigger value="dividend-yield">殖利率排行</TabsTrigger>
             <TabsTrigger value="pe-ratio">本益比排行</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
-            <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="全部產業" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部產業</SelectItem>
-                {industries.map((ind) => (
-                  <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {activeTab !== "top-volume" && (
+              <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="全部產業" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部產業</SelectItem>
+                  {industries.map((ind) => (
+                    <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Input
               placeholder="搜尋代號、名稱..."
               value={search}
@@ -364,10 +453,18 @@ export default function RankingClient() {
         {isLoading() ? (
           <div className="flex h-[60vh] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">載入排行資料中...</span>
+            <span className="ml-2 text-muted-foreground">載入資料中...</span>
           </div>
         ) : (
           <>
+            <TabsContent value="top-volume">
+              <RankingTable
+                data={topVolumeData}
+                columns={topVolumeColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "tradeVolume", desc: true }]}
+              />
+            </TabsContent>
             <TabsContent value="revenue">
               <RankingTable
                 data={revenueData}

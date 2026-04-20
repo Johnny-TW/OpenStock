@@ -123,6 +123,16 @@ function getChangeColor(change: string): string {
   return "text-muted-foreground"
 }
 
+function getChangePercent(row: StockDailyDto): string {
+  const closing = parseNumber(row.closingPrice)
+  const change = parseNumber(row.change)
+  const prev = closing - change
+  if (prev === 0) return "0.00%"
+  const pct = (change / prev) * 100
+  const sign = pct > 0 ? "+" : ""
+  return `${sign}${pct.toFixed(2)}%`
+}
+
 export type StockRow = StockDailyDto & { _rowId: number }
 
 const WatchlistButton = React.memo(function WatchlistButton({
@@ -339,7 +349,7 @@ function WatchlistGroupSelect({
 
 type GroupedItem = { stock: StockRow; wItem: WatchlistItem }
 
-type WatchlistSortKey = "code" | "name" | "closingPrice" | "change" | "openingPrice" | "highestPrice" | "lowestPrice" | "tradeVolume" | "tradeValue" | "transaction"
+type WatchlistSortKey = "code" | "name" | "closingPrice" | "change" | "changePercent" | "openingPrice" | "highestPrice" | "lowestPrice" | "tradeVolume" | "tradeValue" | "transaction"
 
 function SortableHead({
   label,
@@ -374,18 +384,34 @@ function SortableHead({
   )
 }
 
+const WATCHLIST_COLUMNS: { key: WatchlistSortKey; label: string; className?: string }[] = [
+  { key: "code", label: "代號", className: "w-24" },
+  { key: "name", label: "名稱" },
+  { key: "closingPrice", label: "收盤價", className: "text-right" },
+  { key: "change", label: "漲跌價差", className: "text-right" },
+  { key: "changePercent", label: "漲跌幅", className: "text-right" },
+  { key: "openingPrice", label: "開盤價", className: "text-right" },
+  { key: "highestPrice", label: "最高價", className: "text-right" },
+  { key: "lowestPrice", label: "最低價", className: "text-right" },
+  { key: "tradeVolume", label: "成交股數", className: "text-right" },
+  { key: "tradeValue", label: "成交金額", className: "text-right" },
+  { key: "transaction", label: "成交筆數", className: "text-right" },
+]
+
 function WatchlistGroupSection({
   groupName,
   items,
   dispatch,
   userId,
   allGroupNames,
+  columnVisibility,
 }: {
   groupName: string
   items: GroupedItem[]
   dispatch: ReturnType<typeof useAppDispatch>
   userId: string
   allGroupNames: string[]
+  columnVisibility: VisibilityState
 }) {
   const [sortKey, setSortKey] = React.useState<WatchlistSortKey | null>(null)
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc")
@@ -402,6 +428,19 @@ function WatchlistGroupSection({
   const sortedItems = React.useMemo(() => {
     if (!sortKey) return items
     return [...items].sort((a, b) => {
+      if (sortKey === "changePercent") {
+        const closingA = parseNumber(a.stock.closingPrice)
+        const changeA = parseNumber(a.stock.change)
+        const prevA = closingA - changeA
+        const pctA = prevA === 0 ? 0 : (changeA / prevA) * 100
+
+        const closingB = parseNumber(b.stock.closingPrice)
+        const changeB = parseNumber(b.stock.change)
+        const prevB = closingB - changeB
+        const pctB = prevB === 0 ? 0 : (changeB / prevB) * 100
+
+        return sortDir === "asc" ? pctA - pctB : pctB - pctA
+      }
       const valA = a.stock[sortKey]
       const valB = b.stock[sortKey]
       const numA = parseNumber(valA)
@@ -414,6 +453,26 @@ function WatchlistGroupSection({
 
   const headProps = { currentKey: sortKey, direction: sortDir, onSort: handleSort }
 
+  const visibleColumns = React.useMemo(
+    () => WATCHLIST_COLUMNS.filter((col) => columnVisibility[col.key] !== false),
+    [columnVisibility]
+  )
+
+  const renderCell = (stock: StockRow, key: WatchlistSortKey) => {
+    switch (key) {
+      case "code":
+        return <TableCellViewer item={stock} />
+      case "name":
+        return stock.name
+      case "change":
+        return <span className={`font-mono ${getChangeColor(stock.change)}`}>{stock.change}</span>
+      case "changePercent":
+        return <span className={`font-mono ${getChangeColor(stock.change)}`}>{getChangePercent(stock)}</span>
+      default:
+        return <span className="font-mono">{stock[key]}</span>
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 px-1">
@@ -425,16 +484,9 @@ function WatchlistGroupSection({
           <TableHeader className="bg-muted">
             <TableRow>
               <TableHead className="w-10"></TableHead>
-              <SortableHead label="代號" sortKey="code" className="w-24" {...headProps} />
-              <SortableHead label="名稱" sortKey="name" {...headProps} />
-              <SortableHead label="收盤價" sortKey="closingPrice" className="text-right" {...headProps} />
-              <SortableHead label="漲跌價差" sortKey="change" className="text-right" {...headProps} />
-              <SortableHead label="開盤價" sortKey="openingPrice" className="text-right" {...headProps} />
-              <SortableHead label="最高價" sortKey="highestPrice" className="text-right" {...headProps} />
-              <SortableHead label="最低價" sortKey="lowestPrice" className="text-right" {...headProps} />
-              <SortableHead label="成交股數" sortKey="tradeVolume" className="text-right" {...headProps} />
-              <SortableHead label="成交金額" sortKey="tradeValue" className="text-right" {...headProps} />
-              <SortableHead label="成交筆數" sortKey="transaction" className="text-right" {...headProps} />
+              {visibleColumns.map((col) => (
+                <SortableHead key={col.key} label={col.label} sortKey={col.key} className={col.className ?? ""} {...headProps} />
+              ))}
               <TableHead className="w-44">群組</TableHead>
             </TableRow>
           </TableHeader>
@@ -449,16 +501,11 @@ function WatchlistGroupSection({
                     <IconHeartFilled className="size-4" />
                   </button>
                 </TableCell>
-                <TableCell><TableCellViewer item={stock} /></TableCell>
-                <TableCell>{stock.name}</TableCell>
-                <TableCell className="text-right font-mono">{stock.closingPrice}</TableCell>
-                <TableCell className={`text-right font-mono ${getChangeColor(stock.change)}`}>{stock.change}</TableCell>
-                <TableCell className="text-right font-mono">{stock.openingPrice}</TableCell>
-                <TableCell className="text-right font-mono">{stock.highestPrice}</TableCell>
-                <TableCell className="text-right font-mono">{stock.lowestPrice}</TableCell>
-                <TableCell className="text-right font-mono">{stock.tradeVolume}</TableCell>
-                <TableCell className="text-right font-mono">{stock.tradeValue}</TableCell>
-                <TableCell className="text-right font-mono">{stock.transaction}</TableCell>
+                {visibleColumns.map((col) => (
+                  <TableCell key={col.key} className={col.key !== "code" && col.key !== "name" ? "text-right" : ""}>
+                    {renderCell(stock, col.key)}
+                  </TableCell>
+                ))}
                 <TableCell>
                   <WatchlistGroupSelect
                     currentGroup={groupName}
@@ -558,6 +605,30 @@ const columns: ColumnDef<StockRow>[] = [
     ),
     sortingFn: (rowA, rowB) =>
       parseNumber(rowA.original.change) - parseNumber(rowB.original.change),
+    size: 100,
+  },
+  {
+    id: "changePercent",
+    header: "漲跌幅",
+    accessorFn: (row) => {
+      const closing = parseNumber(row.closingPrice)
+      const change = parseNumber(row.change)
+      const prev = closing - change
+      return prev === 0 ? 0 : (change / prev) * 100
+    },
+    cell: ({ row }) => {
+      const pct = getChangePercent(row.original)
+      return (
+        <div className={`text-right font-mono ${getChangeColor(row.original.change)}`}>
+          {pct}
+        </div>
+      )
+    },
+    sortingFn: (rowA, rowB) => {
+      const pctA = (rowA.getValue("changePercent") as number) || 0
+      const pctB = (rowB.getValue("changePercent") as number) || 0
+      return pctA - pctB
+    },
     size: 100,
   },
   {
@@ -675,7 +746,8 @@ export function StockDataTable({
     setData((initialData ?? []).map((d, i) => ({ ...d, _rowId: i })))
   }, [initialData])
 
-  const [activeTab, setActiveTab] = React.useState<"all" | "watchlist" | "summary">("all")
+  const [activeTab, setActiveTab] = React.useState<"all" | "watchlist" | "summary">("watchlist")
+  const [activeGroup, setActiveGroup] = React.useState<string>("__all__")
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -891,7 +963,9 @@ export function StockDataTable({
                       column.toggleVisibility(!!value)
                     }
                   >
-                    {column.id}
+                    {typeof column.columnDef.header === "string"
+                      ? column.columnDef.header
+                      : column.id}
                   </DropdownMenuCheckboxItem>
                 ))}
             </DropdownMenuContent>
@@ -1064,16 +1138,41 @@ export function StockDataTable({
                 <p className="text-sm">找不到符合的自選股</p>
               </div>
             ) : (
-              Object.entries(groupedDisplayData).map(([groupName, items]) => (
-                <WatchlistGroupSection
-                  key={groupName}
-                  groupName={groupName}
-                  items={items}
-                  dispatch={dispatch}
-                  userId={userId}
-                  allGroupNames={Object.keys(groupedDisplayData)}
-                />
-              ))
+              <>
+                <div className="flex items-center gap-1 overflow-x-auto border-b pb-0">
+                  <button
+                    className={`px-3 py-1.5 text-sm font-medium rounded-t-md transition-colors whitespace-nowrap border-b-2 ${activeGroup === "__all__" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                    onClick={() => setActiveGroup("__all__")}
+                  >
+                    全部群組
+                    <span className="ml-1.5 text-xs opacity-70">({watchlist.length})</span>
+                  </button>
+                  {Object.entries(groupedDisplayData).map(([groupName, items]) => (
+                    <button
+                      key={groupName}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-t-md transition-colors whitespace-nowrap border-b-2 ${activeGroup === groupName ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                      onClick={() => setActiveGroup(groupName)}
+                    >
+                      {groupName}
+                      <span className="ml-1.5 text-xs opacity-70">({items.length})</span>
+                    </button>
+                  ))}
+                </div>
+                {(activeGroup === "__all__"
+                  ? Object.entries(groupedDisplayData)
+                  : Object.entries(groupedDisplayData).filter(([name]) => name === activeGroup)
+                ).map(([groupName, items]) => (
+                  <WatchlistGroupSection
+                    key={groupName}
+                    groupName={groupName}
+                    items={items}
+                    dispatch={dispatch}
+                    userId={userId}
+                    allGroupNames={Object.keys(groupedDisplayData)}
+                    columnVisibility={columnVisibility}
+                  />
+                ))}
+              </>
             )}
           </div>
         )}

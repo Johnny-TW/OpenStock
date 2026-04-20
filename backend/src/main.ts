@@ -28,11 +28,31 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('EE39 StockSmart System OpenAPI')
     .setDescription(
-      '本平臺提供臺灣證券交易所服務 API 的二次封裝，資料來源為 [TWSE OpenAPI](https://openapi.twse.com.tw/)。',
+      '本平臺提供臺灣證券交易所服務 API 的二次封裝，資料來源為 [TWSE OpenAPI](https://openapi.twse.com.tw/)。\n\n' +
+        '## 認證方式\n' +
+        '需認證的 API 請在 Header 帶入 `Authorization: Bearer <token>`，點擊右上角 🔓 Authorize 按鈕輸入 JWT Token。',
     )
     .setVersion('1.0')
     .setExternalDoc('TWSE OpenAPI 原始文件', 'https://openapi.twse.com.tw/')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: '請輸入 JWT Token',
+      },
+      'bearer',
+    )
     .addServer('http://localhost:3004', '本機開發')
+    .addTag('系統', '健康檢查與基本資訊')
+    .addTag('證券交易', '上市個股日成交資訊、估值、成交量排行')
+    .addTag('指數', '大盤指數、盤中即時成交、歷史資料')
+    .addTag('排行榜', '營收、毛利率、殖利率、本益比排行')
+    .addTag('新聞', '台股、美股、國際財經新聞彙整')
+    .addTag('熱力圖', '產業漲跌幅 Treemap 資料')
+    .addTag('持股管理', '使用者持股 CRUD (需認證)')
+    .addTag('自選股', '使用者自選股 CRUD (需認證)')
+    .addTag('AI 股票分析', 'Claude AI 市場分析與推薦（需認證）')
     .build();
   const document = SwaggerModule.createDocument(app, config);
 

@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -207,6 +208,45 @@ jobs:
         run: pnpm build
         working-directory: backend
 
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Frontend — 套件漏洞掃描
+        if: needs.detect-changes.outputs.frontend == 'true'
+        working-directory: frontend
+        run: pnpm audit --audit-level=critical
+
+      - name: Backend — 套件漏洞掃描
+        if: needs.detect-changes.outputs.backend == 'true'
+        working-directory: backend
+        run: pnpm audit --audit-level=critical
+
+      - name: Frontend — 已知漏洞檢查（retire.js）
+        if: needs.detect-changes.outputs.frontend == 'true'
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          npx retire --severity critical --exitwith 1
+
+      - name: Backend — 已知漏洞檢查（retire.js）
+        if: needs.detect-changes.outputs.backend == 'true'
+        working-directory: backend
+        run: |
+          pnpm install --frozen-lockfile
+          npx retire --severity critical --exitwith 1
+
   # 合併保護：所有必要 job 都通過才允許合併
   ci-gate:
     name: CI Gate
@@ -219,6 +259,7 @@ jobs:
       - backend-lint
       - backend-test
       - backend-build
+      - security-audit
     steps:
       - name: Check all jobs
         run: |
@@ -228,6 +269,7 @@ jobs:
           echo "backend-lint: ${{ needs.backend-lint.result }}"
           echo "backend-test: ${{ needs.backend-test.result }}"
           echo "backend-build: ${{ needs.backend-build.result }}"
+          echo "security-audit: ${{ needs.security-audit.result }}"
 
           # skipped 也算通過（表示該模組沒變更）
           for result in \
@@ -236,7 +278,8 @@ jobs:
             "${{ needs.frontend-build.result }}" \
             "${{ needs.backend-lint.result }}" \
             "${{ needs.backend-test.result }}" \
-            "${{ needs.backend-build.result }}"; do
+            "${{ needs.backend-build.result }}" \
+            "${{ needs.security-audit.result }}"; do
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               echo "❌ CI failed"
               exit 1

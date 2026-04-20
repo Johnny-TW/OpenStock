@@ -4,7 +4,9 @@ import { useEffect, useState, useMemo } from "react"
 import Image from "next/image"
 import { Loader2, ExternalLink, Newspaper, ChevronLeft, ChevronRight } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header"
+import { PageHeader } from "@/components/commons/page-header/page-header"
+import { Tabs, TabsList, TabsTrigger } from "@/components/commons/tabs"
+import { Badge } from "@/components/commons/badge"
 import type { NewsDto } from "@/type/stock"
 import styles from "./page.module.scss"
 
@@ -61,7 +63,7 @@ export default function NewsClient() {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">載入新聞資料中...</span>
+        <span className="ml-2 text-muted-foreground">載入資料中...</span>
       </div>
     )
   }
@@ -89,24 +91,21 @@ export default function NewsClient() {
         }
       />
 
-      <div className={styles.tabBar}>
-        {TABS.map((tab) => {
-          const count = allNews[tab.key]?.total ?? 0
-          return (
-            <button
-              key={tab.key}
-              className={`${styles.tab} ${activeTab === tab.key ? styles.tabActive : ""}`}
-              onClick={() => {
-                setActiveTab(tab.key)
-                setKeyword("")
-              }}
-            >
-              <span>{tab.label}</span>
-              <span className={styles.tabCount}>{count}</span>
-            </button>
-          )
-        })}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabKey); setKeyword("") }}>
+        <TabsList variant="line">
+          {TABS.map((tab) => {
+            const count = allNews[tab.key]?.total ?? 0
+            return (
+              <TabsTrigger key={tab.key} value={tab.key}>
+                {tab.label}
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[0.65rem]">
+                  {count}
+                </Badge>
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
+      </Tabs>
 
       <div className={styles.newsList}>
         {paged.map((row, i) => (

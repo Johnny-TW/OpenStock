@@ -1,5 +1,5 @@
-import TopVolumeClient from "./top-volume-client"
+import { redirect } from "next/navigation"
 
 export default function TopVolumePage() {
-  return <TopVolumeClient />
+  redirect("/stock/ranking")
 }

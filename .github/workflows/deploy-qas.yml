@@ -1,0 +1,122 @@
+name: CD — Deploy to QAS
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-qas
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  ci-check:
+    name: CI Gate
+    uses: ./.github/workflows/github-ci.yml
+
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    needs: [ci-check]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend:qas
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/backend:qas-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:qas
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/frontend:qas-${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_HOST=${{ vars.QAS_API_HOST }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to QAS Server
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    # environment: qas
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.QAS_SERVER_HOST }}
+          username: ${{ secrets.QAS_SERVER_USER }}
+          key: ${{ secrets.QAS_SERVER_SSH_KEY }}
+          script: |
+            cd /opt/stocksmart
+            docker compose -f docker-compose.qas.yml pull
+            docker compose -f docker-compose.qas.yml up -d
+            docker image prune -f
+            echo "✅ QAS 部署完成：$(date)"
+
+  e2e-test:
+    name: E2E Test (Playwright)
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      - name: Run E2E tests
+        run: npx playwright test
+        working-directory: frontend
+        env:
+          BASE_URL: ${{ vars.QAS_APP_URL || 'http://localhost:4000' }}
+          API_HOST: ${{ vars.QAS_API_HOST || 'http://localhost:4004' }}
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

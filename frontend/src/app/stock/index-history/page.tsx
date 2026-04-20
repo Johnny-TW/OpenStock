@@ -1,5 +1,5 @@
-import IndexHistoryClient from "./index-history-client"
+import { redirect } from "next/navigation"
 
 export default function IndexHistoryPage() {
-  return <IndexHistoryClient />
+  redirect("/stock/market-overview")
 }

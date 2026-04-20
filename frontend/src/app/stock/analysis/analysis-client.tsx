@@ -13,7 +13,7 @@ import {
   Trophy,
 } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header"
+import { PageHeader } from "@/components/commons/page-header/page-header"
 import { Button } from "@/components/commons/button"
 import { Badge } from "@/components/commons/badge"
 import { Checkbox } from "@/components/commons/checkbox"
@@ -535,6 +535,16 @@ export default function AnalysisClient() {
             )}
           </div>
 
+          <div className="grid sm:grid-cols-2 gap-4">
+            <SectionCard icon={<ShieldAlert className="size-5 text-amber-500" />} title="風險提示">
+              <p className="text-sm leading-relaxed text-foreground">{result.risks}</p>
+            </SectionCard>
+
+            <SectionCard icon={<Newspaper className="size-5 text-blue-500" />} title="國際新聞影響">
+              <p className="text-sm leading-relaxed text-foreground">{result.newsImpact}</p>
+            </SectionCard>
+          </div>
+
           <SectionCard icon={<Trophy className="size-5 text-amber-500" />} title="AI 評分排行榜">
             {sortedPicks.length === 0 ? (
               <p className="text-sm text-muted-foreground">暫無推薦</p>
@@ -546,16 +556,6 @@ export default function AnalysisClient() {
               </div>
             )}
           </SectionCard>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <SectionCard icon={<ShieldAlert className="size-5 text-amber-500" />} title="風險提示">
-              <p className="text-sm leading-relaxed text-foreground">{result.risks}</p>
-            </SectionCard>
-
-            <SectionCard icon={<Newspaper className="size-5 text-blue-500" />} title="國際新聞影響">
-              <p className="text-sm leading-relaxed text-foreground">{result.newsImpact}</p>
-            </SectionCard>
-          </div>
 
           <p className="text-xs text-muted-foreground text-center px-4">
             以上內容由 AI 根據技術指標自動生成，僅供參考，不構成任何投資建議。投資有風險，請審慎評估。

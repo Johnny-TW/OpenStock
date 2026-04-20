@@ -1,7 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-//  原始 TWSE wrapper 格式
-
 export interface TwseResponse {
   stat: string;
   date: string;
@@ -10,8 +8,6 @@ export interface TwseResponse {
   data: string[][];
   notes: string[];
 }
-
-//  上市個股日成交資訊
 
 export class StockDailyDto {
   @ApiProperty({ example: '0050', description: '證券代號' })
@@ -68,8 +64,7 @@ export class StockDailyAllResponse {
   total: number;
 }
 
-//  上市個股日本益比、殖利率及股價淨值比
-
+// 上市個股日本益比、殖利率及股價淨值比
 export class StockValuationDto {
   @ApiProperty({ example: '0050', description: '證券代號' })
   code: string;
@@ -111,7 +106,6 @@ export class StockValuationResponse {
 }
 
 //  大盤統計資訊（指數）
-
 export class MarketIndexDto {
   @ApiProperty({ example: '20260311', description: '日期' })
   date: string;
@@ -141,7 +135,6 @@ export class MarketIndexResponse {
 }
 
 //  成交量前 20 名
-
 export class TopVolumeDto {
   @ApiProperty({ example: '20260311', description: '日期' })
   date: string;
@@ -188,8 +181,7 @@ export class TopVolumeResponse {
   total: number;
 }
 
-//  盤中五秒累計成交資訊
-
+// 盤中五秒累計成交資訊
 export class IntradayTickDto {
   @ApiProperty({ example: '09:00:05', description: '時間' })
   time: string;
@@ -212,8 +204,7 @@ export class IntradayResponse {
   total: number;
 }
 
-//  發行量加權股價指數歷史資料
-
+// 發行量加權股價指數歷史資料
 export class IndexHistoryDto {
   @ApiProperty({ example: '20260310', description: '日期' })
   date: string;
@@ -239,8 +230,7 @@ export class IndexHistoryResponse {
   total: number;
 }
 
-//  排行榜
-
+// 排行榜
 export class RevenueRankingDto {
   @ApiProperty({ example: '2330', description: '證券代號' })
   code: string;
@@ -315,6 +305,7 @@ export class GrossMarginRankingResponse {
   quarter: string;
 }
 
+// 上市個股殖利率排行榜
 export class DividendYieldRankingDto {
   @ApiProperty({ example: '2330', description: '證券代號' })
   code: string;
@@ -343,6 +334,7 @@ export class DividendYieldRankingResponse {
   total: number;
 }
 
+// 上市個股本益比排行榜
 export class PeRatioRankingDto {
   @ApiProperty({ example: '2330', description: '證券代號' })
   code: string;

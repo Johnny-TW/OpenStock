@@ -1,9 +1,5 @@
-import Layout from "@/components/layout";
+import { redirect } from "next/navigation"
 
 export default function Home() {
-  return (
-    <Layout>
-      <h1>ee39-stocksmart-system</h1>
-    </Layout>
-  );
+  redirect("/stock")
 }
