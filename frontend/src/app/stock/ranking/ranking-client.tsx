@@ -38,6 +38,7 @@ import type {
   DividendYieldRankingDto,
   PeRatioRankingDto,
   TopVolumeDto,
+  StockDailyDto,
 } from "@/type/stock"
 import { parseNumber, SortHeader, Pagination } from "@/components/data-table/shared"
 
@@ -56,6 +57,76 @@ function getChangeColor(direction: string) {
   if (direction === "+") return "text-red-500"
   return ""
 }
+
+// 漲跌幅排行
+interface ChangeRankItem {
+  code: string
+  name: string
+  closingPrice: string
+  change: string
+  changePct: number
+  tradeVolume: string
+  tradeValue: string
+  industry: string
+}
+
+const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
+  {
+    accessorKey: "rank",
+    header: "排名",
+    cell: ({ row }) => <span>{row.index + 1}</span>,
+    size: 60,
+    enableSorting: false,
+  },
+  {
+    accessorKey: "code",
+    header: "代號",
+    cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+    size: 80,
+    enableSorting: false,
+  },
+  { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
+  {
+    accessorKey: "closingPrice",
+    header: "收盤價",
+    cell: ({ row }) => <div className="text-right">{row.original.closingPrice}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
+    size: 90,
+  },
+  {
+    accessorKey: "changePct",
+    header: "漲跌幅",
+    cell: ({ row }) => {
+      const pct = row.original.changePct
+      const color = pct > 0 ? "text-red-500" : pct < 0 ? "text-green-500" : ""
+      const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : ""
+      return (
+        <div className={`text-right font-semibold ${color}`}>
+          {arrow} {Math.abs(pct).toFixed(2)}%
+        </div>
+      )
+    },
+    sortingFn: (a, b) => a.original.changePct - b.original.changePct,
+    size: 100,
+  },
+  {
+    accessorKey: "change",
+    header: "漲跌",
+    cell: ({ row }) => {
+      const pct = row.original.changePct
+      const color = pct > 0 ? "text-red-500" : pct < 0 ? "text-green-500" : ""
+      return <div className={`text-right ${color}`}>{row.original.change}</div>
+    },
+    size: 80,
+  },
+  {
+    accessorKey: "tradeVolume",
+    header: "成交量",
+    cell: ({ row }) => <div className="text-right">{row.original.tradeVolume}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.tradeVolume) - parseNumber(b.original.tradeVolume),
+    size: 100,
+  },
+]
 
 const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
   {
@@ -275,7 +346,7 @@ function RankingTable<T>({
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 50 },
+      pagination: { pageSize: 10 },
     },
   })
 
@@ -335,9 +406,14 @@ export default function RankingClient() {
   const dispatch = useAppDispatch()
   const ranking = useAppSelector((state) => state.ranking)
   const topVolume = useAppSelector((state) => state.stock?.topVolume)
-  const [activeTab, setActiveTab] = useState("top-volume")
+  const dailyAll = useAppSelector((state) => state.stock?.dailyAll)
+  const [activeTab, setActiveTab] = useState("change")
   const [search, setSearch] = useState("")
   const [selectedIndustry, setSelectedIndustry] = useState("all")
+
+  useEffect(() => {
+    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" })
+  }, [dispatch, dailyAll])
 
   useEffect(() => {
     if (activeTab === "top-volume" && !topVolume) {
@@ -353,6 +429,15 @@ export default function RankingClient() {
     }
   }, [activeTab, dispatch, topVolume, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio])
 
+  // 底部獨立區塊：進頁面就撈
+  useEffect(() => {
+    if (!ranking?.peRatio) dispatch({ type: "GET_RANKING_PE_RATIO" })
+    if (!ranking?.dividendYield) dispatch({ type: "GET_RANKING_DIVIDEND_YIELD" })
+    if (!ranking?.grossMargin) dispatch({ type: "GET_RANKING_GROSS_MARGIN" })
+    if (!ranking?.revenue) dispatch({ type: "GET_RANKING_REVENUE" })
+    if (!topVolume) dispatch({ type: "GET_STOCK_TOP_VOLUME" })
+  }, [dispatch, ranking?.peRatio, ranking?.dividendYield, ranking?.grossMargin, ranking?.revenue, topVolume])
+
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value)
     setSearch("")
@@ -363,6 +448,33 @@ export default function RankingClient() {
     if (selectedIndustry === "all") return list
     return list.filter((r) => r.industry === selectedIndustry)
   }, [selectedIndustry])
+
+  // 漲跌幅排行
+  const changeRankData = useMemo(() => {
+    const stocks: StockDailyDto[] = dailyAll?.data ?? []
+    if (!stocks.length) return { up: [] as ChangeRankItem[], down: [] as ChangeRankItem[] }
+    const mapped = stocks
+      .map((s) => {
+        const close = parseNumber(s.closingPrice)
+        const change = parseNumber(s.change)
+        const prev = close - change
+        const pct = prev > 0 ? (change / prev) * 100 : 0
+        return {
+          code: s.code,
+          name: s.name,
+          closingPrice: s.closingPrice,
+          change: s.change,
+          changePct: pct,
+          tradeVolume: s.tradeVolume,
+          tradeValue: s.tradeValue,
+          industry: s.industry || "",
+        }
+      })
+      .filter((r) => parseNumber(r.closingPrice) > 0)
+    const up = [...mapped].filter((r) => r.changePct > 0).sort((a, b) => b.changePct - a.changePct)
+    const down = [...mapped].filter((r) => r.changePct < 0).sort((a, b) => a.changePct - b.changePct)
+    return { up, down }
+  }, [dailyAll?.data])
 
   const topVolumeRaw = topVolume?.data
   const topVolumeData: TopVolumeDto[] = Array.isArray(topVolumeRaw) ? topVolumeRaw : []
@@ -385,6 +497,8 @@ export default function RankingClient() {
 
   const getPeriod = () => {
     switch (activeTab) {
+      case "change":
+        return "當日漲跌幅排行"
       case "top-volume": return "即時成交量排行"
       case "revenue": {
         const y = ranking?.revenue?.year
@@ -402,6 +516,8 @@ export default function RankingClient() {
 
   const isLoading = () => {
     switch (activeTab) {
+      case "change":
+        return !dailyAll
       case "top-volume": return !topVolume
       case "revenue": return !ranking?.revenue
       case "gross-margin": return !ranking?.grossMargin
@@ -411,24 +527,18 @@ export default function RankingClient() {
     }
   }
 
+  const isBottomLoading = !ranking?.peRatio || !ranking?.dividendYield || !ranking?.grossMargin || !ranking?.revenue || !topVolume
+
+  const showIndustryFilter = !["top-volume", "change"].includes(activeTab)
+
   return (
     <div className="space-y-4 p-4">
       <PageHeader
         title="排行榜"
         subtitle={<>{getPeriod() && `${getPeriod()}`}</>}
-      />
-
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList>
-            <TabsTrigger value="top-volume">成交排行</TabsTrigger>
-            <TabsTrigger value="revenue">營收排行</TabsTrigger>
-            <TabsTrigger value="gross-margin">毛利率排行</TabsTrigger>
-            <TabsTrigger value="dividend-yield">殖利率排行</TabsTrigger>
-            <TabsTrigger value="pe-ratio">本益比排行</TabsTrigger>
-          </TabsList>
+        controls={
           <div className="flex items-center gap-2">
-            {activeTab !== "top-volume" && (
+            {showIndustryFilter && (
               <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="全部產業" />
@@ -448,8 +558,10 @@ export default function RankingClient() {
               className="w-full sm:w-64"
             />
           </div>
-        </div>
+        }
+      />
 
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         {isLoading() ? (
           <div className="flex h-[60vh] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -457,6 +569,26 @@ export default function RankingClient() {
           </div>
         ) : (
           <>
+            <TabsContent value="change">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div>
+                  <RankingTable
+                    data={changeRankData.up}
+                    columns={changeRankColumns}
+                    globalFilter={search}
+                    defaultSorting={[{ id: "changePct", desc: true }]}
+                  />
+                </div>
+                <div>
+                  <RankingTable
+                    data={changeRankData.down}
+                    columns={changeRankColumns}
+                    globalFilter={search}
+                    defaultSorting={[{ id: "changePct", desc: false }]}
+                  />
+                </div>
+              </div>
+            </TabsContent>
             <TabsContent value="top-volume">
               <RankingTable
                 data={topVolumeData}
@@ -500,6 +632,67 @@ export default function RankingClient() {
           </>
         )}
       </Tabs>
+
+      {isBottomLoading ? (
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">載入資料中...</span>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="space-y-2">
+              <PageHeader title="殖利率排行" subtitle="依殖利率由高至低" />
+              <RankingTable
+                data={dividendYieldData}
+                columns={dividendYieldColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "dividendYield", desc: true }]}
+              />
+            </div>
+            <div className="space-y-2">
+              <PageHeader title="本益比排行" subtitle="依本益比由低至高" />
+              <RankingTable
+                data={peRatioData}
+                columns={peRatioColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "peRatio", desc: false }]}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="space-y-2">
+              <PageHeader title="毛利率排行" subtitle={ranking?.grossMargin?.year ? `${ranking.grossMargin.year} 年第 ${ranking.grossMargin.quarter} 季` : ""} />
+              <RankingTable
+                data={grossMarginData}
+                columns={grossMarginColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "grossMarginRate", desc: true }]}
+              />
+            </div>
+            <div className="space-y-2">
+              <PageHeader title="營收排行" subtitle={ranking?.revenue?.year ? `${ranking.revenue.year} 年第 ${ranking.revenue.quarter} 季` : ""} />
+              <RankingTable
+                data={revenueData}
+                columns={revenueColumns}
+                globalFilter={search}
+                defaultSorting={[{ id: "revenue", desc: true }]}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <PageHeader title="成交排行" subtitle="即時成交量排行" />
+            <RankingTable
+              data={topVolumeData}
+              columns={topVolumeColumns}
+              globalFilter={search}
+              defaultSorting={[{ id: "tradeVolume", desc: true }]}
+            />
+          </div>
+        </>
+      )}
 
       <p className="text-xs text-muted-foreground/60 pt-2">
         資料來源：

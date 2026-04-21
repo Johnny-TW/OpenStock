@@ -66,7 +66,7 @@ import {
 import type { MarketIndexDto, IntradayTickDto, IndexHistoryDto } from "@/type/stock"
 import { parseNumber, SortHeader, Pagination } from "@/components/data-table/shared"
 
-// ── Chart Configs ──
+// 圖表配置：定義不同圖表類型的顏色和標籤
 const intradayChartConfig = {
   volume: { label: "累計成交量", color: "hsl(217, 91%, 60%)" },
   value: { label: "累計成交值", color: "hsl(199, 89%, 48%)" },
@@ -79,7 +79,7 @@ const historyChartConfig = {
   openingIndex: { label: "開盤指數", color: "hsl(210, 40%, 58%)" },
 } satisfies ChartConfig
 
-// ── Market Index Table Columns ──
+// 解析漲跌顏色：根據漲跌值返回對應的文字顏色類名
 function getChangeColor(val: string) {
   if (!val) return ""
   if (val.startsWith("-")) return "text-green-500"
@@ -126,7 +126,7 @@ const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
   },
 ]
 
-// ── Index History Table Columns ──
+// 歷史指數表格欄位定義，包含日期、開盤、最高、最低、收盤等欄位，並定義排序函數
 const historyColumns: ColumnDef<IndexHistoryDto>[] = [
   {
     accessorKey: "date",
@@ -164,7 +164,7 @@ const historyColumns: ColumnDef<IndexHistoryDto>[] = [
   },
 ]
 
-// ── Helpers ──
+// 格式化大量數字，將數字轉換為更易讀的格式，例如將 1000000 轉換為 "100 萬"
 function formatLargeNumber(val: string) {
   const n = parseNumber(val)
   if (n >= 1e12) return `${(n / 1e12).toFixed(2)} 兆`
@@ -173,7 +173,7 @@ function formatLargeNumber(val: string) {
   return val
 }
 
-// ── Intraday Chart Section ──
+// 解析並格式化數字，適用於指數相關數據
 function IntradayChartSection({ list }: { list: IntradayTickDto[] }) {
   const [chartTab, setChartTab] = useState("volume")
 
@@ -248,7 +248,7 @@ function IntradayChartSection({ list }: { list: IntradayTickDto[] }) {
   )
 }
 
-// ── History Chart Section ──
+// 解析並格式化數字，適用於指數歷史數據
 function HistoryChartSection({ list }: { list: IndexHistoryDto[] }) {
   const chartData = useMemo(() => {
     const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date))
@@ -362,12 +362,13 @@ function HistoryChartSection({ list }: { list: IndexHistoryDto[] }) {
   )
 }
 
-// ── Main Component ──
+// 這是
 export default function MarketOverviewClient() {
   const dispatch = useAppDispatch()
   const marketIndex = useAppSelector((state) => state.stock?.marketIndex)
   const intraday = useAppSelector((state) => state.stock?.intraday)
   const indexHistory = useAppSelector((state) => state.stock?.indexHistory)
+  const dailyAll = useAppSelector((state) => state.stock?.dailyAll)
 
   const [indexSorting, setIndexSorting] = useState<SortingState>([{ id: "closingIndex", desc: true }])
   const [historySorting, setHistorySorting] = useState<SortingState>([{ id: "date", desc: true }])
@@ -379,7 +380,8 @@ export default function MarketOverviewClient() {
     dispatch({ type: "GET_STOCK_MARKET_INDEX" })
     dispatch({ type: "GET_STOCK_INTRADAY" })
     dispatch({ type: "GET_STOCK_INDEX_HISTORY" })
-  }, [dispatch])
+    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" })
+  }, [dispatch, dailyAll])
 
   const intradayList: IntradayTickDto[] = useMemo(() => {
     const d = intraday?.data
@@ -413,6 +415,21 @@ export default function MarketOverviewClient() {
   }, [historyList])
 
   const taiexRow = indexList.find((r) => r.name?.includes("發行量加權"))
+
+  // ── 漲跌家數統計 ──
+  const marketSentiment = useMemo(() => {
+    const stocks = dailyAll?.data ?? []
+    if (!stocks.length) return null
+    let up = 0, down = 0, flat = 0
+    for (const s of stocks) {
+      const change = parseFloat(s.change?.replace(/,/g, "") || "0")
+      if (change > 0) up++
+      else if (change < 0) down++
+      else flat++
+    }
+    const total = up + down + flat
+    return { up, down, flat, total }
+  }, [dailyAll?.data])
 
   const indexTable = useReactTable({
     data: indexList,
@@ -461,20 +478,22 @@ export default function MarketOverviewClient() {
       {/* ── 頂部統計卡片 ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {taiexRow && (
-          <>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardDescription>加權指數</CardDescription>
-                <TrendingUp className="size-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{taiexRow.closingIndex}</p>
-                <p className={`text-sm font-medium ${getChangeColor(taiexRow.changePoints)}`}>
-                  {taiexRow.direction} {taiexRow.changePoints} ({taiexRow.changePercent}%)
-                </p>
-              </CardContent>
-            </Card>
-          </>
+          <Card className="border-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription>加權指數</CardDescription>
+              {getChangeColor(taiexRow.changePoints).includes("red") ? (
+                <TrendingUp className="size-4 text-red-500" />
+              ) : (
+                <TrendingDown className="size-4 text-green-500" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold tracking-tight">{taiexRow.closingIndex}</p>
+              <p className={`text-sm font-semibold ${getChangeColor(taiexRow.changePoints)}`}>
+                {taiexRow.direction} {taiexRow.changePoints} ({taiexRow.changePercent}%)
+              </p>
+            </CardContent>
+          </Card>
         )}
         {latest && (
           <>
@@ -511,14 +530,17 @@ export default function MarketOverviewClient() {
                 {historyStats.isUp ? "+" : ""}{historyStats.change.toFixed(2)}
               </p>
               <p className="text-xs text-muted-foreground">
-                {historyStats.changePercent}%（最高 {historyStats.high.toLocaleString()} / 最低 {historyStats.low.toLocaleString()}）
+                {historyStats.changePercent}%（高 {historyStats.high.toLocaleString()} / 低 {historyStats.low.toLocaleString()}）
               </p>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* ── 圖表區 ── */}
+      {/* 產業分類總覽 */}
+      {indexList.length > 0 && <IndustryRadialSection indices={indexList} />}
+
+      {/* 圖表區 */}
       <Card>
         <CardHeader>
           <CardTitle>走勢圖</CardTitle>
@@ -552,7 +574,7 @@ export default function MarketOverviewClient() {
         </CardFooter>
       </Card>
 
-      {/* ── 底部資料表：左右並排 ── */}
+      {/* 底部資料表：左右並排 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* 左：各類指數 */}
         <Card>
@@ -610,7 +632,7 @@ export default function MarketOverviewClient() {
   )
 }
 
-// ── Radial Chart Colors ──
+// 產業分類雷達圖顏色列表
 const RADIAL_COLORS = [
   "hsl(217, 91%, 60%)",
   "hsl(199, 89%, 48%)",
@@ -622,7 +644,7 @@ const RADIAL_COLORS = [
   "hsl(215, 50%, 62%)",
 ]
 
-// ── Industry Radial Card ──
+// 產業分類雷達圖卡片
 function IndustryRadialCard({
   name,
   closingIndex,
@@ -706,7 +728,7 @@ function IndustryRadialCard({
   )
 }
 
-// ── Industry Radial Section ──
+// 產業分類雷達圖區塊，顯示漲跌幅前幾大的類股指數
 function IndustryRadialSection({ indices }: { indices: MarketIndexDto[] }) {
   const sectorIndices = useMemo(() => {
     return indices
@@ -745,7 +767,7 @@ function IndustryRadialSection({ indices }: { indices: MarketIndexDto[] }) {
   )
 }
 
-// ── Shared Table Renderer ──
+// 資料表渲染器，使用 React Table 的 table 實例和欄位定義來渲染表格
 function DataTableRenderer<T>({
   table,
   columns,

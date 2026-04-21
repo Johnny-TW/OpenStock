@@ -1,3 +1,13 @@
+.wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .section {
   border: 1px solid hsl(var(--border));
   border-radius: 0.75rem;
@@ -20,10 +30,16 @@
   gap: 0.5rem;
 }
 
-.icon {
+.iconUp {
   width: 16px;
   height: 16px;
   color: hsl(0 72% 51%);
+}
+
+.iconDown {
+  width: 16px;
+  height: 16px;
+  color: hsl(120 60% 35%);
 }
 
 .title {
@@ -132,10 +148,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-.change {
+.changeUp {
   font-size: 0.6875rem;
   font-weight: 600;
   color: hsl(0 72% 51%);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.changeDown {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: hsl(120 60% 35%);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

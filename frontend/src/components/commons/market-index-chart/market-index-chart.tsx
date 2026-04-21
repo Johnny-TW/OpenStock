@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import Link from "next/link"
-import { TrendingUp, ArrowRight } from "lucide-react"
+import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react"
 import type { StockDailyDto } from "@/type/stock"
 import styles from "./market-index-chart.module.scss"
 
@@ -26,12 +26,15 @@ function formatValue(val: string): string {
   return n.toLocaleString()
 }
 
-interface TopGainersProps {
-  data: StockDailyDto[]
+interface RankingListProps {
+  title: string
+  icon: React.ReactNode
+  list: ReturnType<typeof useRankList>
+  variant: "up" | "down"
 }
 
-export function MarketIndexChart({ data }: TopGainersProps) {
-  const topList = useMemo(() => {
+function useRankList(data: StockDailyDto[], direction: "up" | "down") {
+  return useMemo(() => {
     if (!data?.length) return []
     return data
       .map((row) => {
@@ -41,19 +44,27 @@ export function MarketIndexChart({ data }: TopGainersProps) {
         const pct = prev > 0 ? (change / prev) * 100 : 0
         return { ...row, changeNum: change, pct, closeNum: close }
       })
-      .filter((r) => r.closeNum > 0 && r.pct > 0)
-      .sort((a, b) => b.pct - a.pct)
+      .filter((r) =>
+        direction === "up"
+          ? r.closeNum > 0 && r.pct > 0
+          : r.closeNum > 0 && r.pct < 0
+      )
+      .sort((a, b) =>
+        direction === "up" ? b.pct - a.pct : a.pct - b.pct
+      )
       .slice(0, TOP_COUNT)
-  }, [data])
+  }, [data, direction])
+}
 
-  if (topList.length === 0) return null
+function RankingList({ title, icon, list, variant }: RankingListProps) {
+  if (list.length === 0) return null
 
   return (
     <section className={styles.section}>
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <TrendingUp className={styles.icon} />
-          <h2 className={styles.title}>漲幅排行 Top {TOP_COUNT}</h2>
+          {icon}
+          <h2 className={styles.title}>{title}</h2>
         </div>
         <Link href="/stock/ranking" className={styles.moreLink}>
           更多排行 <ArrowRight className="h-3.5 w-3.5" />
@@ -61,7 +72,7 @@ export function MarketIndexChart({ data }: TopGainersProps) {
       </div>
 
       <div className={styles.list}>
-        {topList.map((stock, idx) => (
+        {list.map((stock, idx) => (
           <div key={stock.code} className={styles.row}>
             <span className={styles.rank} data-rank={idx + 1}>{idx + 1}</span>
             <div className={styles.stockInfo}>
@@ -70,8 +81,8 @@ export function MarketIndexChart({ data }: TopGainersProps) {
             </div>
             <div className={styles.priceInfo}>
               <span className={styles.close}>{stock.closingPrice}</span>
-              <span className={styles.change}>
-                ▲ {stock.changeNum.toFixed(2)} ({stock.pct.toFixed(2)}%)
+              <span className={variant === "up" ? styles.changeUp : styles.changeDown}>
+                {variant === "up" ? "▲" : "▼"} {Math.abs(stock.changeNum).toFixed(2)} ({Math.abs(stock.pct).toFixed(2)}%)
               </span>
             </div>
             <div className={styles.volumeInfo}>
@@ -82,5 +93,31 @@ export function MarketIndexChart({ data }: TopGainersProps) {
         ))}
       </div>
     </section>
+  )
+}
+
+interface MarketIndexChartProps {
+  data: StockDailyDto[]
+}
+
+export function MarketIndexChart({ data }: MarketIndexChartProps) {
+  const topGainers = useRankList(data, "up")
+  const topLosers = useRankList(data, "down")
+
+  return (
+    <div className={styles.wrapper}>
+      <RankingList
+        title={`漲幅排行 Top ${TOP_COUNT}`}
+        icon={<TrendingUp className={styles.iconUp} />}
+        list={topGainers}
+        variant="up"
+      />
+      <RankingList
+        title={`跌幅排行 Top ${TOP_COUNT}`}
+        icon={<TrendingDown className={styles.iconDown} />}
+        list={topLosers}
+        variant="down"
+      />
+    </div>
   )
 }
