@@ -2,7 +2,7 @@ name: CD — Deploy to QAS
 
 on:
   push:
-    branches: [develop]
+    branches: [qas]
   workflow_dispatch:
 
 concurrency:
