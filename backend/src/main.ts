@@ -70,14 +70,18 @@ async function bootstrap() {
     customSiteTitle: '臺灣證券交易所 OpenAPI',
   });
 
+  const corsOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://localhost:3003',
+    'http://localhost:3004',
+  ];
+  if (process.env.CORS_ORIGIN) {
+    corsOrigins.push(process.env.CORS_ORIGIN);
+  }
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'http://localhost:3003',
-      'http://localhost:3004',
-    ],
+    origin: corsOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
