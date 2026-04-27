@@ -15,6 +15,8 @@ import {
   HeatmapResponse,
   NewsResponse,
   AllNewsResponse,
+  StockDetailResponse,
+  StockHistoryResponse,
 } from './dto/stock.dto';
 
 @Controller('stock')
@@ -209,5 +211,55 @@ export class StockController {
   async saveDailyPrices(): Promise<{ count: number }> {
     const count = await this.stockService.saveDailyStockPrices();
     return { count };
+  }
+
+  @ApiTags('個股詳情')
+  @ApiOperation({
+    summary: '個股基本面詳細資料',
+    description:
+      '取得個股的基本面資料，包含市值、本益比、EPS、殖利率、市淨率等。\n\n' +
+      '台股代號（如 2330）自動轉換為 Yahoo Finance 格式。\n\n' +
+      '資料來源：Yahoo Finance',
+  })
+  @ApiQuery({
+    name: 'symbol',
+    required: true,
+    description: '股票代號（如 2330、NVDA）',
+  })
+  @ApiResponse({ status: 200, description: '成功取得個股詳細資料' })
+  @Get('detail')
+  async getStockDetail(
+    @Query('symbol') symbol: string,
+  ): Promise<StockDetailResponse> {
+    return this.stockService.getStockDetail(symbol);
+  }
+
+  @ApiTags('個股詳情')
+  @ApiOperation({
+    summary: '個股歷史價格',
+    description:
+      '取得個股歷史 OHLCV 資料，支援多種期間（1d/5d/1m/3m/6m/1y/5y/all）。\n\n' +
+      '資料來源：Yahoo Finance',
+  })
+  @ApiQuery({
+    name: 'symbol',
+    required: true,
+    description: '股票代號（如 2330、NVDA）',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['1d', '5d', '1m', '3m', '6m', '1y', '5y', 'all'],
+    description: '查詢期間，預設 1m',
+  })
+  @ApiResponse({ status: 200, description: '成功取得歷史價格資料' })
+  @Get('history')
+  async getStockHistory(
+    @Query('symbol') symbol: string,
+    @Query('period') period?: string,
+  ): Promise<StockHistoryResponse> {
+    const validPeriods = ['1d', '5d', '1m', '3m', '6m', '1y', '5y', 'all'];
+    const safePeriod = validPeriods.includes(period ?? '') ? period! : '1m';
+    return this.stockService.getStockHistory(symbol, safePeriod);
   }
 }

@@ -7,6 +7,8 @@ import {
   API_STOCK_TOP_VOLUME,
   API_STOCK_INTRADAY,
   API_STOCK_INDEX_HISTORY,
+  API_STOCK_DETAIL,
+  API_STOCK_HISTORY,
 } from "../api/API"
 import { fetchApi } from "."
 
@@ -58,6 +60,22 @@ function* getStockIndexHistory() {
   })
 }
 
+function* getStockDetail(action) {
+  yield fetchApi({
+    method: API_METHOD.GET,
+    path: `${API_STOCK_DETAIL}?symbol=${action.symbol}`,
+    reducer: "SET_STOCK_DETAIL",
+  })
+}
+
+function* getStockHistory(action) {
+  yield fetchApi({
+    method: API_METHOD.GET,
+    path: `${API_STOCK_HISTORY}?symbol=${action.symbol}&period=${action.period || '1m'}`,
+    reducer: "SET_STOCK_HISTORY",
+  })
+}
+
 export default function* stockSaga() {
   yield takeLatest("GET_STOCK_DAILY_ALL", getStockDailyAll)
   yield takeLatest("GET_STOCK_VALUATION", getStockValuation)
@@ -65,4 +83,6 @@ export default function* stockSaga() {
   yield takeLatest("GET_STOCK_TOP_VOLUME", getStockTopVolume)
   yield takeLatest("GET_STOCK_INTRADAY", getStockIntraday)
   yield takeLatest("GET_STOCK_INDEX_HISTORY", getStockIndexHistory)
+  yield takeLatest("GET_STOCK_DETAIL", getStockDetail)
+  yield takeLatest("GET_STOCK_HISTORY", getStockHistory)
 }

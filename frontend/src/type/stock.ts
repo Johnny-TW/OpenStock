@@ -221,3 +221,69 @@ export interface HeatmapResponse {
   total: number;
   date: string;
 }
+
+export interface StockDetailDto {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  open: number;
+  high: number;
+  low: number;
+  volume: number;
+  marketCap: number;
+  peRatio: number;
+  forwardPE: number;
+  eps: number;
+  dividendYield: number;
+  pbRatio: number;
+  week52High: number;
+  week52Low: number;
+  beta: number;
+  previousClose: number;
+  avgVolume: number;
+  fiftyDayAvg: number;
+  twoHundredDayAvg: number;
+  returnOnEquity: number;
+  returnOnAssets: number;
+  grossMargins: number;
+  operatingMargins: number;
+  profitMargins: number;
+  revenueGrowth: number;
+  earningsGrowth: number;
+  debtToEquity: number;
+  currentRatio: number;
+  bookValue: number;
+  targetMeanPrice: number;
+  targetHighPrice: number;
+  targetLowPrice: number;
+  numberOfAnalysts: number;
+  recommendationKey: string;
+  payoutRatio: number;
+  exDividendDate: string;
+  dividendRate: number;
+  sharesOutstanding: number;
+  sector: string;
+  industry: string;
+}
+
+export interface StockDetailResponse {
+  data: StockDetailDto;
+}
+
+export interface StockHistoryPointDto {
+  date: string;
+  close: number;
+  open: number;
+  high: number;
+  low: number;
+  volume: number;
+}
+
+export interface StockHistoryResponse {
+  symbol: string;
+  period: string;
+  data: StockHistoryPointDto[];
+  total: number;
+}

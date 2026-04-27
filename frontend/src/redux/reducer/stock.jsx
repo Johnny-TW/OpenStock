@@ -5,6 +5,9 @@ const initialState = {
   topVolume: null,
   intraday: null,
   indexHistory: null,
+  stockDetail: null,
+  stockDetailLoaded: false,
+  stockHistory: null,
 }
 
 const reducer = (state = initialState, action) => {
@@ -38,6 +41,28 @@ const reducer = (state = initialState, action) => {
       return {
         ...state,
         indexHistory: action.data,
+      }
+    case "SET_STOCK_DETAIL":
+      return {
+        ...state,
+        stockDetail: action.data,
+        stockDetailLoaded: true,
+      }
+    case "CLEAR_STOCK_DETAIL":
+      return {
+        ...state,
+        stockDetail: null,
+        stockDetailLoaded: false,
+      }
+    case "SET_STOCK_HISTORY":
+      return {
+        ...state,
+        stockHistory: action.data,
+      }
+    case "CLEAR_STOCK_HISTORY":
+      return {
+        ...state,
+        stockHistory: null,
       }
     default:
       return state

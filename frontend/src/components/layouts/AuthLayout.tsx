@@ -7,7 +7,7 @@ import { Header, Sidebar, Footer } from "@/components/layouts"
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const { status } = useSession()
 
-  if (status === "unauthenticated") {
+  if (status === "loading" || status === "unauthenticated") {
     return <>{children}</>
   }
 

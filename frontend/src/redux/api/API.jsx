@@ -29,6 +29,8 @@ export const API_STOCK_MARKET_INDEX = "stock/market-index"
 export const API_STOCK_TOP_VOLUME = "stock/top-volume"
 export const API_STOCK_INTRADAY = "stock/intraday"
 export const API_STOCK_INDEX_HISTORY = "stock/index-history"
+export const API_STOCK_DETAIL = "stock/detail"
+export const API_STOCK_HISTORY = "stock/history"
 
 // ranking
 export const API_STOCK_RANKING_REVENUE = "stock/ranking/revenue"

@@ -23,6 +23,16 @@ const PermissionGuard = ({ children }: { children: React.ReactNode }) => {
     }
   }, [session, status, pathname, router]);
 
+  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+
+  if (status === "loading" && !isPublic) {
+    return null;
+  }
+
+  if (!session && !isPublic) {
+    return null;
+  }
+
   return <>{children}</>;
 };
 

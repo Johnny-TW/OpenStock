@@ -44,6 +44,7 @@ async function bootstrap() {
       'bearer',
     )
     .addServer('http://localhost:3004', '本機開發')
+    .addServer('http://52.68.77.3:4004', 'QAS 測試環境')
     .addTag('系統', '健康檢查與基本資訊')
     .addTag('證券交易', '上市個股日成交資訊、估值、成交量排行')
     .addTag('指數', '大盤指數、盤中即時成交、歷史資料')
@@ -54,7 +55,9 @@ async function bootstrap() {
     .addTag('自選股', '使用者自選股 CRUD (需認證)')
     .addTag('AI 股票分析', 'Claude AI 市場分析與推薦（需認證）')
     .build();
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    autoTagControllers: false,
+  });
 
   // 設定 Swagger 並開啟 search 功能
   SwaggerModule.setup('api/docs', app, document, {

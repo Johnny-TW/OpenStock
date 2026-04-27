@@ -463,3 +463,173 @@ export class HeatmapResponse {
   @ApiProperty({ example: '114/03/31' })
   date: string;
 }
+
+export class StockDetailDto {
+  @ApiProperty({ example: '2330', description: '股票代號' })
+  symbol: string;
+
+  @ApiProperty({ example: '台積電', description: '股票名稱' })
+  name: string;
+
+  @ApiProperty({ example: 904.84, description: '目前股價' })
+  price: number;
+
+  @ApiProperty({ example: -0.16, description: '漲跌金額' })
+  change: number;
+
+  @ApiProperty({ example: -0.02, description: '漲跌幅 (%)' })
+  changePercent: number;
+
+  @ApiProperty({ example: 896.33, description: '開盤價' })
+  open: number;
+
+  @ApiProperty({ example: 927.92, description: '最高價' })
+  high: number;
+
+  @ApiProperty({ example: 884.44, description: '最低價' })
+  low: number;
+
+  @ApiProperty({ example: 41000000, description: '成交量' })
+  volume: number;
+
+  @ApiProperty({ example: 2240000000000, description: '市值' })
+  marketCap: number;
+
+  @ApiProperty({ example: 68.3, description: '本益比 P/E' })
+  peRatio: number;
+
+  @ApiProperty({ example: 38.2, description: '預估本益比' })
+  forwardPE: number;
+
+  @ApiProperty({ example: 11.93, description: 'EPS' })
+  eps: number;
+
+  @ApiProperty({ example: 0.03, description: '殖息率 (%)' })
+  dividendYield: number;
+
+  @ApiProperty({ example: 35.6, description: '市淨率 P/B' })
+  pbRatio: number;
+
+  @ApiProperty({ example: 1248.9, description: '52 週最高' })
+  week52High: number;
+
+  @ApiProperty({ example: 588.25, description: '52 週最低' })
+  week52Low: number;
+
+  @ApiProperty({ example: 1.72, description: 'Beta' })
+  beta: number;
+
+  @ApiProperty({ example: 900.0, description: '昨收價' })
+  previousClose: number;
+
+  @ApiProperty({ example: 35000000, description: '近三月日均量' })
+  avgVolume: number;
+
+  @ApiProperty({ example: 880.5, description: '50日均線' })
+  fiftyDayAvg: number;
+
+  @ApiProperty({ example: 790.2, description: '200日均線' })
+  twoHundredDayAvg: number;
+
+  @ApiProperty({ example: 0.32, description: 'ROE (%)' })
+  returnOnEquity: number;
+
+  @ApiProperty({ example: 0.15, description: 'ROA (%)' })
+  returnOnAssets: number;
+
+  @ApiProperty({ example: 0.55, description: '毛利率 (%)' })
+  grossMargins: number;
+
+  @ApiProperty({ example: 0.44, description: '營業利益率 (%)' })
+  operatingMargins: number;
+
+  @ApiProperty({ example: 0.38, description: '淨利率 (%)' })
+  profitMargins: number;
+
+  @ApiProperty({ example: 0.12, description: '營收成長率 (%)' })
+  revenueGrowth: number;
+
+  @ApiProperty({ example: 0.25, description: '季盈餘成長率 (%)' })
+  earningsGrowth: number;
+
+  @ApiProperty({ example: 0.35, description: '負債股東權益比' })
+  debtToEquity: number;
+
+  @ApiProperty({ example: 2.1, description: '流動比率' })
+  currentRatio: number;
+
+  @ApiProperty({ example: 25.93, description: '每股淨值' })
+  bookValue: number;
+
+  @ApiProperty({ example: 1200, description: '分析師目標均價' })
+  targetMeanPrice: number;
+
+  @ApiProperty({ example: 1500, description: '分析師最高目標價' })
+  targetHighPrice: number;
+
+  @ApiProperty({ example: 900, description: '分析師最低目標價' })
+  targetLowPrice: number;
+
+  @ApiProperty({ example: 25, description: '分析師人數' })
+  numberOfAnalysts: number;
+
+  @ApiProperty({ example: 'buy', description: '分析師建議' })
+  recommendationKey: string;
+
+  @ApiProperty({ example: 0.35, description: '配息率 (%)' })
+  payoutRatio: number;
+
+  @ApiProperty({ example: '2026-07-15', description: '除息日' })
+  exDividendDate: string;
+
+  @ApiProperty({ example: 13.5, description: '年化股利金額' })
+  dividendRate: number;
+
+  @ApiProperty({ example: 25930000000, description: '流通在外股數' })
+  sharesOutstanding: number;
+
+  @ApiProperty({ example: '半導體業', description: '產業類別' })
+  sector: string;
+
+  @ApiProperty({ example: 'Semiconductors', description: '細項產業' })
+  industry: string;
+}
+
+export class StockDetailResponse {
+  @ApiProperty({ type: StockDetailDto })
+  data: StockDetailDto;
+}
+
+export class StockHistoryPointDto {
+  @ApiProperty({ example: '2026-04-25', description: '日期' })
+  date: string;
+
+  @ApiProperty({ example: 904.84, description: '收盤價' })
+  close: number;
+
+  @ApiProperty({ example: 896.33, description: '開盤價' })
+  open: number;
+
+  @ApiProperty({ example: 927.92, description: '最高價' })
+  high: number;
+
+  @ApiProperty({ example: 884.44, description: '最低價' })
+  low: number;
+
+  @ApiProperty({ example: 41000000, description: '成交量' })
+  volume: number;
+}
+
+export class StockHistoryResponse {
+  @ApiProperty({ example: '2330', description: '股票代號' })
+  symbol: string;
+
+  @ApiProperty({ example: '1d', description: '查詢期間' })
+  period: string;
+
+  @ApiProperty({ type: [StockHistoryPointDto], description: '歷史價格資料' })
+  data: StockHistoryPointDto[];
+
+  @ApiProperty({ example: 250, description: '資料筆數' })
+  total: number;
+}

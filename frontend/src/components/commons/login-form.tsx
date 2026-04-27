@@ -32,11 +32,11 @@ export function LoginForm({
   const errorMessage = error ? (ERROR_MAP[error] ?? ERROR_MAP.default) : null
 
   const handleAzureLogin = () => {
-    signIn("azure-ad", { callbackUrl: "/" })
+    signIn("azure-ad", { callbackUrl: "/stock" })
   }
 
   const handleGoogleLogin = () => {
-    signIn("google", { callbackUrl: "/" })
+    signIn("google", { callbackUrl: "/stock" })
   }
 
   return (

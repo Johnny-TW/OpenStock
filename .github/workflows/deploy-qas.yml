@@ -66,19 +66,25 @@ jobs:
     name: Deploy to QAS Server
     runs-on: ubuntu-latest
     needs: [build-and-push]
-    # environment: qas
+    permissions:
+      packages: read
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.QAS_SERVER_HOST }}
           username: ${{ secrets.QAS_SERVER_USER }}
           key: ${{ secrets.QAS_SERVER_SSH_KEY }}
+          envs: GHCR_TOKEN
           script: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u github-actions --password-stdin
             cd /opt/stocksmart
-            docker compose -f docker-compose.qas.yml pull
-            docker compose -f docker-compose.qas.yml up -d
+            docker compose -f docker-compose.qas.yml --env-file .env.qas pull backend frontend
+            docker compose -f docker-compose.qas.yml --env-file .env.qas up -d
             docker image prune -f
+            docker logout ghcr.io
             echo "✅ QAS 部署完成：$(date)"
 
   e2e-test:

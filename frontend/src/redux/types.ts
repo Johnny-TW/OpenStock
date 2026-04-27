@@ -13,6 +13,8 @@ import type {
   HeatmapResponse,
   AllNewsResponse,
   WatchlistItem,
+  StockDetailResponse,
+  StockHistoryResponse,
 } from "@/type/stock"
 
 export interface RootState {
@@ -35,6 +37,9 @@ export interface RootState {
     topVolume: TopVolumeResponse | null
     intraday: IntradayResponse | null
     indexHistory: IndexHistoryResponse | null
+    stockDetail: StockDetailResponse | null
+    stockDetailLoaded: boolean
+    stockHistory: StockHistoryResponse | null
   }
   ranking: {
     revenue: RevenueRankingResponse | null

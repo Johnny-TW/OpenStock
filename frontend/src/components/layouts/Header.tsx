@@ -11,6 +11,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/commons/breadcrumb";
+import { ThemeToggle } from "@/components/commons/theme-toggle";
 
 const breadcrumbMap: Record<string, { category: string; page: string }> = {
   "/stock": { category: "股票資訊", page: "當日成交總覽" },
@@ -36,7 +37,7 @@ export default function AppHeader() {
   const { category, page } = getBreadcrumb(pathname);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
       <div className="flex items-center gap-2 px-4">
         <SidebarTrigger className="-ml-1" />
         <Separator
@@ -54,6 +55,9 @@ export default function AppHeader() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+      </div>
+      <div className="flex items-center gap-2 px-4">
+        <ThemeToggle />
       </div>
     </header>
   );

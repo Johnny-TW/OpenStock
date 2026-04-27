@@ -52,29 +52,13 @@ import {
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 
-import { useIsMobile } from "@/hooks/use-mobile"
 import { useAppDispatch } from "@/hooks/use-redux"
 import { Badge } from "@/components/commons/badge"
 import { Button } from "@/components/commons/button"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/commons/chart"
+
 import { Checkbox } from "@/components/commons/checkbox"
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/commons/drawer"
+
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -82,7 +66,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/commons/dropdown-menu"
 import { Input } from "@/components/commons/input"
-import { Label } from "@/components/commons/label"
+
 import {
   Select,
   SelectContent,
@@ -90,7 +74,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/commons/select"
-import { Separator } from "@/components/commons/separator"
+
 import {
   Table,
   TableBody,
@@ -99,6 +83,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/commons/table"
+import { Label } from "@/components/commons/label"
 import {
   Tabs,
   TabsContent,
@@ -461,7 +446,14 @@ function WatchlistGroupSection({
   const renderCell = (stock: StockRow, key: WatchlistSortKey) => {
     switch (key) {
       case "code":
-        return <TableCellViewer item={stock} />
+        return (
+          <a
+            href={`/stock/${stock.code}`}
+            className="font-mono hover:text-primary hover:underline"
+          >
+            {stock.code}
+          </a>
+        )
       case "name":
         return stock.name
       case "change":
@@ -575,7 +567,14 @@ const columns: ColumnDef<StockRow>[] = [
   {
     accessorKey: "code",
     header: "證券代號",
-    cell: ({ row }) => <TableCellViewer item={row.original} />,
+    cell: ({ row }) => (
+      <a
+        href={`/stock/${row.original.code}`}
+        className="text-foreground w-fit px-0 text-left font-mono hover:text-primary hover:underline"
+      >
+        {row.original.code}
+      </a>
+    ),
     enableHiding: false,
     size: 100,
   },
@@ -703,16 +702,28 @@ function DraggableRow({ row }: { row: Row<StockRow> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.original._rowId,
   })
+  const handleRowClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (
+      target.closest("button") ||
+      target.closest("input") ||
+      target.closest("a") ||
+      target.closest("[role='checkbox']")
+    )
+      return
+    window.location.href = `/stock/${row.original.code}`
+  }
   return (
     <TableRow
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      className="relative z-0 cursor-pointer hover:bg-muted/50 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
       }}
+      onClick={handleRowClick}
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
@@ -1190,127 +1201,4 @@ export function StockDataTable({
   )
 }
 
-const chartConfig = {
-  price: {
-    label: "價格",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig
 
-const TableCellViewer = React.memo(function TableCellViewer({ item }: { item: StockRow }) {
-  const isMobile = useIsMobile()
-
-  const change = parseNumber(item.change)
-  const isUp = change > 0
-  const isDown = change < 0
-
-  const chartData = React.useMemo(
-    () => [
-      { label: "最低", value: parseNumber(item.lowestPrice) },
-      { label: "開盤", value: parseNumber(item.openingPrice) },
-      { label: "收盤", value: parseNumber(item.closingPrice) },
-      { label: "最高", value: parseNumber(item.highestPrice) },
-    ],
-    [item.lowestPrice, item.openingPrice, item.closingPrice, item.highestPrice]
-  )
-
-  return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left font-mono">
-          {item.code}
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>
-            {item.code} {item.name}
-          </DrawerTitle>
-          <DrawerDescription className="flex items-center gap-2">
-            收盤 {item.closingPrice}
-            <span className={getChangeColor(item.change)}>
-              {item.change}
-              {isUp && <IconTrendingUp className="inline size-4 ml-1" />}
-              {isDown && <IconTrendingDown className="inline size-4 ml-1" />}
-            </span>
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          {!isMobile && (
-            <>
-              <ChartContainer config={chartConfig}>
-                <AreaChart
-                  accessibilityLayer
-                  data={chartData}
-                  margin={{ left: 0, right: 10 }}
-                >
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="label"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
-                  />
-                  <Area
-                    dataKey="value"
-                    type="natural"
-                    fill="var(--color-price)"
-                    fillOpacity={0.4}
-                    stroke="var(--color-price)"
-                  />
-                </AreaChart>
-              </ChartContainer>
-              <Separator />
-            </>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">開盤價</Label>
-              <span className="font-mono">{item.openingPrice}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">收盤價</Label>
-              <span className="font-mono">{item.closingPrice}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">最高價</Label>
-              <span className="font-mono">{item.highestPrice}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">最低價</Label>
-              <span className="font-mono">{item.lowestPrice}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">漲跌價差</Label>
-              <span className={`font-mono ${getChangeColor(item.change)}`}>
-                {item.change}
-              </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">成交筆數</Label>
-              <span className="font-mono">{item.transaction}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">成交股數</Label>
-              <span className="font-mono">{item.tradeVolume}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-muted-foreground">成交金額</Label>
-              <span className="font-mono">{item.tradeValue}</span>
-            </div>
-          </div>
-        </div>
-        <DrawerFooter>
-          <DrawerClose asChild>
-            <Button variant="outline">關閉</Button>
-          </DrawerClose>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-  )
-})

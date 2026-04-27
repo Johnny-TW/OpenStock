@@ -1,9 +1,16 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  NotFoundException,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { Cron } from '@nestjs/schedule';
 import { firstValueFrom } from 'rxjs';
 import type { AxiosRequestConfig } from 'axios';
 import * as https from 'https';
+import YahooFinance from 'yahoo-finance2';
+const yahooFinance = new YahooFinance();
 import { PrismaService } from '../prisma/prisma.service';
 import {
   TwseResponse,
@@ -33,6 +40,10 @@ import {
   NewsDto,
   NewsResponse,
   AllNewsResponse,
+  StockDetailDto,
+  StockDetailResponse,
+  StockHistoryPointDto,
+  StockHistoryResponse,
 } from './dto/stock.dto';
 
 @Injectable()
@@ -772,5 +783,202 @@ export class StockService implements OnModuleInit {
     });
 
     return { data: industries, total: industries.length, date: data.date };
+  }
+
+  async getStockDetail(symbol: string): Promise<StockDetailResponse> {
+    const isTwStock = /^\d{4,6}$/.test(symbol);
+    const yahooSymbol = isTwStock ? `${symbol}.TW` : symbol;
+
+    try {
+      const quote = (await yahooFinance.quote(yahooSymbol)) as Record<
+        string,
+        number | string | undefined
+      >;
+      const summary = (await yahooFinance.quoteSummary(yahooSymbol, {
+        modules: [
+          'financialData',
+          'defaultKeyStatistics',
+          'summaryDetail',
+          'assetProfile',
+        ],
+      })) as {
+        financialData?: Record<string, number | string | undefined>;
+        defaultKeyStatistics?: Record<string, number | string | undefined>;
+        summaryDetail?: Record<string, number | string | undefined>;
+        assetProfile?: Record<string, number | string | undefined>;
+      };
+
+      const financial = summary.financialData ?? {};
+      const keyStats = summary.defaultKeyStatistics ?? {};
+      const summaryDetail = summary.summaryDetail ?? {};
+      const profile = summary.assetProfile ?? {};
+
+      const price = (quote.regularMarketPrice as number) ?? 0;
+      const trailingPE = (summaryDetail.trailingPE as number) ?? 0;
+
+      const exDivRaw = summaryDetail.exDividendDate;
+      const exDividendDate =
+        exDivRaw &&
+        typeof exDivRaw === 'object' &&
+        'toISOString' in (exDivRaw as object)
+          ? (exDivRaw as Date).toISOString().split('T')[0]
+          : typeof exDivRaw === 'string'
+            ? exDivRaw
+            : '';
+
+      const detail: StockDetailDto = {
+        symbol,
+        name:
+          (quote.shortName as string) || (quote.longName as string) || symbol,
+        price,
+        change: (quote.regularMarketChange as number) ?? 0,
+        changePercent: (quote.regularMarketChangePercent as number) ?? 0,
+        open: (quote.regularMarketOpen as number) ?? 0,
+        high: (quote.regularMarketDayHigh as number) ?? 0,
+        low: (quote.regularMarketDayLow as number) ?? 0,
+        volume: (quote.regularMarketVolume as number) ?? 0,
+        marketCap: (quote.marketCap as number) ?? 0,
+        peRatio: trailingPE,
+        forwardPE:
+          (summaryDetail.forwardPE as number) ??
+          (keyStats.forwardPE as number) ??
+          0,
+        eps: (financial.earningsGrowth as number)
+          ? price / (trailingPE || 1)
+          : ((keyStats.trailingEps as number) ?? 0),
+        dividendYield: ((summaryDetail.dividendYield as number) ?? 0) * 100,
+        pbRatio: (keyStats.priceToBook as number) ?? 0,
+        week52High: (summaryDetail.fiftyTwoWeekHigh as number) ?? 0,
+        week52Low: (summaryDetail.fiftyTwoWeekLow as number) ?? 0,
+        beta: (keyStats.beta as number) ?? (summaryDetail.beta as number) ?? 0,
+        previousClose: (quote.regularMarketPreviousClose as number) ?? 0,
+        avgVolume: (quote.averageDailyVolume3Month as number) ?? 0,
+        fiftyDayAvg: (quote.fiftyDayAverage as number) ?? 0,
+        twoHundredDayAvg: (quote.twoHundredDayAverage as number) ?? 0,
+        returnOnEquity: (financial.returnOnEquity as number) ?? 0,
+        returnOnAssets: (financial.returnOnAssets as number) ?? 0,
+        grossMargins: (financial.grossMargins as number) ?? 0,
+        operatingMargins: (financial.operatingMargins as number) ?? 0,
+        profitMargins: (financial.profitMargins as number) ?? 0,
+        revenueGrowth: (financial.revenueGrowth as number) ?? 0,
+        earningsGrowth: (financial.earningsGrowth as number) ?? 0,
+        debtToEquity: (financial.debtToEquity as number) ?? 0,
+        currentRatio: (financial.currentRatio as number) ?? 0,
+        bookValue: (keyStats.bookValue as number) ?? 0,
+        targetMeanPrice: (financial.targetMeanPrice as number) ?? 0,
+        targetHighPrice: (financial.targetHighPrice as number) ?? 0,
+        targetLowPrice: (financial.targetLowPrice as number) ?? 0,
+        numberOfAnalysts: (financial.numberOfAnalystOpinions as number) ?? 0,
+        recommendationKey: (financial.recommendationKey as string) ?? '',
+        payoutRatio: (summaryDetail.payoutRatio as number) ?? 0,
+        exDividendDate,
+        dividendRate: (summaryDetail.dividendRate as number) ?? 0,
+        sharesOutstanding:
+          (keyStats.sharesOutstanding as number) ??
+          (keyStats.floatShares as number) ??
+          0,
+        sector: (profile.sector as string) ?? '',
+        industry: (profile.industry as string) ?? '',
+      };
+
+      return { data: detail };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`取得 ${symbol} 詳細資料失敗: ${message}`);
+      throw new NotFoundException(`查無此股票資料：${symbol}`);
+    }
+  }
+
+  async getStockHistory(
+    symbol: string,
+    period: string,
+  ): Promise<StockHistoryResponse> {
+    const isTwStock = /^\d{4,6}$/.test(symbol);
+    const yahooSymbol = isTwStock ? `${symbol}.TW` : symbol;
+
+    const periodMap: Record<string, { period1: string; interval: string }> = {
+      '1d': {
+        period1: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        interval: '5m',
+      },
+      '5d': {
+        period1: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        interval: '15m',
+      },
+      '1m': {
+        period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        interval: '1d',
+      },
+      '3m': {
+        period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        interval: '1d',
+      },
+      '6m': {
+        period1: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        interval: '1d',
+      },
+      '1y': {
+        period1: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        interval: '1wk',
+      },
+      '5y': {
+        period1: new Date(Date.now() - 5 * 365 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        interval: '1wk',
+      },
+      all: {
+        period1: '2000-01-01',
+        interval: '1mo',
+      },
+    };
+
+    const config = periodMap[period] ?? periodMap['1m'];
+
+    try {
+      interface YahooQuote {
+        date: Date | string | number;
+        close: number | null;
+        open: number | null;
+        high: number | null;
+        low: number | null;
+        volume: number | null;
+      }
+      const result = (await yahooFinance.chart(yahooSymbol, {
+        period1: config.period1,
+        interval: config.interval as '1d',
+      })) as { quotes?: YahooQuote[] };
+
+      const quotes: YahooQuote[] = result.quotes ?? [];
+
+      const data: StockHistoryPointDto[] = quotes
+        .filter((q) => q.close != null)
+        .map((q) => ({
+          date: new Date(q.date).toISOString(),
+          close: Math.round((q.close ?? 0) * 100) / 100,
+          open: Math.round((q.open ?? 0) * 100) / 100,
+          high: Math.round((q.high ?? 0) * 100) / 100,
+          low: Math.round((q.low ?? 0) * 100) / 100,
+          volume: q.volume ?? 0,
+        }));
+
+      return { symbol, period, data, total: data.length };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`取得 ${symbol} 歷史資料失敗: ${message}`);
+      throw error;
+    }
   }
 }
