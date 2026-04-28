@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/commons/table";
-import { TabsContent } from "@/components/commons/tabs";
+import { Tabs, TabsContent } from "@/components/commons/tabs";
 import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 import type {
