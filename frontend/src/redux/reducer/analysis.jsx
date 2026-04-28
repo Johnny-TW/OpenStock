@@ -1,14 +1,14 @@
 const initialState = {
   result: null,
-}
+};
 
 const reducer = (state = initialState, action) => {
   switch (action.type) {
     case "SET_ANALYSIS_RESULT":
-      return { ...state, result: action.data ?? null }
+      return { ...state, result: action.data ?? null };
     default:
-      return state
+      return state;
   }
-}
+};
 
-export default reducer
+export default reducer;

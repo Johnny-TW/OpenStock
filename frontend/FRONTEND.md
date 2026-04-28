@@ -254,6 +254,7 @@ Reducer: SET_STOCK_DAILY_ALL → 更新 state.stock.dailyAll
 pnpm dev        # 開發伺服器
 pnpm build      # 正式建置
 pnpm start      # 啟動正式版
-pnpm lint       # ESLint 檢查
-pnpm prettier   # 程式碼格式化
+pnpm lint       # Biome 檢查（lint + format）
+pnpm lint:fix   # Biome 自動修復
+pnpm format     # Biome 格式化
 ```

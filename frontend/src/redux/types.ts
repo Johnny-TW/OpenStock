@@ -1,65 +1,65 @@
-import store from "./store"
 import type {
-  StockDailyAllResponse,
-  StockValuationResponse,
-  MarketIndexResponse,
-  TopVolumeResponse,
-  IntradayResponse,
-  IndexHistoryResponse,
-  RevenueRankingResponse,
-  GrossMarginRankingResponse,
-  DividendYieldRankingResponse,
-  PeRatioRankingResponse,
-  HeatmapResponse,
   AllNewsResponse,
-  WatchlistItem,
+  DividendYieldRankingResponse,
+  GrossMarginRankingResponse,
+  HeatmapResponse,
+  IndexHistoryResponse,
+  IntradayResponse,
+  MarketIndexResponse,
+  PeRatioRankingResponse,
+  RevenueRankingResponse,
+  StockDailyAllResponse,
   StockDetailResponse,
   StockHistoryResponse,
-} from "@/type/stock"
+  StockValuationResponse,
+  TopVolumeResponse,
+  WatchlistItem,
+} from "@/type/stock";
+import store from "./store";
 
 export interface RootState {
   api: {
-    loading: number
-    loadingStack: { path: string; loading: boolean }[]
-    error: { message: string; action?: () => void } | null
-    success: { message: string; action?: () => void } | null
-    deleted: { message?: string; action?: () => void } | null
-  }
+    loading: number;
+    loadingStack: { path: string; loading: boolean }[];
+    error: { message: string; action?: () => void } | null;
+    success: { message: string; action?: () => void } | null;
+    deleted: { message?: string; action?: () => void } | null;
+  };
   auth: {
-    session: { accessToken?: string; user?: Record<string, unknown> } | null
-    token: string | null
-    user: Record<string, unknown> | null
-  }
+    session: { accessToken?: string; user?: Record<string, unknown> } | null;
+    token: string | null;
+    user: Record<string, unknown> | null;
+  };
   stock: {
-    dailyAll: StockDailyAllResponse | null
-    valuation: StockValuationResponse | null
-    marketIndex: MarketIndexResponse | null
-    topVolume: TopVolumeResponse | null
-    intraday: IntradayResponse | null
-    indexHistory: IndexHistoryResponse | null
-    stockDetail: StockDetailResponse | null
-    stockDetailLoaded: boolean
-    stockHistory: StockHistoryResponse | null
-  }
+    dailyAll: StockDailyAllResponse | null;
+    valuation: StockValuationResponse | null;
+    marketIndex: MarketIndexResponse | null;
+    topVolume: TopVolumeResponse | null;
+    intraday: IntradayResponse | null;
+    indexHistory: IndexHistoryResponse | null;
+    stockDetail: StockDetailResponse | null;
+    stockDetailLoaded: boolean;
+    stockHistory: StockHistoryResponse | null;
+  };
   ranking: {
-    revenue: RevenueRankingResponse | null
-    grossMargin: GrossMarginRankingResponse | null
-    dividendYield: DividendYieldRankingResponse | null
-    peRatio: PeRatioRankingResponse | null
-  }
+    revenue: RevenueRankingResponse | null;
+    grossMargin: GrossMarginRankingResponse | null;
+    dividendYield: DividendYieldRankingResponse | null;
+    peRatio: PeRatioRankingResponse | null;
+  };
   heatmap: {
-    data: HeatmapResponse | null
-  }
+    data: HeatmapResponse | null;
+  };
   watchlist: {
-    list: WatchlistItem[]
-  }
+    list: WatchlistItem[];
+  };
   news: {
-    data: unknown
-    allNews: AllNewsResponse | null
-  }
+    data: unknown;
+    allNews: AllNewsResponse | null;
+  };
   analysis: {
-    result: unknown
-  }
+    result: unknown;
+  };
 }
 
-export type AppDispatch = typeof store.dispatch
+export type AppDispatch = typeof store.dispatch;

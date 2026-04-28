@@ -4,15 +4,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/globals.css";
-import { SidebarInset, SidebarProvider } from "@/components/commons/sidebar";
-import { Header, Sidebar, Footer } from "@/components/layouts";
-import AuthLayout from "@/components/layouts/AuthLayout";
-import ReduxProvider from "@/providers/ReduxProvider";
-import QueryProvider from "@/providers/QueryProvider";
 import DialogProvider from "@/components/commons/dialog-provider";
-import SessionProvider from "@/providers/SessionProvider";
-import PermissionGuard from "@/providers/PermissionGuard";
+import AuthLayout from "@/components/layouts/AuthLayout";
 import AuthSync from "@/providers/AuthSync";
+import PermissionGuard from "@/providers/PermissionGuard";
+import QueryProvider from "@/providers/QueryProvider";
+import ReduxProvider from "@/providers/ReduxProvider";
+import SessionProvider from "@/providers/SessionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,10 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Icons"
-          rel="stylesheet"
-        />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet" />
         <link rel="icon" href="/enbglogo.svg" />
         <link rel="shortcut icon" href="/enbglogo.svg" />
         <script
@@ -66,9 +61,7 @@ export default function RootLayout({
               <AuthSync />
               <DialogProvider>
                 <PermissionGuard>
-                  <AuthLayout>
-                    {children}
-                  </AuthLayout>
+                  <AuthLayout>{children}</AuthLayout>
                 </PermissionGuard>
               </DialogProvider>
             </ReduxProvider>

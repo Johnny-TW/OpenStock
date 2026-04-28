@@ -1,11 +1,6 @@
-import { AllExceptionsFilter } from './all-exceptions.filter';
-import {
-  HttpException,
-  HttpStatus,
-  ArgumentsHost,
-  Logger,
-} from '@nestjs/common';
+import { ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { AllExceptionsFilter } from './all-exceptions.filter';
 
 describe('AllExceptionsFilter', () => {
   let filter: AllExceptionsFilter;
@@ -101,10 +96,10 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('應處理 Prisma P2003 外鍵約束', () => {
-    const exception = new PrismaClientKnownRequestError(
-      'Foreign key constraint',
-      { code: 'P2003', clientVersion: '5.0.0' },
-    );
+    const exception = new PrismaClientKnownRequestError('Foreign key constraint', {
+      code: 'P2003',
+      clientVersion: '5.0.0',
+    });
 
     filter.catch(exception, mockHost);
 

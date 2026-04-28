@@ -1,5 +1,5 @@
-import MarketOverviewClient from "./market-overview-client"
+import MarketOverviewClient from "./market-overview-client";
 
 export default function MarketOverviewPage() {
-  return <MarketOverviewClient />
+  return <MarketOverviewClient />;
 }

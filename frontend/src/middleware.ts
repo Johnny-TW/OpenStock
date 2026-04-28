@@ -10,10 +10,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const baseName =
-    process.env.SESSION_TOKEN_NAME ?? "next-auth.session-token";
-  const hasSession =
-    request.cookies.has(baseName) || request.cookies.has(`${baseName}.0`);
+  const baseName = process.env.SESSION_TOKEN_NAME ?? "next-auth.session-token";
+  const hasSession = request.cookies.has(baseName) || request.cookies.has(`${baseName}.0`);
 
   if (!hasSession) {
     const loginUrl = new URL("/login", request.url);
@@ -24,7 +22,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*|public).*)"],
 };

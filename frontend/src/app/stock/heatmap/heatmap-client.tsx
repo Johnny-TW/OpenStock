@@ -1,111 +1,98 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useCallback, useState, useRef } from "react"
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import * as d3 from "d3"
-import {
-  Label,
-  PolarGrid,
-  PolarRadiusAxis,
-  RadialBar,
-  RadialBarChart,
-} from "recharts"
-import { Info, X, ChevronDown, Check } from "lucide-react"
-import type { HeatmapIndustryDto, HeatmapStockDto } from "@/type/stock"
-import { PageHeader } from "@/components/commons/page-header/page-header"
-import {
-  ChartContainer,
-  type ChartConfig,
-} from "@/components/commons/chart"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import styles from "./page.module.scss"
+import * as d3 from "d3";
+import { Check, ChevronDown, Info } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from "recharts";
+import { type ChartConfig, ChartContainer } from "@/components/commons/chart";
+import { PageHeader } from "@/components/commons/page-header/page-header";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import type { HeatmapIndustryDto } from "@/type/stock";
+import styles from "./page.module.scss";
 
 const getColor = (changePercent: number): string => {
-  if (changePercent >= 7) return "#b91c1c"
-  if (changePercent >= 4) return "#dc2626"
-  if (changePercent >= 2) return "#ef4444"
-  if (changePercent >= 0.5) return "#f87171"
-  if (changePercent > -0.5) return "#6b7280"
-  if (changePercent > -2) return "#4ade80"
-  if (changePercent > -4) return "#22c55e"
-  if (changePercent > -7) return "#16a34a"
-  return "#15803d"
-}
+  if (changePercent >= 7) return "#b91c1c";
+  if (changePercent >= 4) return "#dc2626";
+  if (changePercent >= 2) return "#ef4444";
+  if (changePercent >= 0.5) return "#f87171";
+  if (changePercent > -0.5) return "#6b7280";
+  if (changePercent > -2) return "#4ade80";
+  if (changePercent > -4) return "#22c55e";
+  if (changePercent > -7) return "#16a34a";
+  return "#15803d";
+};
 
 const getTextColor = (changePercent: number): string => {
-  const absVal = Math.abs(changePercent)
-  if (absVal >= 2) return "#ffffff"
-  if (absVal >= 0.5) return "#f8fafc"
-  return "#e2e8f0"
-}
+  const absVal = Math.abs(changePercent);
+  if (absVal >= 2) return "#ffffff";
+  if (absVal >= 0.5) return "#f8fafc";
+  return "#e2e8f0";
+};
 
 interface StockNode {
-  name: string
-  code: string
-  changePercent: number
-  closingPrice: number
-  change: string
-  tradeVolume: number
-  value: number
+  name: string;
+  code: string;
+  changePercent: number;
+  closingPrice: number;
+  change: string;
+  tradeVolume: number;
+  value: number;
 }
 
 interface IndustryNode {
-  name: string
-  children: StockNode[]
+  name: string;
+  children: StockNode[];
 }
 
 interface HierarchyData {
-  name: string
-  children: IndustryNode[]
+  name: string;
+  children: IndustryNode[];
 }
 
-type TreemapNode = d3.HierarchyRectangularNode<HierarchyData | IndustryNode | StockNode>
+type TreemapNode = d3.HierarchyRectangularNode<HierarchyData | IndustryNode | StockNode>;
 
-type ViewMode = "all" | "industry"
+type ViewMode = "all" | "industry";
 
 function D3Treemap({
   data,
   onStockHover,
   onStockLeave,
 }: {
-  data: HierarchyData
-  onStockHover: (stock: StockNode, event: React.MouseEvent) => void
-  onStockLeave: () => void
+  data: HierarchyData;
+  onStockHover: (stock: StockNode, event: React.MouseEvent) => void;
+  onStockLeave: () => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 0, height: 600 })
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 600 });
 
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    let timer: ReturnType<typeof setTimeout>
+    const el = containerRef.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout>;
     const observer = new ResizeObserver((entries) => {
-      const { width } = entries[0].contentRect
+      const { width } = entries[0].contentRect;
       if (width > 0) {
-        clearTimeout(timer)
-        timer = setTimeout(() => setDimensions({ width, height: 600 }), 100)
+        clearTimeout(timer);
+        timer = setTimeout(() => setDimensions({ width, height: 600 }), 100);
       }
-    })
-    observer.observe(el)
+    });
+    observer.observe(el);
     return () => {
-      clearTimeout(timer)
-      observer.disconnect()
-    }
-  }, [])
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, []);
 
   const root = useMemo((): TreemapNode | null => {
-    if (dimensions.width === 0) return null
+    if (dimensions.width === 0) return null;
     const hierarchy = d3
       .hierarchy<HierarchyData | IndustryNode | StockNode>(data)
       .sum((d) => ("value" in d ? (d as StockNode).value : 0))
-      .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+      .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
-    return d3.treemap<HierarchyData | IndustryNode | StockNode>()
+    return d3
+      .treemap<HierarchyData | IndustryNode | StockNode>()
       .tile(d3.treemapSquarify)
       .size([dimensions.width, dimensions.height])
       .paddingTop(22)
@@ -113,17 +100,17 @@ function D3Treemap({
       .paddingBottom(1)
       .paddingLeft(1)
       .paddingInner(2)
-      .round(true)(hierarchy)
-  }, [data, dimensions])
+      .round(true)(hierarchy);
+  }, [data, dimensions]);
 
-  const leaves = useMemo((): TreemapNode[] => root?.leaves() ?? [], [root])
+  const leaves = useMemo((): TreemapNode[] => root?.leaves() ?? [], [root]);
   const groups = useMemo((): TreemapNode[] => {
-    if (!root) return []
-    return root.children ?? []
-  }, [root])
+    if (!root) return [];
+    return root.children ?? [];
+  }, [root]);
 
   if (dimensions.width === 0) {
-    return <div ref={containerRef} style={{ width: "100%", height: 600 }} />
+    return <div ref={containerRef} style={{ width: "100%", height: 600 }} />;
   }
 
   return (
@@ -135,7 +122,7 @@ function D3Treemap({
         style={{ maxWidth: "100%", height: "auto", font: "10px sans-serif" }}
       >
         {groups.map((group) => {
-          const d = group.data as IndustryNode
+          const d = group.data as IndustryNode;
           return (
             <g key={d.name}>
               <rect
@@ -147,12 +134,7 @@ function D3Treemap({
                 rx={3}
               />
               <clipPath id={`clip-group-${d.name}`}>
-                <rect
-                  x={group.x0}
-                  y={group.y0}
-                  width={group.x1! - group.x0!}
-                  height={18}
-                />
+                <rect x={group.x0} y={group.y0} width={group.x1! - group.x0!} height={18} />
               </clipPath>
               <text
                 clipPath={`url(#clip-group-${d.name})`}
@@ -165,30 +147,31 @@ function D3Treemap({
                 {d.name}
               </text>
             </g>
-          )
+          );
         })}
         {leaves.map((leaf) => {
-          const d = leaf.data as StockNode
-          const x = leaf.x0 ?? 0
-          const y = leaf.y0 ?? 0
-          const w = (leaf.x1 ?? 0) - x
-          const h = (leaf.y1 ?? 0) - y
-          if (w < 2 || h < 2) return null
-          const color = getColor(d.changePercent)
-          const textColor = getTextColor(d.changePercent)
-          const minDim = Math.min(w, h)
-          const showName = w > 12 && h > 8
-          const showPercent = w > 18 && h > 16
-          const showCode = w > 40 && h > 36
-          const fontSize = minDim < 20
-            ? Math.max(5, Math.floor(minDim / 3))
-            : minDim < 40
-              ? Math.max(7, Math.floor(minDim / 4))
-              : Math.min(18, Math.max(10, Math.floor(Math.sqrt(w * h) / 6)))
-          const codeSize = Math.max(5, fontSize - 2)
-          const percentSize = Math.max(5, fontSize - 1)
-          const lineGap = fontSize < 8 ? fontSize : fontSize + 2
-          const uid = `${d.code}-${d.name}`
+          const d = leaf.data as StockNode;
+          const x = leaf.x0 ?? 0;
+          const y = leaf.y0 ?? 0;
+          const w = (leaf.x1 ?? 0) - x;
+          const h = (leaf.y1 ?? 0) - y;
+          if (w < 2 || h < 2) return null;
+          const color = getColor(d.changePercent);
+          const textColor = getTextColor(d.changePercent);
+          const minDim = Math.min(w, h);
+          const showName = w > 12 && h > 8;
+          const showPercent = w > 18 && h > 16;
+          const showCode = w > 40 && h > 36;
+          const fontSize =
+            minDim < 20
+              ? Math.max(5, Math.floor(minDim / 3))
+              : minDim < 40
+                ? Math.max(7, Math.floor(minDim / 4))
+                : Math.min(18, Math.max(10, Math.floor(Math.sqrt(w * h) / 6)));
+          const codeSize = Math.max(5, fontSize - 2);
+          const percentSize = Math.max(5, fontSize - 1);
+          const lineGap = fontSize < 8 ? fontSize : fontSize + 2;
+          const uid = `${d.code}-${d.name}`;
 
           return (
             <g
@@ -197,14 +180,7 @@ function D3Treemap({
               onMouseLeave={onStockLeave}
               style={{ cursor: "pointer" }}
             >
-              <rect
-                x={x}
-                y={y}
-                width={w}
-                height={h}
-                fill={color}
-                rx={2}
-              />
+              <rect x={x} y={y} width={w} height={h} fill={color} rx={2} />
               <clipPath id={`clip-${uid}`}>
                 <rect x={x} y={y} width={w} height={h} />
               </clipPath>
@@ -251,11 +227,11 @@ function D3Treemap({
                 </text>
               )}
             </g>
-          )
+          );
         })}
       </svg>
     </div>
-  )
+  );
 }
 
 function IndustryFilter({
@@ -263,48 +239,41 @@ function IndustryFilter({
   selected,
   onChange,
 }: {
-  industries: string[]
-  selected: string[]
-  onChange: (val: string[]) => void
+  industries: string[];
+  selected: string[];
+  onChange: (val: string[]) => void;
 }) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState("")
-  const ref = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [])
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const filtered = useMemo(() => {
-    if (!search) return industries
-    return industries.filter((i) => i.includes(search))
-  }, [industries, search])
+    if (!search) return industries;
+    return industries.filter((i) => i.includes(search));
+  }, [industries, search]);
 
   const toggle = (name: string) => {
-    onChange(
-      selected.includes(name)
-        ? selected.filter((s) => s !== name)
-        : [...selected, name]
-    )
-  }
+    onChange(selected.includes(name) ? selected.filter((s) => s !== name) : [...selected, name]);
+  };
 
   const label =
     selected.length === 0
       ? "全部產業"
       : selected.length <= 2
         ? selected.join("、")
-        : `已選 ${selected.length} 個產業`
+        : `已選 ${selected.length} 個產業`;
 
   return (
     <div className={styles.filterWrapper} ref={ref}>
-      <button
-        className={styles.filterBtn}
-        onClick={() => setOpen((v) => !v)}
-      >
+      <button className={styles.filterBtn} onClick={() => setOpen((v) => !v)}>
         <span className={styles.filterLabel}>{label}</span>
         <ChevronDown size={14} className={open ? styles.filterChevronOpen : ""} />
       </button>
@@ -315,7 +284,6 @@ function IndustryFilter({
             placeholder="搜尋產業..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            autoFocus
           />
           <div className={styles.filterActions}>
             <button onClick={() => onChange([])}>全部顯示</button>
@@ -323,7 +291,7 @@ function IndustryFilter({
           </div>
           <div className={styles.filterList}>
             {filtered.map((name) => {
-              const checked = selected.includes(name)
+              const checked = selected.includes(name);
               return (
                 <label key={name} className={styles.filterItem} onClick={() => toggle(name)}>
                   <span className={`${styles.filterCheck} ${checked ? styles.filterChecked : ""}`}>
@@ -331,50 +299,50 @@ function IndustryFilter({
                   </span>
                   <span>{name}</span>
                 </label>
-              )
+              );
             })}
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default function HeatmapClient() {
-  const dispatch = useAppDispatch()
-  const heatmapData = useAppSelector((state) => state.heatmap?.data)
-  const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>("all")
-  const [topN, setTopN] = useState(15)
-  const [filteredIndustries, setFilteredIndustries] = useState<string[]>([])
+  const dispatch = useAppDispatch();
+  const heatmapData = useAppSelector((state) => state.heatmap?.data);
+  const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [topN, setTopN] = useState(15);
+  const [filteredIndustries, setFilteredIndustries] = useState<string[]>([]);
   const [tooltip, setTooltip] = useState<{
-    stock: StockNode
-    x: number
-    y: number
-  } | null>(null)
-  const [infoOpen, setInfoOpen] = useState(false)
-  const [period, setPeriod] = useState("1d")
+    stock: StockNode;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [period, setPeriod] = useState("1d");
 
   useEffect(() => {
-    dispatch({ type: "GET_HEATMAP", data: period })
-  }, [dispatch, period])
+    dispatch({ type: "GET_HEATMAP", data: period });
+  }, [dispatch, period]);
 
   const industries: HeatmapIndustryDto[] = useMemo(() => {
-    if (!heatmapData?.data) return []
-    return heatmapData.data
-  }, [heatmapData])
+    if (!heatmapData?.data) return [];
+    return heatmapData.data;
+  }, [heatmapData]);
 
-  const allIndustryNames = useMemo(() => industries.map((i) => i.industry), [industries])
+  const allIndustryNames = useMemo(() => industries.map((i) => i.industry), [industries]);
 
   const visibleIndustries = useMemo(() => {
-    if (filteredIndustries.length === 0) return industries
-    return industries.filter((i) => filteredIndustries.includes(i.industry))
-  }, [industries, filteredIndustries])
+    if (filteredIndustries.length === 0) return industries;
+    return industries.filter((i) => filteredIndustries.includes(i.industry));
+  }, [industries, filteredIndustries]);
 
   const hierarchyData: HierarchyData | null = useMemo(() => {
     if (viewMode === "industry" && selectedIndustry) {
-      const industry = industries.find((i) => i.industry === selectedIndustry)
-      if (!industry) return null
+      const industry = industries.find((i) => i.industry === selectedIndustry);
+      if (!industry) return null;
       return {
         name: "root",
         children: [
@@ -391,11 +359,12 @@ export default function HeatmapClient() {
             })),
           },
         ],
-      }
+      };
     }
 
-    const source = filteredIndustries.length > 0 ? visibleIndustries : visibleIndustries.slice(0, topN)
-    if (source.length === 0) return null
+    const source =
+      filteredIndustries.length > 0 ? visibleIndustries : visibleIndustries.slice(0, topN);
+    if (source.length === 0) return null;
 
     return {
       name: "root",
@@ -411,29 +380,26 @@ export default function HeatmapClient() {
           value: Math.max(s.tradeVolume, 1),
         })),
       })),
-    }
-  }, [industries, visibleIndustries, viewMode, selectedIndustry, topN, filteredIndustries])
+    };
+  }, [industries, visibleIndustries, viewMode, selectedIndustry, topN, filteredIndustries]);
 
-  const handleStockHover = useCallback(
-    (stock: StockNode, event: React.MouseEvent) => {
-      setTooltip({ stock, x: event.clientX, y: event.clientY })
-    },
-    []
-  )
+  const handleStockHover = useCallback((stock: StockNode, event: React.MouseEvent) => {
+    setTooltip({ stock, x: event.clientX, y: event.clientY });
+  }, []);
 
   const handleStockLeave = useCallback(() => {
-    setTooltip(null)
-  }, [])
+    setTooltip(null);
+  }, []);
 
   const handleIndustryClick = useCallback((industry: string) => {
-    setSelectedIndustry(industry)
-    setViewMode("industry")
-  }, [])
+    setSelectedIndustry(industry);
+    setViewMode("industry");
+  }, []);
 
   const handleBackToAll = useCallback(() => {
-    setSelectedIndustry(null)
-    setViewMode("all")
-  }, [])
+    setSelectedIndustry(null);
+    setViewMode("all");
+  }, []);
 
   const periodOptions = [
     { value: "1d", label: "1日" },
@@ -441,15 +407,17 @@ export default function HeatmapClient() {
     { value: "1m", label: "1月" },
     { value: "3m", label: "3月" },
     { value: "1y", label: "1年" },
-  ]
+  ];
 
-  const date = heatmapData?.date ?? ""
+  const date = heatmapData?.date ?? "";
 
   return (
     <div className={styles.container}>
       <PageHeader
         title="產業漲跌熱力圖"
-        subtitle={<>依個股成交量決定區塊大小，顏色反映漲跌幅度{date && <span>（資料日期：{date}）</span>}</>}
+        subtitle={
+          <>依個股成交量決定區塊大小，顏色反映漲跌幅度{date && <span>（資料日期：{date}）</span>}</>
+        }
         controls={
           <div className={styles.controlsRow}>
             <div className={styles.periodToggle}>
@@ -480,11 +448,7 @@ export default function HeatmapClient() {
                 <option value={30}>全部產業</option>
               </select>
             )}
-            <button
-              className={styles.infoBtn}
-              onClick={() => setInfoOpen(true)}
-              title="查看說明"
-            >
+            <button className={styles.infoBtn} onClick={() => setInfoOpen(true)} title="查看說明">
               <Info size={16} />
               說明
             </button>
@@ -605,13 +569,13 @@ export default function HeatmapClient() {
         </div>
         <div className={styles.industryRadialCards}>
           {visibleIndustries.map((ind) => {
-            const pct = Math.abs(ind.avgChangePercent)
-            const maxAngle = Math.min(pct * 36, 340)
-            const isUp = ind.avgChangePercent > 0
-            const isDown = ind.avgChangePercent < 0
-            const color = isDown ? "#22c55e" : isUp ? "#ef4444" : "#6b7280"
-            const chartData = [{ value: pct, fill: color }]
-            const config = { value: { label: ind.industry, color } } satisfies ChartConfig
+            const pct = Math.abs(ind.avgChangePercent);
+            const maxAngle = Math.min(pct * 36, 340);
+            const isUp = ind.avgChangePercent > 0;
+            const isDown = ind.avgChangePercent < 0;
+            const color = isDown ? "#22c55e" : isUp ? "#ef4444" : "#6b7280";
+            const chartData = [{ value: pct, fill: color }];
+            const config = { value: { label: ind.industry, color } } satisfies ChartConfig;
 
             return (
               <button
@@ -619,10 +583,7 @@ export default function HeatmapClient() {
                 className={`${styles.industryRadialCard} ${selectedIndustry === ind.industry ? styles.industryCardActive : ""}`}
                 onClick={() => handleIndustryClick(ind.industry)}
               >
-                <ChartContainer
-                  config={config}
-                  className={styles.radialChartContainer}
-                >
+                <ChartContainer config={config} className={styles.radialChartContainer}>
                   <RadialBarChart
                     data={chartData}
                     endAngle={isDown ? -maxAngle : maxAngle}
@@ -657,7 +618,7 @@ export default function HeatmapClient() {
                                   {pct.toFixed(1)}%
                                 </tspan>
                               </text>
-                            )
+                            );
                           }
                         }}
                       />
@@ -665,26 +626,20 @@ export default function HeatmapClient() {
                   </RadialBarChart>
                 </ChartContainer>
                 <span className={styles.industryName}>{ind.industry}</span>
-                <span className={styles.industryCount}>
-                  {ind.stocks.length} 檔
-                </span>
+                <span className={styles.industryCount}>{ind.stocks.length} 檔</span>
               </button>
-            )
+            );
           })}
         </div>
       </div>
 
       <div className={styles.attribution}>
         資料來源：
-        <a
-          href="https://openapi.twse.com.tw"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href="https://openapi.twse.com.tw" target="_blank" rel="noopener noreferrer">
           臺灣證券交易所 OpenAPI
         </a>
         ，僅供參考，不構成投資建議。
       </div>
     </div>
-  )
+  );
 }

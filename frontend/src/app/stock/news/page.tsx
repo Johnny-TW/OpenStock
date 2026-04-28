@@ -1,5 +1,5 @@
-import NewsClient from "./news-client"
+import NewsClient from "./news-client";
 
 export default function NewsPage() {
-  return <NewsClient />
+  return <NewsClient />;
 }

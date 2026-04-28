@@ -1,6 +1,18 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState } from "react"
+import { IconActivity, IconClock, IconCurrencyDollar } from "@tabler/icons-react";
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Loader2, TrendingDown, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -14,35 +26,8 @@ import {
   RadialBarChart,
   XAxis,
   YAxis,
-} from "recharts"
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-} from "@tanstack/react-table"
-import {
-  IconActivity,
-  IconCurrencyDollar,
-  IconClock,
-} from "@tabler/icons-react"
-import { Loader2, TrendingUp, TrendingDown } from "lucide-react"
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header/page-header"
-import { Input } from "@/components/commons/input"
-import { Badge } from "@/components/commons/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/commons/table"
+} from "recharts";
+import { Badge } from "@/components/commons/badge";
 import {
   Card,
   CardContent,
@@ -50,41 +35,47 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/commons/card"
+} from "@/components/commons/card";
 import {
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/commons/chart"
+} from "@/components/commons/chart";
+import { Input } from "@/components/commons/input";
+import { PageHeader } from "@/components/commons/page-header/page-header";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/commons/tabs"
-import type { MarketIndexDto, IntradayTickDto, IndexHistoryDto } from "@/type/stock"
-import { parseNumber, SortHeader, Pagination } from "@/components/data-table/shared"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/commons/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs";
+import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import type { IndexHistoryDto, IntradayTickDto, MarketIndexDto } from "@/type/stock";
 
 // 圖表配置：定義不同圖表類型的顏色和標籤
 const intradayChartConfig = {
   volume: { label: "累計成交量", color: "hsl(217, 91%, 60%)" },
   value: { label: "累計成交值", color: "hsl(199, 89%, 48%)" },
   transaction: { label: "累計成交筆數", color: "hsl(210, 40%, 58%)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 const historyChartConfig = {
   closingIndex: { label: "收盤指數", color: "hsl(217, 91%, 60%)" },
   highLow: { label: "高低區間", color: "hsl(199, 89%, 48%)" },
   openingIndex: { label: "開盤指數", color: "hsl(210, 40%, 58%)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 // 解析漲跌顏色：根據漲跌值返回對應的文字顏色類名
 function getChangeColor(val: string) {
-  if (!val) return ""
-  if (val.startsWith("-")) return "text-green-500"
-  if (val === "0.00" || val === "0") return ""
-  return "text-red-500"
+  if (!val) return "";
+  if (val.startsWith("-")) return "text-green-500";
+  if (val === "0.00" || val === "0") return "";
+  return "text-red-500";
 }
 
 const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
@@ -99,7 +90,8 @@ const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
     accessorKey: "closingIndex",
     header: "收盤指數",
     cell: ({ row }) => <div className="text-right">{row.original.closingIndex}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
     size: 120,
   },
   {
@@ -110,7 +102,8 @@ const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
         {row.original.direction} {row.original.changePoints}
       </div>
     ),
-    sortingFn: (a, b) => parseNumber(a.original.changePoints) - parseNumber(b.original.changePoints),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.changePoints) - parseNumber(b.original.changePoints),
     size: 120,
   },
   {
@@ -121,10 +114,11 @@ const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
         {row.original.changePercent}%
       </div>
     ),
-    sortingFn: (a, b) => parseNumber(a.original.changePercent) - parseNumber(b.original.changePercent),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.changePercent) - parseNumber(b.original.changePercent),
     size: 120,
   },
-]
+];
 
 // 歷史指數表格欄位定義，包含日期、開盤、最高、最低、收盤等欄位，並定義排序函數
 const historyColumns: ColumnDef<IndexHistoryDto>[] = [
@@ -138,14 +132,16 @@ const historyColumns: ColumnDef<IndexHistoryDto>[] = [
     accessorKey: "openingIndex",
     header: "開盤指數",
     cell: ({ row }) => <div className="text-right">{row.original.openingIndex}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.openingIndex) - parseNumber(b.original.openingIndex),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.openingIndex) - parseNumber(b.original.openingIndex),
     size: 120,
   },
   {
     accessorKey: "highestIndex",
     header: "最高指數",
     cell: ({ row }) => <div className="text-right text-red-500">{row.original.highestIndex}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.highestIndex) - parseNumber(b.original.highestIndex),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.highestIndex) - parseNumber(b.original.highestIndex),
     size: 120,
   },
   {
@@ -159,35 +155,37 @@ const historyColumns: ColumnDef<IndexHistoryDto>[] = [
     accessorKey: "closingIndex",
     header: "收盤指數",
     cell: ({ row }) => <div className="text-right font-semibold">{row.original.closingIndex}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
     size: 120,
   },
-]
+];
 
 // 格式化大量數字，將數字轉換為更易讀的格式，例如將 1000000 轉換為 "100 萬"
 function formatLargeNumber(val: string) {
-  const n = parseNumber(val)
-  if (n >= 1e12) return `${(n / 1e12).toFixed(2)} 兆`
-  if (n >= 1e8) return `${(n / 1e8).toFixed(2)} 億`
-  if (n >= 1e4) return `${(n / 1e4).toFixed(0)} 萬`
-  return val
+  const n = parseNumber(val);
+  if (n >= 1e12) return `${(n / 1e12).toFixed(2)} 兆`;
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)} 億`;
+  if (n >= 1e4) return `${(n / 1e4).toFixed(0)} 萬`;
+  return val;
 }
 
 // 解析並格式化數字，適用於指數相關數據
 function IntradayChartSection({ list }: { list: IntradayTickDto[] }) {
-  const [chartTab, setChartTab] = useState("volume")
+  const [chartTab, setChartTab] = useState("volume");
 
   const chartData = useMemo(() => {
-    const sampled = list.length > 120
-      ? list.filter((_, i) => i % Math.ceil(list.length / 120) === 0 || i === list.length - 1)
-      : list
+    const sampled =
+      list.length > 120
+        ? list.filter((_, i) => i % Math.ceil(list.length / 120) === 0 || i === list.length - 1)
+        : list;
     return sampled.map((item) => ({
       time: item.time,
       volume: parseNumber(item.accTradeVolume),
       value: parseNumber(item.accTradeValue),
       transaction: parseNumber(item.accTransaction),
-    }))
-  }, [list])
+    }));
+  }, [list]);
 
   return (
     <div className="space-y-4">
@@ -219,10 +217,10 @@ function IntradayChartSection({ list }: { list: IntradayTickDto[] }) {
                 axisLine={false}
                 tickMargin={8}
                 tickFormatter={(v) => {
-                  if (v >= 1e12) return `${(v / 1e12).toFixed(1)}兆`
-                  if (v >= 1e8) return `${(v / 1e8).toFixed(0)}億`
-                  if (v >= 1e4) return `${(v / 1e4).toFixed(0)}萬`
-                  return v.toLocaleString()
+                  if (v >= 1e12) return `${(v / 1e12).toFixed(1)}兆`;
+                  if (v >= 1e8) return `${(v / 1e8).toFixed(0)}億`;
+                  if (v >= 1e4) return `${(v / 1e4).toFixed(0)}萬`;
+                  return v.toLocaleString();
                 }}
               />
               <ChartTooltip
@@ -245,31 +243,31 @@ function IntradayChartSection({ list }: { list: IntradayTickDto[] }) {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
 // 解析並格式化數字，適用於指數歷史數據
 function HistoryChartSection({ list }: { list: IndexHistoryDto[] }) {
   const chartData = useMemo(() => {
-    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date))
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
     return sorted.map((item) => ({
       date: item.date,
       closingIndex: parseNumber(item.closingIndex),
       openingIndex: parseNumber(item.openingIndex),
       highestIndex: parseNumber(item.highestIndex),
       lowestIndex: parseNumber(item.lowestIndex),
-    }))
-  }, [list])
+    }));
+  }, [list]);
 
   const stats = useMemo(() => {
-    if (chartData.length === 0) return null
-    const closes = chartData.map((d) => d.closingIndex)
-    const latest = closes[closes.length - 1]
-    const first = closes[0]
-    const change = latest - first
-    const changePercent = ((change / first) * 100).toFixed(2)
-    return { change, changePercent, isUp: change >= 0 }
-  }, [chartData])
+    if (chartData.length === 0) return null;
+    const closes = chartData.map((d) => d.closingIndex);
+    const latest = closes[closes.length - 1];
+    const first = closes[0];
+    const change = latest - first;
+    const changePercent = ((change / first) * 100).toFixed(2);
+    return { change, changePercent, isUp: change >= 0 };
+  }, [chartData]);
 
   return (
     <div className="space-y-4">
@@ -288,8 +286,10 @@ function HistoryChartSection({ list }: { list: IndexHistoryDto[] }) {
             axisLine={false}
             tickMargin={8}
             tickFormatter={(v) => {
-              const parts = v.split("/")
-              return parts.length >= 2 ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}` : v
+              const parts = v.split("/");
+              return parts.length >= 2
+                ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
+                : v;
             }}
           />
           <YAxis
@@ -309,8 +309,8 @@ function HistoryChartSection({ list }: { list: IndexHistoryDto[] }) {
                     openingIndex: "開盤",
                     highestIndex: "最高",
                     lowestIndex: "最低",
-                  }
-                  return `${labels[name as string] || name}：${Number(value).toLocaleString()}`
+                  };
+                  return `${labels[name as string] || name}：${Number(value).toLocaleString()}`;
                 }}
               />
             }
@@ -359,77 +359,81 @@ function HistoryChartSection({ list }: { list: IndexHistoryDto[] }) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // 這是
 export default function MarketOverviewClient() {
-  const dispatch = useAppDispatch()
-  const marketIndex = useAppSelector((state) => state.stock?.marketIndex)
-  const intraday = useAppSelector((state) => state.stock?.intraday)
-  const indexHistory = useAppSelector((state) => state.stock?.indexHistory)
-  const dailyAll = useAppSelector((state) => state.stock?.dailyAll)
+  const dispatch = useAppDispatch();
+  const marketIndex = useAppSelector((state) => state.stock?.marketIndex);
+  const intraday = useAppSelector((state) => state.stock?.intraday);
+  const indexHistory = useAppSelector((state) => state.stock?.indexHistory);
+  const dailyAll = useAppSelector((state) => state.stock?.dailyAll);
 
-  const [indexSorting, setIndexSorting] = useState<SortingState>([{ id: "closingIndex", desc: true }])
-  const [historySorting, setHistorySorting] = useState<SortingState>([{ id: "date", desc: true }])
-  const [indexFilter, setIndexFilter] = useState("")
-  const [historyFilter, setHistoryFilter] = useState("")
-  const [chartView, setChartView] = useState("intraday")
+  const [indexSorting, setIndexSorting] = useState<SortingState>([
+    { id: "closingIndex", desc: true },
+  ]);
+  const [historySorting, setHistorySorting] = useState<SortingState>([{ id: "date", desc: true }]);
+  const [indexFilter, setIndexFilter] = useState("");
+  const [historyFilter, setHistoryFilter] = useState("");
+  const [chartView, setChartView] = useState("intraday");
 
   useEffect(() => {
-    dispatch({ type: "GET_STOCK_MARKET_INDEX" })
-    dispatch({ type: "GET_STOCK_INTRADAY" })
-    dispatch({ type: "GET_STOCK_INDEX_HISTORY" })
-    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" })
-  }, [dispatch, dailyAll])
+    dispatch({ type: "GET_STOCK_MARKET_INDEX" });
+    dispatch({ type: "GET_STOCK_INTRADAY" });
+    dispatch({ type: "GET_STOCK_INDEX_HISTORY" });
+    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" });
+  }, [dispatch, dailyAll]);
 
   const intradayList: IntradayTickDto[] = useMemo(() => {
-    const d = intraday?.data
-    return Array.isArray(d) ? d : []
-  }, [intraday?.data])
+    const d = intraday?.data;
+    return Array.isArray(d) ? d : [];
+  }, [intraday?.data]);
   const historyList: IndexHistoryDto[] = useMemo(() => {
-    const d = indexHistory?.data
-    return Array.isArray(d) ? d : []
-  }, [indexHistory?.data])
+    const d = indexHistory?.data;
+    return Array.isArray(d) ? d : [];
+  }, [indexHistory?.data]);
   const indexList: MarketIndexDto[] = useMemo(() => {
-    const d = marketIndex?.data
-    return Array.isArray(d) ? d : []
-  }, [marketIndex?.data])
-  const latest = intradayList.length > 0 ? intradayList[intradayList.length - 1] : null
+    const d = marketIndex?.data;
+    return Array.isArray(d) ? d : [];
+  }, [marketIndex?.data]);
+  const latest = intradayList.length > 0 ? intradayList[intradayList.length - 1] : null;
 
   const historyStats = useMemo(() => {
-    if (historyList.length === 0) return null
-    const sorted = [...historyList].sort((a, b) => a.date.localeCompare(b.date))
+    if (historyList.length === 0) return null;
+    const sorted = [...historyList].sort((a, b) => a.date.localeCompare(b.date));
     const parsed = sorted.map((d) => ({
       close: parseNumber(d.closingIndex),
       high: parseNumber(d.highestIndex),
       low: parseNumber(d.lowestIndex),
-    }))
-    const latestClose = parsed[parsed.length - 1].close
-    const high = Math.max(...parsed.map((d) => d.high))
-    const low = Math.min(...parsed.map((d) => d.low))
-    const first = parsed[0].close
-    const change = latestClose - first
-    const changePercent = ((change / first) * 100).toFixed(2)
-    return { latestClose, high, low, change, changePercent, isUp: change >= 0 }
-  }, [historyList])
+    }));
+    const latestClose = parsed[parsed.length - 1].close;
+    const high = Math.max(...parsed.map((d) => d.high));
+    const low = Math.min(...parsed.map((d) => d.low));
+    const first = parsed[0].close;
+    const change = latestClose - first;
+    const changePercent = ((change / first) * 100).toFixed(2);
+    return { latestClose, high, low, change, changePercent, isUp: change >= 0 };
+  }, [historyList]);
 
-  const taiexRow = indexList.find((r) => r.name?.includes("發行量加權"))
+  const taiexRow = indexList.find((r) => r.name?.includes("發行量加權"));
 
   // ── 漲跌家數統計 ──
-  const marketSentiment = useMemo(() => {
-    const stocks = dailyAll?.data ?? []
-    if (!stocks.length) return null
-    let up = 0, down = 0, flat = 0
+  const _marketSentiment = useMemo(() => {
+    const stocks = dailyAll?.data ?? [];
+    if (!stocks.length) return null;
+    let up = 0,
+      down = 0,
+      flat = 0;
     for (const s of stocks) {
-      const change = parseFloat(s.change?.replace(/,/g, "") || "0")
-      if (change > 0) up++
-      else if (change < 0) down++
-      else flat++
+      const change = parseFloat(s.change?.replace(/,/g, "") || "0");
+      if (change > 0) up++;
+      else if (change < 0) down++;
+      else flat++;
     }
-    const total = up + down + flat
-    return { up, down, flat, total }
-  }, [dailyAll?.data])
+    const total = up + down + flat;
+    return { up, down, flat, total };
+  }, [dailyAll?.data]);
 
   const indexTable = useReactTable({
     data: indexList,
@@ -442,7 +446,7 @@ export default function MarketOverviewClient() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 10 } },
-  })
+  });
 
   const historyTable = useReactTable({
     data: historyList,
@@ -455,9 +459,9 @@ export default function MarketOverviewClient() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize: 10 } },
-  })
+  });
 
-  const isLoading = !marketIndex || !intraday || !indexHistory
+  const isLoading = !marketIndex || !intraday || !indexHistory;
 
   if (isLoading) {
     return (
@@ -465,15 +469,12 @@ export default function MarketOverviewClient() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <span className="ml-2 text-muted-foreground">載入資料中...</span>
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-6 p-4">
-      <PageHeader
-        title="大盤總覽"
-        subtitle={<>加權指數即時行情、盤中走勢、歷史指數</>}
-      />
+      <PageHeader title="大盤總覽" subtitle={<>加權指數即時行情、盤中走勢、歷史指數</>} />
 
       {/* ── 頂部統計卡片 ── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -526,11 +527,15 @@ export default function MarketOverviewClient() {
               <IconClock className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <p className={`text-2xl font-bold ${historyStats.isUp ? "text-red-500" : "text-green-500"}`}>
-                {historyStats.isUp ? "+" : ""}{historyStats.change.toFixed(2)}
+              <p
+                className={`text-2xl font-bold ${historyStats.isUp ? "text-red-500" : "text-green-500"}`}
+              >
+                {historyStats.isUp ? "+" : ""}
+                {historyStats.change.toFixed(2)}
               </p>
               <p className="text-xs text-muted-foreground">
-                {historyStats.changePercent}%（高 {historyStats.high.toLocaleString()} / 低 {historyStats.low.toLocaleString()}）
+                {historyStats.changePercent}%（高 {historyStats.high.toLocaleString()} / 低{" "}
+                {historyStats.low.toLocaleString()}）
               </p>
             </CardContent>
           </Card>
@@ -623,13 +628,18 @@ export default function MarketOverviewClient() {
 
       <p className="text-xs text-muted-foreground/60 pt-2">
         資料來源：
-        <a href="https://openapi.twse.com.tw" target="_blank" rel="noopener noreferrer" className="underline">
+        <a
+          href="https://openapi.twse.com.tw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
           臺灣證券交易所 OpenAPI
         </a>
         ，僅供投資研究參考，不構成任何投資建議。
       </p>
     </div>
-  )
+  );
 }
 
 // 產業分類雷達圖顏色列表
@@ -642,7 +652,7 @@ const RADIAL_COLORS = [
   "hsl(220, 60%, 50%)",
   "hsl(205, 75%, 52%)",
   "hsl(215, 50%, 62%)",
-]
+];
 
 // 產業分類雷達圖卡片
 function IndustryRadialCard({
@@ -652,21 +662,21 @@ function IndustryRadialCard({
   direction,
   color,
 }: {
-  name: string
-  closingIndex: string
-  changePercent: string
-  direction: string
-  color: string
+  name: string;
+  closingIndex: string;
+  changePercent: string;
+  direction: string;
+  color: string;
 }) {
-  const pct = Math.abs(parseNumber(changePercent))
-  const maxAngle = Math.min(pct * 36, 340)
-  const isUp = direction !== "-" && changePercent !== "0.00"
-  const isDown = direction === "-"
+  const pct = Math.abs(parseNumber(changePercent));
+  const maxAngle = Math.min(pct * 36, 340);
+  const isUp = direction !== "-" && changePercent !== "0.00";
+  const isDown = direction === "-";
 
-  const chartData = [{ value: pct, fill: color }]
+  const chartData = [{ value: pct, fill: color }];
   const config = {
     value: { label: name, color },
-  } satisfies ChartConfig
+  } satisfies ChartConfig;
 
   return (
     <Card className="flex flex-col">
@@ -674,15 +684,13 @@ function IndustryRadialCard({
         <CardTitle className="text-sm">{name}</CardTitle>
         <CardDescription>
           <span className={isDown ? "text-green-500" : isUp ? "text-red-500" : ""}>
-            {isDown ? "-" : isUp ? "+" : ""}{changePercent}%
+            {isDown ? "-" : isUp ? "+" : ""}
+            {changePercent}%
           </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={config}
-          className="mx-auto aspect-square max-h-35"
-        >
+        <ChartContainer config={config} className="mx-auto aspect-square max-h-35">
           <RadialBarChart
             data={chartData}
             endAngle={isDown ? -maxAngle : maxAngle}
@@ -716,7 +724,7 @@ function IndustryRadialCard({
                           {closingIndex}
                         </tspan>
                       </text>
-                    )
+                    );
                   }
                 }}
               />
@@ -725,7 +733,7 @@ function IndustryRadialCard({
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // 產業分類雷達圖區塊，顯示漲跌幅前幾大的類股指數
@@ -733,17 +741,29 @@ function IndustryRadialSection({ indices }: { indices: MarketIndexDto[] }) {
   const sectorIndices = useMemo(() => {
     return indices
       .filter((idx) => {
-        const n = idx.name
-        return n.includes("類") || n.includes("紡織") || n.includes("塑膠") ||
-          n.includes("電子") || n.includes("金融") || n.includes("半導體") ||
-          n.includes("航運") || n.includes("觀光") || n.includes("鋼鐵") ||
-          n.includes("營建") || n.includes("生技") || n.includes("油電")
+        const n = idx.name;
+        return (
+          n.includes("類") ||
+          n.includes("紡織") ||
+          n.includes("塑膠") ||
+          n.includes("電子") ||
+          n.includes("金融") ||
+          n.includes("半導體") ||
+          n.includes("航運") ||
+          n.includes("觀光") ||
+          n.includes("鋼鐵") ||
+          n.includes("營建") ||
+          n.includes("生技") ||
+          n.includes("油電")
+        );
       })
-      .sort((a, b) => Math.abs(parseNumber(b.changePercent)) - Math.abs(parseNumber(a.changePercent)))
-      .slice(0, 8)
-  }, [indices])
+      .sort(
+        (a, b) => Math.abs(parseNumber(b.changePercent)) - Math.abs(parseNumber(a.changePercent)),
+      )
+      .slice(0, 8);
+  }, [indices]);
 
-  if (sectorIndices.length === 0) return null
+  if (sectorIndices.length === 0) return null;
 
   return (
     <div className="space-y-3">
@@ -764,7 +784,7 @@ function IndustryRadialSection({ indices }: { indices: MarketIndexDto[] }) {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 // 資料表渲染器，使用 React Table 的 table 實例和欄位定義來渲染表格
@@ -772,8 +792,8 @@ function DataTableRenderer<T>({
   table,
   columns,
 }: {
-  table: ReturnType<typeof useReactTable<T>>
-  columns: ColumnDef<T, unknown>[]
+  table: ReturnType<typeof useReactTable<T>>;
+  columns: ColumnDef<T, unknown>[];
 }) {
   return (
     <div className="overflow-auto border-t">
@@ -809,7 +829,10 @@ function DataTableRenderer<T>({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
                 沒有符合的資料
               </TableCell>
             </TableRow>
@@ -817,5 +840,5 @@ function DataTableRenderer<T>({
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

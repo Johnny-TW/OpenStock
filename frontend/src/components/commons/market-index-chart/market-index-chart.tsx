@@ -1,63 +1,59 @@
-"use client"
+"use client";
 
-import { useMemo } from "react"
-import Link from "next/link"
-import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react"
-import type { StockDailyDto } from "@/type/stock"
-import styles from "./market-index-chart.module.scss"
+import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { useMemo } from "react";
+import type { StockDailyDto } from "@/type/stock";
+import styles from "./market-index-chart.module.scss";
 
-const TOP_COUNT = 5
+const TOP_COUNT = 5;
 
 function parseNum(val: string): number {
-  return parseFloat(val.replace(/,/g, "")) || 0
+  return parseFloat(val.replace(/,/g, "")) || 0;
 }
 
 function formatVolume(val: string): string {
-  const n = parseNum(val)
-  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}億`
-  if (n >= 1e4) return `${Math.round(n / 1e3).toLocaleString()}張`
-  return n.toLocaleString()
+  const n = parseNum(val);
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}億`;
+  if (n >= 1e4) return `${Math.round(n / 1e3).toLocaleString()}張`;
+  return n.toLocaleString();
 }
 
 function formatValue(val: string): string {
-  const n = parseNum(val)
-  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}億`
-  if (n >= 1e4) return `${(n / 1e4).toFixed(0)}萬`
-  return n.toLocaleString()
+  const n = parseNum(val);
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}億`;
+  if (n >= 1e4) return `${(n / 1e4).toFixed(0)}萬`;
+  return n.toLocaleString();
 }
 
 interface RankingListProps {
-  title: string
-  icon: React.ReactNode
-  list: ReturnType<typeof useRankList>
-  variant: "up" | "down"
+  title: string;
+  icon: React.ReactNode;
+  list: ReturnType<typeof useRankList>;
+  variant: "up" | "down";
 }
 
 function useRankList(data: StockDailyDto[], direction: "up" | "down") {
   return useMemo(() => {
-    if (!data?.length) return []
+    if (!data?.length) return [];
     return data
       .map((row) => {
-        const close = parseNum(row.closingPrice)
-        const change = parseNum(row.change)
-        const prev = close - change
-        const pct = prev > 0 ? (change / prev) * 100 : 0
-        return { ...row, changeNum: change, pct, closeNum: close }
+        const close = parseNum(row.closingPrice);
+        const change = parseNum(row.change);
+        const prev = close - change;
+        const pct = prev > 0 ? (change / prev) * 100 : 0;
+        return { ...row, changeNum: change, pct, closeNum: close };
       })
       .filter((r) =>
-        direction === "up"
-          ? r.closeNum > 0 && r.pct > 0
-          : r.closeNum > 0 && r.pct < 0
+        direction === "up" ? r.closeNum > 0 && r.pct > 0 : r.closeNum > 0 && r.pct < 0,
       )
-      .sort((a, b) =>
-        direction === "up" ? b.pct - a.pct : a.pct - b.pct
-      )
-      .slice(0, TOP_COUNT)
-  }, [data, direction])
+      .sort((a, b) => (direction === "up" ? b.pct - a.pct : a.pct - b.pct))
+      .slice(0, TOP_COUNT);
+  }, [data, direction]);
 }
 
 function RankingList({ title, icon, list, variant }: RankingListProps) {
-  if (list.length === 0) return null
+  if (list.length === 0) return null;
 
   return (
     <section className={styles.section}>
@@ -74,7 +70,9 @@ function RankingList({ title, icon, list, variant }: RankingListProps) {
       <div className={styles.list}>
         {list.map((stock, idx) => (
           <div key={stock.code} className={styles.row}>
-            <span className={styles.rank} data-rank={idx + 1}>{idx + 1}</span>
+            <span className={styles.rank} data-rank={idx + 1}>
+              {idx + 1}
+            </span>
             <div className={styles.stockInfo}>
               <span className={styles.code}>{stock.code}</span>
               <span className={styles.name}>{stock.name}</span>
@@ -82,7 +80,8 @@ function RankingList({ title, icon, list, variant }: RankingListProps) {
             <div className={styles.priceInfo}>
               <span className={styles.close}>{stock.closingPrice}</span>
               <span className={variant === "up" ? styles.changeUp : styles.changeDown}>
-                {variant === "up" ? "▲" : "▼"} {Math.abs(stock.changeNum).toFixed(2)} ({Math.abs(stock.pct).toFixed(2)}%)
+                {variant === "up" ? "▲" : "▼"} {Math.abs(stock.changeNum).toFixed(2)} (
+                {Math.abs(stock.pct).toFixed(2)}%)
               </span>
             </div>
             <div className={styles.volumeInfo}>
@@ -93,16 +92,16 @@ function RankingList({ title, icon, list, variant }: RankingListProps) {
         ))}
       </div>
     </section>
-  )
+  );
 }
 
 interface MarketIndexChartProps {
-  data: StockDailyDto[]
+  data: StockDailyDto[];
 }
 
 export function MarketIndexChart({ data }: MarketIndexChartProps) {
-  const topGainers = useRankList(data, "up")
-  const topLosers = useRankList(data, "down")
+  const topGainers = useRankList(data, "up");
+  const topLosers = useRankList(data, "down");
 
   return (
     <div className={styles.wrapper}>
@@ -119,5 +118,5 @@ export function MarketIndexChart({ data }: MarketIndexChartProps) {
         variant="down"
       />
     </div>
-  )
+  );
 }

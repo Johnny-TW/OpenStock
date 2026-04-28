@@ -2,7 +2,7 @@ const initialState = {
   session: null,
   token: null,
   user: null,
-}
+};
 
 const reducer = (state = initialState, action) => {
   switch (action.type) {
@@ -12,12 +12,12 @@ const reducer = (state = initialState, action) => {
         session: action.data?.session,
         token: action.data?.session?.accessToken,
         user: action.data?.session?.user,
-      }
+      };
     case "LOGOUT":
-      return initialState
+      return initialState;
     default:
-      return state
+      return state;
   }
-}
+};
 
-export default reducer
+export default reducer;

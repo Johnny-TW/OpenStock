@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PortfolioService } from './portfolio.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../prisma/prisma.service';
+import { PortfolioService } from './portfolio.service';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
@@ -27,10 +27,7 @@ describe('PortfolioService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        PortfolioService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [PortfolioService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     service = module.get<PortfolioService>(PortfolioService);
@@ -38,9 +35,7 @@ describe('PortfolioService', () => {
 
   describe('findAll', () => {
     it('應回傳使用者的持股清單', async () => {
-      const mockData = [
-        { id: 1, userId: 'u1', stockNo: '2330', buyPrice: 950, shares: 100 },
-      ];
+      const mockData = [{ id: 1, userId: 'u1', stockNo: '2330', buyPrice: 950, shares: 100 }];
       prisma.portfolio.findMany.mockResolvedValue(mockData);
 
       const result = await service.findAll('u1');
@@ -65,9 +60,7 @@ describe('PortfolioService', () => {
     it('應在找不到紀錄時拋出 NotFoundException', async () => {
       prisma.portfolio.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne(99, 'u1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findOne(99, 'u1')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -126,9 +119,7 @@ describe('PortfolioService', () => {
     it('應在找不到紀錄時拋出 NotFoundException', async () => {
       prisma.portfolio.findFirst.mockResolvedValue(null);
 
-      await expect(service.update(99, 'u1', { shares: 200 })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.update(99, 'u1', { shares: 200 })).rejects.toThrow(NotFoundException);
     });
   });
 

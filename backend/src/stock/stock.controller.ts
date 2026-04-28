@@ -1,23 +1,23 @@
 import { Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { StockService } from './stock.service';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
-  StockDailyAllResponse,
-  StockValuationResponse,
-  MarketIndexResponse,
-  TopVolumeResponse,
-  IntradayResponse,
-  IndexHistoryResponse,
-  RevenueRankingResponse,
-  GrossMarginRankingResponse,
-  DividendYieldRankingResponse,
-  PeRatioRankingResponse,
-  HeatmapResponse,
-  NewsResponse,
   AllNewsResponse,
+  DividendYieldRankingResponse,
+  GrossMarginRankingResponse,
+  HeatmapResponse,
+  IndexHistoryResponse,
+  IntradayResponse,
+  MarketIndexResponse,
+  NewsResponse,
+  PeRatioRankingResponse,
+  RevenueRankingResponse,
+  StockDailyAllResponse,
   StockDetailResponse,
   StockHistoryResponse,
+  StockValuationResponse,
+  TopVolumeResponse,
 } from './dto/stock.dto';
+import { StockService } from './stock.service';
 
 @Controller('stock')
 export class StockController {
@@ -157,8 +157,7 @@ export class StockController {
   @ApiOperation({
     summary: '證交所新聞列表',
     description:
-      '取得臺灣證券交易所最新公告與新聞。\n\n' +
-      '資料來源：TWSE OpenAPI `news/newsList`',
+      '取得臺灣證券交易所最新公告與新聞。\n\n' + '資料來源：TWSE OpenAPI `news/newsList`',
   })
   @ApiResponse({ status: 200, description: '成功取得新聞列表' })
   @Get('news')
@@ -228,9 +227,7 @@ export class StockController {
   })
   @ApiResponse({ status: 200, description: '成功取得個股詳細資料' })
   @Get('detail')
-  async getStockDetail(
-    @Query('symbol') symbol: string,
-  ): Promise<StockDetailResponse> {
+  async getStockDetail(@Query('symbol') symbol: string): Promise<StockDetailResponse> {
     return this.stockService.getStockDetail(symbol);
   }
 

@@ -1,29 +1,29 @@
-"use client"
+"use client";
 
-import { useMemo } from "react"
-import Link from "next/link"
-import { ExternalLink, Flame, ArrowRight } from "lucide-react"
-import { useAppSelector } from "@/hooks/use-redux"
-import type { NewsDto } from "@/type/stock"
-import styles from "./top-news.module.scss"
+import { ArrowRight, ExternalLink, Flame } from "lucide-react";
+import Link from "next/link";
+import { useMemo } from "react";
+import { useAppSelector } from "@/hooks/use-redux";
+import type { NewsDto } from "@/type/stock";
+import styles from "./top-news.module.scss";
 
-const TOP_COUNT = 5
+const TOP_COUNT = 5;
 
 export function TopNews() {
-  const allNews = useAppSelector((state) => state.news?.allNews ?? null)
+  const allNews = useAppSelector((state) => state.news?.allNews ?? null);
 
   const topList: NewsDto[] = useMemo(() => {
-    if (!allNews) return []
+    if (!allNews) return [];
     const merged = [
       ...(allNews.twStock?.data ?? []),
       ...(allNews.usStock?.data ?? []),
       ...(allNews.international?.data ?? []),
-    ]
-    merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    return merged.slice(0, TOP_COUNT)
-  }, [allNews])
+    ];
+    merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return merged.slice(0, TOP_COUNT);
+  }, [allNews]);
 
-  if (!allNews || topList.length === 0) return null
+  if (!allNews || topList.length === 0) return null;
 
   return (
     <section className={styles.section}>
@@ -61,5 +61,5 @@ export function TopNews() {
         ))}
       </div>
     </section>
-  )
+  );
 }

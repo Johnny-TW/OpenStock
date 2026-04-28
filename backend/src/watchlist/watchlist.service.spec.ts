@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { WatchlistService } from './watchlist.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../prisma/prisma.service';
+import { WatchlistService } from './watchlist.service';
 
 describe('WatchlistService', () => {
   let service: WatchlistService;
@@ -29,10 +29,7 @@ describe('WatchlistService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        WatchlistService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [WatchlistService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     service = module.get<WatchlistService>(WatchlistService);
@@ -40,9 +37,7 @@ describe('WatchlistService', () => {
 
   describe('findAll', () => {
     it('應回傳使用者的自選股清單', async () => {
-      const mockData = [
-        { id: 1, userId: 'u1', stockNo: '2330', stockName: '台積電' },
-      ];
+      const mockData = [{ id: 1, userId: 'u1', stockNo: '2330', stockName: '台積電' }];
       prisma.watchlist.findMany.mockResolvedValue(mockData);
 
       const result = await service.findAll('u1');
@@ -122,9 +117,7 @@ describe('WatchlistService', () => {
     it('應在找不到紀錄時拋出 NotFoundException', async () => {
       prisma.watchlist.findFirst.mockResolvedValue(null);
 
-      await expect(service.updateGroup(99, 'u1', '金融業')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.updateGroup(99, 'u1', '金融業')).rejects.toThrow(NotFoundException);
     });
   });
 

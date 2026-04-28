@@ -1,16 +1,16 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, memo } from "react"
+import { memo, useEffect, useRef } from "react";
 
 interface TradingViewTechnicalProps {
-  symbol: string
-  theme?: "light" | "dark"
-  height?: number
+  symbol: string;
+  theme?: "light" | "dark";
+  height?: number;
 }
 
 function getTradingViewSymbol(code: string): string {
-  if (/^\d{4,6}$/.test(code)) return `TWSE:${code}`
-  return code
+  if (/^\d{4,6}$/.test(code)) return `TWSE:${code}`;
+  return code;
 }
 
 export const TradingViewTechnical = memo(function TradingViewTechnical({
@@ -18,25 +18,24 @@ export const TradingViewTechnical = memo(function TradingViewTechnical({
   theme = "dark",
   height = 425,
 }: TradingViewTechnicalProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!containerRef.current) return;
 
-    const container = containerRef.current
-    container.innerHTML = ""
+    const container = containerRef.current;
+    container.innerHTML = "";
 
-    const widgetDiv = document.createElement("div")
-    widgetDiv.className = "tradingview-widget-container__widget"
-    widgetDiv.style.height = "100%"
-    widgetDiv.style.width = "100%"
-    container.appendChild(widgetDiv)
+    const widgetDiv = document.createElement("div");
+    widgetDiv.className = "tradingview-widget-container__widget";
+    widgetDiv.style.height = "100%";
+    widgetDiv.style.width = "100%";
+    container.appendChild(widgetDiv);
 
-    const script = document.createElement("script")
-    script.src =
-      "https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js"
-    script.type = "text/javascript"
-    script.async = true
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js";
+    script.type = "text/javascript";
+    script.async = true;
     script.innerHTML = JSON.stringify({
       interval: "1D",
       width: "100%",
@@ -47,14 +46,14 @@ export const TradingViewTechnical = memo(function TradingViewTechnical({
       displayMode: "single",
       locale: "zh_TW",
       colorTheme: theme,
-    })
+    });
 
-    container.appendChild(script)
+    container.appendChild(script);
 
     return () => {
-      container.innerHTML = ""
-    }
-  }, [symbol, theme])
+      container.innerHTML = "";
+    };
+  }, [symbol, theme]);
 
   return (
     <div
@@ -62,5 +61,5 @@ export const TradingViewTechnical = memo(function TradingViewTechnical({
       ref={containerRef}
       style={{ height, width: "100%" }}
     />
-  )
-})
+  );
+});

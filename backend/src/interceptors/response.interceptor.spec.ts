@@ -1,9 +1,6 @@
-import {
-  LoggingInterceptor,
-  ResponseInterceptor,
-} from './response.interceptor';
-import { ExecutionContext, CallHandler, Logger } from '@nestjs/common';
+import { CallHandler, ExecutionContext, Logger } from '@nestjs/common';
 import { of } from 'rxjs';
+import { LoggingInterceptor, ResponseInterceptor } from './response.interceptor';
 
 function createMockContext(method = 'GET', url = '/test'): ExecutionContext {
   return {
@@ -32,9 +29,7 @@ describe('LoggingInterceptor', () => {
 
     interceptor.intercept(ctx, handler).subscribe({
       next: () => {
-        expect(logSpy).toHaveBeenCalledWith(
-          expect.stringContaining('POST /api/watchlist'),
-        );
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('POST /api/watchlist'));
       },
       complete: done,
     });

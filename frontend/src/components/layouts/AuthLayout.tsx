@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useSession } from "next-auth/react"
-import { SidebarInset, SidebarProvider } from "@/components/commons/sidebar"
-import { Header, Sidebar, Footer } from "@/components/layouts"
+import { useSession } from "next-auth/react";
+import { SidebarInset, SidebarProvider } from "@/components/commons/sidebar";
+import { Footer, Header, Sidebar } from "@/components/layouts";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  const { status } = useSession()
+  const { status } = useSession();
 
   if (status === "loading" || status === "unauthenticated") {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   return (
@@ -22,5 +22,5 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Footer />
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

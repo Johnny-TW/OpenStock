@@ -60,8 +60,7 @@ applyTo: "**"
 - 使用 pnpm 作為套件管理工具。
 - 優先使用 scss 進行樣式設計。
 - 主要元件使用 shadcn ui 庫。
-- 遵循 ESLint 和 Prettier 規則，確保程式碼一致性。
-- 優化效能：避免不必要的 re-render，使用 memoization。
+- 遵循 Biome 規則（根目錄 `biome.json`），確保程式碼一致性。
 - API 呼叫使用目前專案 Redux 用法。
 - 認證使用 NextAuth（next-auth）搭配 Azure AD Provider，session 策略為 JWT。
 - 前端在 session callback 用 `JWT_SECRET` 自簽 JWT（3h），呼叫後端 API 時帶 `Authorization: Bearer <token>`。
@@ -82,7 +81,7 @@ applyTo: "**"
 - 使用 Node.js 20, NestJS 11 開發 API。
 - 使用 pnpm 作為套件管理工具。
 - 使用 TypeScript 進行開發，確保類型安全。
-- 遵循 ESLint 和 Prettier 規則，確保程式碼一致性。
+- 遵循 Biome 規則（根目錄 `biome.json`），確保程式碼一致性。
 - API 路由遵循 RESTful 風格，使用 /api 作為基礎路徑。
 - 使用 `@nestjs/jwt` 進行 JWT 驗證（`JwtModule.register` 全域註冊於 AppModule）。
 - 需認證的路由使用 `@UseGuards(AuthGuard)` 保護，AuthGuard 從 `Authorization: Bearer` header 取 token 驗證。

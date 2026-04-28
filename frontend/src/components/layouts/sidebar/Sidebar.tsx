@@ -1,38 +1,26 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useSession } from "next-auth/react"
-import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
-  TrendingUp,
-} from "lucide-react"
-
-import { NavMain } from "@/components/layouts/sidebar/NavMain"
-import { NavProjects } from "@/components/layouts/sidebar/NavProjects"
-import { NavUser } from "@/components/layouts/sidebar/NavUser"
-import { TeamSwitcher } from "@/components/layouts/sidebar/team-switcher"
+import { BarChart3, Frame, Map, PieChart, TrendingUp } from "lucide-react";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import * as React from "react";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/commons/sidebar"
-import { enbg_icon } from "@/images/index"
-import Image from "next/image"
+} from "@/components/commons/sidebar";
+import { NavMain } from "@/components/layouts/sidebar/NavMain";
+import { NavProjects } from "@/components/layouts/sidebar/NavProjects";
+import { NavUser } from "@/components/layouts/sidebar/NavUser";
+import { TeamSwitcher } from "@/components/layouts/sidebar/team-switcher";
+import { enbg_icon } from "@/images/index";
 
 // 將圖片包成 React 元件，讓 TeamSwitcher 可以像 Lucide icon 一樣使用
 const EnbgIconLogo = ({ className }: { className?: string }) => (
   <Image src={enbg_icon} alt="Enbg Icon" className={className} width={6} height={6} />
-)
+);
 
 const data = {
   teams: [
@@ -44,7 +32,7 @@ const data = {
   ],
   navMain: [
     {
-      title: "股票資訊",
+      title: "市場數據",
       url: "/stock",
       icon: TrendingUp,
       isActive: true,
@@ -56,9 +44,9 @@ const data = {
       ],
     },
     {
-      title: "產業熱力圖",
-      url: "/stock",
-      icon: TrendingUp,
+      title: "分析工具",
+      url: "/stock/heatmap",
+      icon: BarChart3,
       isActive: true,
       items: [
         { title: "產業熱力圖", url: "/stock/heatmap" },
@@ -72,23 +60,21 @@ const data = {
     { name: "Sales & Marketing", url: "#", icon: PieChart },
     { name: "Travel", url: "#", icon: Map },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { data: session } = useSession()
+  const { data: session } = useSession();
 
   const sessionUser = session?.user as
     | (Record<string, unknown> & { name?: string; email?: string })
-    | undefined
+    | undefined;
 
   const user = {
     name: sessionUser?.name ?? "使用者",
     email: sessionUser?.email ?? "",
     avatar:
-      sessionUser && (session as any)?.provider === "azure-ad"
-        ? "/api/me/photo"
-        : enbg_icon.src,
-  }
+      sessionUser && (session as any)?.provider === "azure-ad" ? "/api/me/photo" : enbg_icon.src,
+  };
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -104,7 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
 
-export default AppSidebar
+export default AppSidebar;

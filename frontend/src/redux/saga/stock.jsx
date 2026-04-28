@@ -1,23 +1,23 @@
-import { takeLatest } from "redux-saga/effects"
-import { API_METHOD } from "../api/apiService"
+import { takeLatest } from "redux-saga/effects";
 import {
   API_STOCK_DAILY_ALL,
-  API_STOCK_VALUATION,
-  API_STOCK_MARKET_INDEX,
-  API_STOCK_TOP_VOLUME,
-  API_STOCK_INTRADAY,
-  API_STOCK_INDEX_HISTORY,
   API_STOCK_DETAIL,
   API_STOCK_HISTORY,
-} from "../api/API"
-import { fetchApi } from "."
+  API_STOCK_INDEX_HISTORY,
+  API_STOCK_INTRADAY,
+  API_STOCK_MARKET_INDEX,
+  API_STOCK_TOP_VOLUME,
+  API_STOCK_VALUATION,
+} from "../api/API";
+import { API_METHOD } from "../api/apiService";
+import { fetchApi } from ".";
 
 function* getStockDailyAll() {
   yield fetchApi({
     method: API_METHOD.GET,
     path: API_STOCK_DAILY_ALL,
     reducer: "SET_STOCK_DAILY_ALL",
-  })
+  });
 }
 
 function* getStockValuation() {
@@ -25,7 +25,7 @@ function* getStockValuation() {
     method: API_METHOD.GET,
     path: API_STOCK_VALUATION,
     reducer: "SET_STOCK_VALUATION",
-  })
+  });
 }
 
 function* getStockMarketIndex() {
@@ -33,7 +33,7 @@ function* getStockMarketIndex() {
     method: API_METHOD.GET,
     path: API_STOCK_MARKET_INDEX,
     reducer: "SET_STOCK_MARKET_INDEX",
-  })
+  });
 }
 
 function* getStockTopVolume() {
@@ -41,7 +41,7 @@ function* getStockTopVolume() {
     method: API_METHOD.GET,
     path: API_STOCK_TOP_VOLUME,
     reducer: "SET_STOCK_TOP_VOLUME",
-  })
+  });
 }
 
 function* getStockIntraday() {
@@ -49,7 +49,7 @@ function* getStockIntraday() {
     method: API_METHOD.GET,
     path: API_STOCK_INTRADAY,
     reducer: "SET_STOCK_INTRADAY",
-  })
+  });
 }
 
 function* getStockIndexHistory() {
@@ -57,7 +57,7 @@ function* getStockIndexHistory() {
     method: API_METHOD.GET,
     path: API_STOCK_INDEX_HISTORY,
     reducer: "SET_STOCK_INDEX_HISTORY",
-  })
+  });
 }
 
 function* getStockDetail(action) {
@@ -65,24 +65,24 @@ function* getStockDetail(action) {
     method: API_METHOD.GET,
     path: `${API_STOCK_DETAIL}?symbol=${action.symbol}`,
     reducer: "SET_STOCK_DETAIL",
-  })
+  });
 }
 
 function* getStockHistory(action) {
   yield fetchApi({
     method: API_METHOD.GET,
-    path: `${API_STOCK_HISTORY}?symbol=${action.symbol}&period=${action.period || '1m'}`,
+    path: `${API_STOCK_HISTORY}?symbol=${action.symbol}&period=${action.period || "1m"}`,
     reducer: "SET_STOCK_HISTORY",
-  })
+  });
 }
 
 export default function* stockSaga() {
-  yield takeLatest("GET_STOCK_DAILY_ALL", getStockDailyAll)
-  yield takeLatest("GET_STOCK_VALUATION", getStockValuation)
-  yield takeLatest("GET_STOCK_MARKET_INDEX", getStockMarketIndex)
-  yield takeLatest("GET_STOCK_TOP_VOLUME", getStockTopVolume)
-  yield takeLatest("GET_STOCK_INTRADAY", getStockIntraday)
-  yield takeLatest("GET_STOCK_INDEX_HISTORY", getStockIndexHistory)
-  yield takeLatest("GET_STOCK_DETAIL", getStockDetail)
-  yield takeLatest("GET_STOCK_HISTORY", getStockHistory)
+  yield takeLatest("GET_STOCK_DAILY_ALL", getStockDailyAll);
+  yield takeLatest("GET_STOCK_VALUATION", getStockValuation);
+  yield takeLatest("GET_STOCK_MARKET_INDEX", getStockMarketIndex);
+  yield takeLatest("GET_STOCK_TOP_VOLUME", getStockTopVolume);
+  yield takeLatest("GET_STOCK_INTRADAY", getStockIntraday);
+  yield takeLatest("GET_STOCK_INDEX_HISTORY", getStockIndexHistory);
+  yield takeLatest("GET_STOCK_DETAIL", getStockDetail);
+  yield takeLatest("GET_STOCK_HISTORY", getStockHistory);
 }

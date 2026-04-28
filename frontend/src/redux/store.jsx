@@ -1,14 +1,14 @@
-import { combineReducers, configureStore } from "@reduxjs/toolkit"
-import createSagaMiddleware from "redux-saga"
+import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import createSagaMiddleware from "redux-saga";
 
-import reducers from "./reducer"
-import mySaga from "./saga"
+import reducers from "./reducer";
+import mySaga from "./saga";
 
-const sagaMiddleware = createSagaMiddleware()
+const sagaMiddleware = createSagaMiddleware();
 
 const reducer = combineReducers({
   ...reducers,
-})
+});
 
 export default configureStore({
   reducer,
@@ -16,6 +16,6 @@ export default configureStore({
     getDefaultMiddleware({
       serializableCheck: false,
     }).concat(sagaMiddleware),
-})
+});
 
-sagaMiddleware.run(mySaga)
+sagaMiddleware.run(mySaga);

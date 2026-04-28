@@ -3,7 +3,7 @@
 ## 通用
 
 - 使用 TypeScript，確保類型安全
-- 遵循 ESLint + Prettier 規則
+- 遵循 Biome 規則（lint + format），配置在根目錄 `biome.json`
 - 不寫多餘的註解或說明文件
 - 文案一律繁體中文
 

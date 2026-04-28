@@ -1,27 +1,24 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
   Body,
+  Controller,
+  Delete,
+  Get,
   Param,
-  Query,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiQuery,
   ApiBearerAuth,
-  ApiResponse,
+  ApiOperation,
   ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
+import { CreateWatchlistDto, UpdateWatchlistGroupDto } from './dto/watchlist.dto';
 import { WatchlistService } from './watchlist.service';
-import {
-  CreateWatchlistDto,
-  UpdateWatchlistGroupDto,
-} from './dto/watchlist.dto';
 
 @ApiTags('自選股')
 @ApiBearerAuth('bearer')
@@ -54,10 +51,7 @@ export class WatchlistController {
   @ApiResponse({ status: 401, description: '未認證' })
   @ApiResponse({ status: 404, description: '自選股不存在' })
   @Patch(':id/group')
-  updateGroup(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateWatchlistGroupDto,
-  ) {
+  updateGroup(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWatchlistGroupDto) {
     return this.watchlistService.updateGroup(id, dto.userId, dto.groupName);
   }
 
@@ -68,10 +62,7 @@ export class WatchlistController {
   @ApiResponse({ status: 401, description: '未認證' })
   @ApiResponse({ status: 404, description: '自選股不存在' })
   @Delete(':id')
-  remove(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('userId') userId: string,
-  ) {
+  remove(@Param('id', ParseIntPipe) id: number, @Query('userId') userId: string) {
     return this.watchlistService.remove(id, userId);
   }
 }

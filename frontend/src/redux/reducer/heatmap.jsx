@@ -1,14 +1,14 @@
 const initialState = {
   data: null,
-}
+};
 
 const reducer = (state = initialState, action) => {
   switch (action.type) {
     case "SET_HEATMAP":
-      return { ...state, data: action.data }
+      return { ...state, data: action.data };
     default:
-      return state
+      return state;
   }
-}
+};
 
-export default reducer
+export default reducer;

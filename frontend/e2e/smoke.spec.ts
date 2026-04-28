@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("頁面基本載入", () => {
   test("首頁應該重導到 /stock", async ({ page }) => {

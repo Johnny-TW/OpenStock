@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { Module } from '@nestjs/common';
+import { StockModule } from '../stock/stock.module';
 import { AnalysisController } from './analysis.controller';
 import { AnalysisService } from './analysis.service';
-import { StockModule } from '../stock/stock.module';
 
 @Module({
   imports: [

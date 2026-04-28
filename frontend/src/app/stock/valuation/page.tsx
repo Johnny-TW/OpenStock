@@ -1,5 +1,5 @@
-import ValuationClient from "./valuation-client"
+import ValuationClient from "./valuation-client";
 
 export default function ValuationPage() {
-  return <ValuationClient />
+  return <ValuationClient />;
 }

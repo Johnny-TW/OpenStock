@@ -1,27 +1,27 @@
-"use client"
+"use client";
 
 import {
   IconArrowDown,
-  IconArrowUp,
   IconArrowsUpDown,
+  IconArrowUp,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-} from "@tabler/icons-react"
-import { useReactTable } from "@tanstack/react-table"
-import { Button } from "@/components/commons/button"
+} from "@tabler/icons-react";
+import { useReactTable } from "@tanstack/react-table";
+import { Button } from "@/components/commons/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/commons/select"
+} from "@/components/commons/select";
 
 export function parseNumber(value: string): number {
-  if (!value || value === "-" || value === "--") return 0
-  return parseFloat(value.replace(/,/g, "")) || 0
+  if (!value || value === "-" || value === "--") return 0;
+  return parseFloat(value.replace(/,/g, "")) || 0;
 }
 
 export function SortHeader<T>({
@@ -29,12 +29,12 @@ export function SortHeader<T>({
   label,
   className,
 }: {
-  column: ReturnType<ReturnType<typeof useReactTable<T>>["getColumn"]>
-  label: string
-  className?: string
+  column: ReturnType<ReturnType<typeof useReactTable<T>>["getColumn"]>;
+  label: string;
+  className?: string;
 }) {
-  if (!column) return <span>{label}</span>
-  const sorted = column.getIsSorted()
+  if (!column) return <span>{label}</span>;
+  const sorted = column.getIsSorted();
   return (
     <Button
       variant="ghost"
@@ -51,7 +51,7 @@ export function SortHeader<T>({
         <IconArrowsUpDown className="ml-1 size-3 opacity-40" />
       )}
     </Button>
-  )
+  );
 }
 
 export function Pagination<T>({ table }: { table: ReturnType<typeof useReactTable<T>> }) {
@@ -77,22 +77,46 @@ export function Pagination<T>({ table }: { table: ReturnType<typeof useReactTabl
         <span>筆</span>
       </div>
       <div className="flex items-center gap-1">
-        <Button variant="outline" size="icon" className="size-8" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-8"
+          onClick={() => table.setPageIndex(0)}
+          disabled={!table.getCanPreviousPage()}
+        >
           <IconChevronsLeft className="size-4" />
         </Button>
-        <Button variant="outline" size="icon" className="size-8" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-8"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
           <IconChevronLeft className="size-4" />
         </Button>
         <span className="text-sm text-muted-foreground px-2">
           {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
         </span>
-        <Button variant="outline" size="icon" className="size-8" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-8"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
           <IconChevronRight className="size-4" />
         </Button>
-        <Button variant="outline" size="icon" className="size-8" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-8"
+          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+          disabled={!table.getCanNextPage()}
+        >
           <IconChevronsRight className="size-4" />
         </Button>
       </div>
     </div>
-  )
+  );
 }

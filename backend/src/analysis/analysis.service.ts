@@ -1,17 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
 import Anthropic from '@anthropic-ai/sdk';
-import { StockService } from '../stock/stock.service';
+import { HttpService } from '@nestjs/axios';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { StockService } from '../stock/stock.service';
 import {
-  AnalyzeMarketDto,
+  AnalysisFactorDto,
   AnalysisResultDto,
+  AnalyzeMarketDto,
+  ScoresDto,
   StockSnapshotDto,
   TechnicalIndicatorsDto,
-  ScoresDto,
-  AnalysisFactorDto,
 } from './dto/analysis.dto';
 
 interface TwseDailyResponse {
@@ -114,8 +114,7 @@ export class AnalysisService {
     'https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=json';
   private readonly TWSE_VALUATION_URL =
     'https://www.twse.com.tw/exchangeReport/BWIBBU_ALL?response=json';
-  private readonly TWSE_MARKET_INDEX_URL =
-    'https://openapi.twse.com.tw/v1/exchangeReport/MI_INDEX';
+  private readonly TWSE_MARKET_INDEX_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/MI_INDEX';
 
   // 預設的 prompt 範本，實際使用時可根據需求進行調整
   constructor(
@@ -169,9 +168,7 @@ export class AnalysisService {
 
     let targetStocks: StockSnapshotDto[];
     if (dto.stockCodes && dto.stockCodes.length > 0) {
-      targetStocks = mergedStocks.filter((s) =>
-        dto.stockCodes!.includes(s.code),
-      );
+      targetStocks = mergedStocks.filter((s) => dto.stockCodes!.includes(s.code));
     } else {
       targetStocks = mergedStocks
         .filter((s) => this.isIndividualStock(s.code))
@@ -238,8 +235,7 @@ export class AnalysisService {
         this.httpService.get<TwseValuationResponse>(this.TWSE_VALUATION_URL),
       );
       if (data.stat !== 'OK') return {};
-      const map: Record<string, { peRatio: string; dividendYield: string }> =
-        {};
+      const map: Record<string, { peRatio: string; dividendYield: string }> = {};
       for (const row of data.data) {
         map[row[0]] = { peRatio: row[4], dividendYield: row[2] };
       }
@@ -273,7 +269,7 @@ export class AnalysisService {
         items.slice(0, 15).map((n) => {
           const summary =
             n.summary && n.summary.length > 100
-              ? n.summary.slice(0, 100) + '...'
+              ? `${n.summary.slice(0, 100)}...`
               : (n.summary ?? '');
           return summary ? `${n.title}：${summary}` : n.title;
         });
@@ -292,17 +288,15 @@ export class AnalysisService {
   private async fetchMarketIndex(): Promise<string> {
     try {
       const { data } = await firstValueFrom(
-        this.httpService.get<Record<string, string>[]>(
-          this.TWSE_MARKET_INDEX_URL,
-        ),
+        this.httpService.get<Record<string, string>[]>(this.TWSE_MARKET_INDEX_URL),
       );
       if (!Array.isArray(data)) return '';
       return data
         .slice(0, 5)
         .map((row) => {
-          const name = row['指數'] ?? '';
-          const close = row['收盤指數'] ?? '';
-          const change = row['漲跌點數'] ?? '';
+          const name = row.指數 ?? '';
+          const close = row.收盤指數 ?? '';
+          const change = row.漲跌點數 ?? '';
           return `${name}：${close}（漲跌 ${change}）`;
         })
         .join('\n');
@@ -326,9 +320,7 @@ export class AnalysisService {
       try {
         const dateStr = `${year}${String(month).padStart(2, '0')}01`;
         const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${dateStr}&stockNo=${code}`;
-        const { data } = await firstValueFrom(
-          this.httpService.get<TwseStockDayResponse>(url),
-        );
+        const { data } = await firstValueFrom(this.httpService.get<TwseStockDayResponse>(url));
         if (data.stat !== 'OK' || !data.data) continue;
         for (const row of data.data) {
           const volume = parseInt(row[1]?.replace(/,/g, '') ?? '0', 10);
@@ -349,9 +341,7 @@ export class AnalysisService {
     return rows;
   }
 
-  private calculateIndicators(
-    history: HistoryRow[],
-  ): TechnicalIndicators | undefined {
+  private calculateIndicators(history: HistoryRow[]): TechnicalIndicators | undefined {
     if (history.length < 20) return undefined;
 
     const closes = history.map((h) => h.close);
@@ -422,8 +412,7 @@ export class AnalysisService {
       const sliceH = history.slice(Math.max(0, i - kdPeriod + 1), i + 1);
       const highN = Math.max(...sliceH.map((h) => h.high));
       const lowN = Math.min(...sliceH.map((h) => h.low));
-      const rsv =
-        highN === lowN ? 50 : ((closes[i] - lowN) / (highN - lowN)) * 100;
+      const rsv = highN === lowN ? 50 : ((closes[i] - lowN) / (highN - lowN)) * 100;
       kValue = (2 / 3) * kValue + (1 / 3) * rsv;
       dValue = (2 / 3) * dValue + (1 / 3) * kValue;
     }
@@ -431,24 +420,18 @@ export class AnalysisService {
     // 布林通道 (20, 2)
     const bb20 = closes.slice(len - 20);
     const bbMean = bb20.reduce((a, b) => a + b, 0) / 20;
-    const bbStdDev = Math.sqrt(
-      bb20.reduce((sum, v) => sum + (v - bbMean) ** 2, 0) / 20,
-    );
+    const bbStdDev = Math.sqrt(bb20.reduce((sum, v) => sum + (v - bbMean) ** 2, 0) / 20);
     const bollingerUpper = bbMean + 2 * bbStdDev;
     const bollingerMiddle = bbMean;
     const bollingerLower = bbMean - 2 * bbStdDev;
 
     // 均線排列趨勢
     let trend = '盤整';
-    if (ma60 > 0 && ma5 > ma10 && ma10 > ma20 && ma20 > ma60)
-      trend = '多頭排列';
-    else if (ma60 > 0 && ma5 < ma10 && ma10 < ma20 && ma20 < ma60)
-      trend = '空頭排列';
+    if (ma60 > 0 && ma5 > ma10 && ma10 > ma20 && ma20 > ma60) trend = '多頭排列';
+    else if (ma60 > 0 && ma5 < ma10 && ma10 < ma20 && ma20 < ma60) trend = '空頭排列';
 
     // 近 60 日收盤價（用於走勢圖）
-    const recentCloses = closes
-      .slice(Math.max(0, len - 60))
-      .map((c) => Math.round(c * 100) / 100);
+    const recentCloses = closes.slice(Math.max(0, len - 60)).map((c) => Math.round(c * 100) / 100);
 
     return {
       ma5: Math.round(ma5 * 100) / 100,
@@ -474,9 +457,7 @@ export class AnalysisService {
     };
   }
 
-  private async enrichWithTechnicals(
-    stocks: StockSnapshotDto[],
-  ): Promise<EnrichedStock[]> {
+  private async enrichWithTechnicals(stocks: StockSnapshotDto[]): Promise<EnrichedStock[]> {
     const batchSize = 5;
     const enriched: EnrichedStock[] = [];
 
@@ -527,16 +508,11 @@ export class AnalysisService {
       })
       .join('\n\n');
 
-    const twStockNews =
-      news.twStock.length > 0 ? news.twStock.join('\n') : '（目前無台股新聞）';
-    const usStockNews =
-      news.usStock.length > 0 ? news.usStock.join('\n') : '（目前無美股新聞）';
+    const twStockNews = news.twStock.length > 0 ? news.twStock.join('\n') : '（目前無台股新聞）';
+    const usStockNews = news.usStock.length > 0 ? news.usStock.join('\n') : '（目前無美股新聞）';
     const internationalNews =
-      news.international.length > 0
-        ? news.international.join('\n')
-        : '（目前無國際財經新聞）';
-    const twseNews =
-      news.twse.length > 0 ? news.twse.join('\n') : '（目前無證交所公告）';
+      news.international.length > 0 ? news.international.join('\n') : '（目前無國際財經新聞）';
+    const twseNews = news.twse.length > 0 ? news.twse.join('\n') : '（目前無證交所公告）';
 
     const systemPrompt = `你是一位擁有 20 年經驗的台灣股市專業投資分析師與技術分析專家。
 你精通以下分析方法：
@@ -705,16 +681,12 @@ ${twseNews}
               total: p.scores.total ?? 0,
             }
           : defaultScores;
-        const bullishFactors: AnalysisFactorDto[] = (
-          p.bullishFactors ?? []
-        ).map((f) => ({
+        const bullishFactors: AnalysisFactorDto[] = (p.bullishFactors ?? []).map((f) => ({
           category: f.category ?? '基本',
           description: f.description ?? '',
           importance: f.importance ?? '一般',
         }));
-        const bearishFactors: AnalysisFactorDto[] = (
-          p.bearishFactors ?? []
-        ).map((f) => ({
+        const bearishFactors: AnalysisFactorDto[] = (p.bearishFactors ?? []).map((f) => ({
           category: f.category ?? '基本',
           description: f.description ?? '',
           importance: f.importance ?? '一般',

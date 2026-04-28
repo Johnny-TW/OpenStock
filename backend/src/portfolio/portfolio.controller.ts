@@ -1,24 +1,24 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
   Body,
+  Controller,
+  Delete,
+  Get,
   Param,
-  Query,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiQuery,
   ApiBearerAuth,
-  ApiResponse,
+  ApiOperation,
   ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
-import { PortfolioService } from './portfolio.service';
 import { CreatePortfolioDto, UpdatePortfolioDto } from './dto/portfolio.dto';
+import { PortfolioService } from './portfolio.service';
 
 @ApiTags('持股管理')
 @ApiBearerAuth('bearer')
@@ -42,10 +42,7 @@ export class PortfolioController {
   @ApiResponse({ status: 401, description: '未認證' })
   @ApiResponse({ status: 404, description: '持股紀錄不存在' })
   @Get(':id')
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('userId') userId: string,
-  ) {
+  findOne(@Param('id', ParseIntPipe) id: number, @Query('userId') userId: string) {
     return this.portfolioService.findOne(id, userId);
   }
 
@@ -80,10 +77,7 @@ export class PortfolioController {
   @ApiResponse({ status: 401, description: '未認證' })
   @ApiResponse({ status: 404, description: '持股紀錄不存在' })
   @Delete(':id')
-  remove(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('userId') userId: string,
-  ) {
+  remove(@Param('id', ParseIntPipe) id: number, @Query('userId') userId: string) {
     return this.portfolioService.remove(id, userId);
   }
 }

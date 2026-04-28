@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react";
 
 const useWindowSize = (options = {}) => {
-  const { smBreakpoint = 768 } = options
+  const { smBreakpoint = 768 } = options;
 
   const [windowSize, setWindowSize] = useState({
     width: undefined,
@@ -9,13 +9,13 @@ const useWindowSize = (options = {}) => {
     isSM: undefined,
     isMD: undefined,
     isLG: undefined,
-  })
+  });
 
   useEffect(() => {
     // Handler to call on window resize
     function handleResize() {
-      const width = window.innerWidth
-      const height = window.innerHeight
+      const width = window.innerWidth;
+      const height = window.innerHeight;
       // Set window width/height to state
       setWindowSize({
         width,
@@ -23,17 +23,17 @@ const useWindowSize = (options = {}) => {
         isSM: width < smBreakpoint,
         isMD: width >= smBreakpoint && width < 992,
         isLG: width >= 992,
-      })
+      });
     }
     // Add event listener
-    window.addEventListener("resize", handleResize)
+    window.addEventListener("resize", handleResize);
     // Call handler right away so state gets updated with initial window size
-    handleResize()
+    handleResize();
     // Remove event listener on cleanup
-    return () => window.removeEventListener("resize", handleResize)
-  }, [smBreakpoint])
+    return () => window.removeEventListener("resize", handleResize);
+  }, [smBreakpoint]);
 
-  return windowSize
-}
+  return windowSize;
+};
 
-export default useWindowSize
+export default useWindowSize;

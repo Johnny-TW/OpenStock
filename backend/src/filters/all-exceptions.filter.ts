@@ -1,13 +1,13 @@
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Request, Response } from 'express';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -28,8 +28,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
-          : ((exceptionResponse as Record<string, unknown>)
-              .message as string) || message;
+          : ((exceptionResponse as Record<string, unknown>).message as string) || message;
       code = `HTTP_${status}`;
     } else if (exception instanceof PrismaClientKnownRequestError) {
       status = HttpStatus.BAD_REQUEST;

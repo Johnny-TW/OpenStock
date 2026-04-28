@@ -1,18 +1,27 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react"
 import {
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
   type SortingState,
-} from "@tanstack/react-table"
-import { Loader2 } from "lucide-react"
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
+  useReactTable,
+} from "@tanstack/react-table";
+import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/commons/badge";
+import { Input } from "@/components/commons/input";
+import { PageHeader } from "@/components/commons/page-header/page-header";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/commons/select";
 import {
   Table,
   TableBody,
@@ -20,54 +29,45 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/commons/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs"
-import { Input } from "@/components/commons/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/commons/select"
-import { PageHeader } from "@/components/commons/page-header/page-header"
-import { Badge } from "@/components/commons/badge"
+} from "@/components/commons/table";
+import { TabsContent } from "@/components/commons/tabs";
+import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 import type {
-  RevenueRankingDto,
-  GrossMarginRankingDto,
   DividendYieldRankingDto,
+  GrossMarginRankingDto,
   PeRatioRankingDto,
-  TopVolumeDto,
+  RevenueRankingDto,
   StockDailyDto,
-} from "@/type/stock"
-import { parseNumber, SortHeader, Pagination } from "@/components/data-table/shared"
+  TopVolumeDto,
+} from "@/type/stock";
 
 function formatCurrency(num: number): string {
   if (Math.abs(num) >= 1e8) {
-    return `${(num / 1e8).toFixed(2)} 億`
+    return `${(num / 1e8).toFixed(2)} 億`;
   }
   if (Math.abs(num) >= 1e4) {
-    return `${(num / 1e4).toFixed(0)} 萬`
+    return `${(num / 1e4).toFixed(0)} 萬`;
   }
-  return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function getChangeColor(direction: string) {
-  if (direction === "-") return "text-green-500"
-  if (direction === "+") return "text-red-500"
-  return ""
+  if (direction === "-") return "text-green-500";
+  if (direction === "+") return "text-red-500";
+  return "";
 }
 
 // 漲跌幅排行
 interface ChangeRankItem {
-  code: string
-  name: string
-  closingPrice: string
-  change: string
-  changePct: number
-  tradeVolume: string
-  tradeValue: string
-  industry: string
+  code: string;
+  name: string;
+  closingPrice: string;
+  change: string;
+  changePct: number;
+  tradeVolume: string;
+  tradeValue: string;
+  industry: string;
 }
 
 const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
@@ -90,21 +90,22 @@ const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
     accessorKey: "closingPrice",
     header: "收盤價",
     cell: ({ row }) => <div className="text-right">{row.original.closingPrice}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
     size: 90,
   },
   {
     accessorKey: "changePct",
     header: "漲跌幅",
     cell: ({ row }) => {
-      const pct = row.original.changePct
-      const color = pct > 0 ? "text-red-500" : pct < 0 ? "text-green-500" : ""
-      const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : ""
+      const pct = row.original.changePct;
+      const color = pct > 0 ? "text-red-500" : pct < 0 ? "text-green-500" : "";
+      const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "";
       return (
         <div className={`text-right font-semibold ${color}`}>
           {arrow} {Math.abs(pct).toFixed(2)}%
         </div>
-      )
+      );
     },
     sortingFn: (a, b) => a.original.changePct - b.original.changePct,
     size: 100,
@@ -113,9 +114,9 @@ const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
     accessorKey: "change",
     header: "漲跌",
     cell: ({ row }) => {
-      const pct = row.original.changePct
-      const color = pct > 0 ? "text-red-500" : pct < 0 ? "text-green-500" : ""
-      return <div className={`text-right ${color}`}>{row.original.change}</div>
+      const pct = row.original.changePct;
+      const color = pct > 0 ? "text-red-500" : pct < 0 ? "text-green-500" : "";
+      return <div className={`text-right ${color}`}>{row.original.change}</div>;
     },
     size: 80,
   },
@@ -126,7 +127,7 @@ const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
     sortingFn: (a, b) => parseNumber(a.original.tradeVolume) - parseNumber(b.original.tradeVolume),
     size: 100,
   },
-]
+];
 
 const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
   {
@@ -160,14 +161,16 @@ const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
     accessorKey: "openingPrice",
     header: "開盤",
     cell: ({ row }) => <div className="text-right">{row.original.openingPrice}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.openingPrice) - parseNumber(b.original.openingPrice),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.openingPrice) - parseNumber(b.original.openingPrice),
     size: 90,
   },
   {
     accessorKey: "highestPrice",
     header: "最高",
     cell: ({ row }) => <div className="text-right">{row.original.highestPrice}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.highestPrice) - parseNumber(b.original.highestPrice),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.highestPrice) - parseNumber(b.original.highestPrice),
     size: 90,
   },
   {
@@ -181,7 +184,8 @@ const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
     accessorKey: "closingPrice",
     header: "收盤",
     cell: ({ row }) => <div className="text-right">{row.original.closingPrice}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
+    sortingFn: (a, b) =>
+      parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
     size: 90,
   },
   {
@@ -189,20 +193,27 @@ const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
     header: "漲跌",
     cell: ({ row }) => (
       <div className={`text-right ${getChangeColor(row.original.direction)}`}>
-        {row.original.direction}{row.original.change}
+        {row.original.direction}
+        {row.original.change}
       </div>
     ),
     sortingFn: (a, b) => {
-      const aVal = parseNumber(a.original.change) * (a.original.direction === "-" ? -1 : 1)
-      const bVal = parseNumber(b.original.change) * (b.original.direction === "-" ? -1 : 1)
-      return aVal - bVal
+      const aVal = parseNumber(a.original.change) * (a.original.direction === "-" ? -1 : 1);
+      const bVal = parseNumber(b.original.change) * (b.original.direction === "-" ? -1 : 1);
+      return aVal - bVal;
     },
     size: 90,
   },
-]
+];
 
 const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
-  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  {
+    accessorKey: "code",
+    header: "代號",
+    cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+    size: 80,
+    enableSorting: false,
+  },
   { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
   { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
   {
@@ -215,34 +226,60 @@ const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
   {
     accessorKey: "operatingIncome",
     header: "營業利益",
-    cell: ({ row }) => <div className={`text-right ${row.original.operatingIncome < 0 ? "text-green-500" : ""}`}>{formatCurrency(row.original.operatingIncome)}</div>,
+    cell: ({ row }) => (
+      <div className={`text-right ${row.original.operatingIncome < 0 ? "text-green-500" : ""}`}>
+        {formatCurrency(row.original.operatingIncome)}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.operatingIncome - b.original.operatingIncome,
     size: 120,
   },
   {
     accessorKey: "netIncome",
     header: "稅後淨利",
-    cell: ({ row }) => <div className={`text-right ${row.original.netIncome < 0 ? "text-green-500" : ""}`}>{formatCurrency(row.original.netIncome)}</div>,
+    cell: ({ row }) => (
+      <div className={`text-right ${row.original.netIncome < 0 ? "text-green-500" : ""}`}>
+        {formatCurrency(row.original.netIncome)}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.netIncome - b.original.netIncome,
     size: 120,
   },
   {
     accessorKey: "eps",
     header: "EPS",
-    cell: ({ row }) => <div className={`text-right font-medium ${row.original.eps < 0 ? "text-green-500" : "text-red-500"}`}>{row.original.eps.toFixed(2)}</div>,
+    cell: ({ row }) => (
+      <div
+        className={`text-right font-medium ${row.original.eps < 0 ? "text-green-500" : "text-red-500"}`}
+      >
+        {row.original.eps.toFixed(2)}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.eps - b.original.eps,
     size: 80,
   },
-]
+];
 
 const grossMarginColumns: ColumnDef<GrossMarginRankingDto>[] = [
-  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  {
+    accessorKey: "code",
+    header: "代號",
+    cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+    size: 80,
+    enableSorting: false,
+  },
   { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
   { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
   {
     accessorKey: "grossMarginRate",
     header: "毛利率",
-    cell: ({ row }) => <div className={`text-right font-bold ${row.original.grossMarginRate >= 50 ? "text-red-500" : row.original.grossMarginRate < 0 ? "text-green-500" : ""}`}>{row.original.grossMarginRate.toFixed(2)}%</div>,
+    cell: ({ row }) => (
+      <div
+        className={`text-right font-bold ${row.original.grossMarginRate >= 50 ? "text-red-500" : row.original.grossMarginRate < 0 ? "text-green-500" : ""}`}
+      >
+        {row.original.grossMarginRate.toFixed(2)}%
+      </div>
+    ),
     sortingFn: (a, b) => a.original.grossMarginRate - b.original.grossMarginRate,
     size: 100,
   },
@@ -263,65 +300,109 @@ const grossMarginColumns: ColumnDef<GrossMarginRankingDto>[] = [
   {
     accessorKey: "grossProfit",
     header: "營業毛利",
-    cell: ({ row }) => <div className={`text-right ${row.original.grossProfit < 0 ? "text-green-500" : ""}`}>{formatCurrency(row.original.grossProfit)}</div>,
+    cell: ({ row }) => (
+      <div className={`text-right ${row.original.grossProfit < 0 ? "text-green-500" : ""}`}>
+        {formatCurrency(row.original.grossProfit)}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.grossProfit - b.original.grossProfit,
     size: 120,
   },
-]
+];
 
 const dividendYieldColumns: ColumnDef<DividendYieldRankingDto>[] = [
-  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  {
+    accessorKey: "code",
+    header: "代號",
+    cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+    size: 80,
+    enableSorting: false,
+  },
   { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
   { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
   {
     accessorKey: "dividendYield",
     header: "殖利率",
-    cell: ({ row }) => <div className={`text-right font-bold ${row.original.dividendYield >= 5 ? "text-red-500" : ""}`}>{row.original.dividendYield.toFixed(2)}%</div>,
+    cell: ({ row }) => (
+      <div
+        className={`text-right font-bold ${row.original.dividendYield >= 5 ? "text-red-500" : ""}`}
+      >
+        {row.original.dividendYield.toFixed(2)}%
+      </div>
+    ),
     sortingFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
     size: 100,
   },
   {
     accessorKey: "peRatio",
     header: "本益比",
-    cell: ({ row }) => <div className="text-right">{row.original.peRatio > 0 ? row.original.peRatio.toFixed(2) : "-"}</div>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        {row.original.peRatio > 0 ? row.original.peRatio.toFixed(2) : "-"}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.peRatio - b.original.peRatio,
     size: 100,
   },
   {
     accessorKey: "pbRatio",
     header: "股價淨值比",
-    cell: ({ row }) => <div className="text-right">{row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}</div>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        {row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
     size: 110,
   },
-]
+];
 
 const peRatioColumns: ColumnDef<PeRatioRankingDto>[] = [
-  { accessorKey: "code", header: "代號", cell: ({ row }) => <span className="font-medium">{row.original.code}</span>, size: 80, enableSorting: false },
+  {
+    accessorKey: "code",
+    header: "代號",
+    cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+    size: 80,
+    enableSorting: false,
+  },
   { accessorKey: "name", header: "名稱", size: 100, enableSorting: false },
   { accessorKey: "industry", header: "產業別", size: 100, enableSorting: false },
   {
     accessorKey: "peRatio",
     header: "本益比",
-    cell: ({ row }) => <div className={`text-right font-bold ${row.original.peRatio <= 10 ? "text-red-500" : row.original.peRatio >= 50 ? "text-green-500" : ""}`}>{row.original.peRatio.toFixed(2)}</div>,
+    cell: ({ row }) => (
+      <div
+        className={`text-right font-bold ${row.original.peRatio <= 10 ? "text-red-500" : row.original.peRatio >= 50 ? "text-green-500" : ""}`}
+      >
+        {row.original.peRatio.toFixed(2)}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.peRatio - b.original.peRatio,
     size: 100,
   },
   {
     accessorKey: "dividendYield",
     header: "殖利率",
-    cell: ({ row }) => <div className="text-right">{row.original.dividendYield > 0 ? `${row.original.dividendYield.toFixed(2)}%` : "-"}</div>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        {row.original.dividendYield > 0 ? `${row.original.dividendYield.toFixed(2)}%` : "-"}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
     size: 100,
   },
   {
     accessorKey: "pbRatio",
     header: "股價淨值比",
-    cell: ({ row }) => <div className="text-right">{row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}</div>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        {row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}
+      </div>
+    ),
     sortingFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
     size: 110,
   },
-]
+];
 
 function RankingTable<T>({
   data,
@@ -329,12 +410,12 @@ function RankingTable<T>({
   globalFilter,
   defaultSorting,
 }: {
-  data: T[]
-  columns: ColumnDef<T, unknown>[]
-  globalFilter: string
-  defaultSorting: SortingState
+  data: T[];
+  columns: ColumnDef<T, unknown>[];
+  globalFilter: string;
+  defaultSorting: SortingState;
 }) {
-  const [sorting, setSorting] = useState<SortingState>(defaultSorting)
+  const [sorting, setSorting] = useState<SortingState>(defaultSorting);
 
   const table = useReactTable({
     data,
@@ -348,7 +429,7 @@ function RankingTable<T>({
     initialState: {
       pagination: { pageSize: 10 },
     },
-  })
+  });
 
   return (
     <div className="space-y-4">
@@ -389,7 +470,10 @@ function RankingTable<T>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   沒有符合的資料
                 </TableCell>
               </TableRow>
@@ -399,66 +483,84 @@ function RankingTable<T>({
       </div>
       <Pagination table={table} />
     </div>
-  )
+  );
 }
 
 export default function RankingClient() {
-  const dispatch = useAppDispatch()
-  const ranking = useAppSelector((state) => state.ranking)
-  const topVolume = useAppSelector((state) => state.stock?.topVolume)
-  const dailyAll = useAppSelector((state) => state.stock?.dailyAll)
-  const [activeTab, setActiveTab] = useState("change")
-  const [search, setSearch] = useState("")
-  const [selectedIndustry, setSelectedIndustry] = useState("all")
+  const dispatch = useAppDispatch();
+  const ranking = useAppSelector((state) => state.ranking);
+  const topVolume = useAppSelector((state) => state.stock?.topVolume);
+  const dailyAll = useAppSelector((state) => state.stock?.dailyAll);
+  const [activeTab, setActiveTab] = useState("change");
+  const [search, setSearch] = useState("");
+  const [selectedIndustry, setSelectedIndustry] = useState("all");
 
   useEffect(() => {
-    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" })
-  }, [dispatch, dailyAll])
+    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" });
+  }, [dispatch, dailyAll]);
 
   useEffect(() => {
     if (activeTab === "top-volume" && !topVolume) {
-      dispatch({ type: "GET_STOCK_TOP_VOLUME" })
+      dispatch({ type: "GET_STOCK_TOP_VOLUME" });
     } else if (activeTab === "revenue" && !ranking?.revenue) {
-      dispatch({ type: "GET_RANKING_REVENUE" })
+      dispatch({ type: "GET_RANKING_REVENUE" });
     } else if (activeTab === "gross-margin" && !ranking?.grossMargin) {
-      dispatch({ type: "GET_RANKING_GROSS_MARGIN" })
+      dispatch({ type: "GET_RANKING_GROSS_MARGIN" });
     } else if (activeTab === "dividend-yield" && !ranking?.dividendYield) {
-      dispatch({ type: "GET_RANKING_DIVIDEND_YIELD" })
+      dispatch({ type: "GET_RANKING_DIVIDEND_YIELD" });
     } else if (activeTab === "pe-ratio" && !ranking?.peRatio) {
-      dispatch({ type: "GET_RANKING_PE_RATIO" })
+      dispatch({ type: "GET_RANKING_PE_RATIO" });
     }
-  }, [activeTab, dispatch, topVolume, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio])
+  }, [
+    activeTab,
+    dispatch,
+    topVolume,
+    ranking?.revenue,
+    ranking?.grossMargin,
+    ranking?.dividendYield,
+    ranking?.peRatio,
+  ]);
 
   // 底部獨立區塊：進頁面就撈
   useEffect(() => {
-    if (!ranking?.peRatio) dispatch({ type: "GET_RANKING_PE_RATIO" })
-    if (!ranking?.dividendYield) dispatch({ type: "GET_RANKING_DIVIDEND_YIELD" })
-    if (!ranking?.grossMargin) dispatch({ type: "GET_RANKING_GROSS_MARGIN" })
-    if (!ranking?.revenue) dispatch({ type: "GET_RANKING_REVENUE" })
-    if (!topVolume) dispatch({ type: "GET_STOCK_TOP_VOLUME" })
-  }, [dispatch, ranking?.peRatio, ranking?.dividendYield, ranking?.grossMargin, ranking?.revenue, topVolume])
+    if (!ranking?.peRatio) dispatch({ type: "GET_RANKING_PE_RATIO" });
+    if (!ranking?.dividendYield) dispatch({ type: "GET_RANKING_DIVIDEND_YIELD" });
+    if (!ranking?.grossMargin) dispatch({ type: "GET_RANKING_GROSS_MARGIN" });
+    if (!ranking?.revenue) dispatch({ type: "GET_RANKING_REVENUE" });
+    if (!topVolume) dispatch({ type: "GET_STOCK_TOP_VOLUME" });
+  }, [
+    dispatch,
+    ranking?.peRatio,
+    ranking?.dividendYield,
+    ranking?.grossMargin,
+    ranking?.revenue,
+    topVolume,
+  ]);
 
   const handleTabChange = useCallback((value: string) => {
-    setActiveTab(value)
-    setSearch("")
-    setSelectedIndustry("all")
-  }, [])
+    setActiveTab(value);
+    setSearch("");
+    setSelectedIndustry("all");
+  }, []);
 
-  const filterByIndustry = useCallback(<T extends { industry: string }>(list: T[]) => {
-    if (selectedIndustry === "all") return list
-    return list.filter((r) => r.industry === selectedIndustry)
-  }, [selectedIndustry])
+  const filterByIndustry = useCallback(
+    <T extends { industry: string }>(list: T[]) => {
+      if (selectedIndustry === "all") return list;
+      return list.filter((r) => r.industry === selectedIndustry);
+    },
+    [selectedIndustry],
+  );
 
   // 漲跌幅排行
   const changeRankData = useMemo(() => {
-    const stocks: StockDailyDto[] = dailyAll?.data ?? []
-    if (!stocks.length) return { up: [] as ChangeRankItem[], down: [] as ChangeRankItem[] }
+    const stocks: StockDailyDto[] = dailyAll?.data ?? [];
+    if (!stocks.length) return { up: [] as ChangeRankItem[], down: [] as ChangeRankItem[] };
     const mapped = stocks
       .map((s) => {
-        const close = parseNumber(s.closingPrice)
-        const change = parseNumber(s.change)
-        const prev = close - change
-        const pct = prev > 0 ? (change / prev) * 100 : 0
+        const close = parseNumber(s.closingPrice);
+        const change = parseNumber(s.change);
+        const prev = close - change;
+        const pct = prev > 0 ? (change / prev) * 100 : 0;
         return {
           code: s.code,
           name: s.name,
@@ -468,74 +570,113 @@ export default function RankingClient() {
           tradeVolume: s.tradeVolume,
           tradeValue: s.tradeValue,
           industry: s.industry || "",
-        }
+        };
       })
-      .filter((r) => parseNumber(r.closingPrice) > 0)
-    const up = [...mapped].filter((r) => r.changePct > 0).sort((a, b) => b.changePct - a.changePct)
-    const down = [...mapped].filter((r) => r.changePct < 0).sort((a, b) => a.changePct - b.changePct)
-    return { up, down }
-  }, [dailyAll?.data])
+      .filter((r) => parseNumber(r.closingPrice) > 0);
+    const up = [...mapped].filter((r) => r.changePct > 0).sort((a, b) => b.changePct - a.changePct);
+    const down = [...mapped]
+      .filter((r) => r.changePct < 0)
+      .sort((a, b) => a.changePct - b.changePct);
+    return { up, down };
+  }, [dailyAll?.data]);
 
-  const topVolumeRaw = topVolume?.data
-  const topVolumeData: TopVolumeDto[] = Array.isArray(topVolumeRaw) ? topVolumeRaw : []
-  const revenueData = useMemo(() => filterByIndustry(Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : []), [ranking?.revenue, filterByIndustry])
-  const grossMarginData = useMemo(() => filterByIndustry(Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : []), [ranking?.grossMargin, filterByIndustry])
-  const dividendYieldData = useMemo(() => filterByIndustry(Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : []), [ranking?.dividendYield, filterByIndustry])
-  const peRatioData = useMemo(() => filterByIndustry(Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : []), [ranking?.peRatio, filterByIndustry])
+  const topVolumeRaw = topVolume?.data;
+  const topVolumeData: TopVolumeDto[] = Array.isArray(topVolumeRaw) ? topVolumeRaw : [];
+  const revenueData = useMemo(
+    () => filterByIndustry(Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : []),
+    [ranking?.revenue, filterByIndustry],
+  );
+  const grossMarginData = useMemo(
+    () =>
+      filterByIndustry(Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : []),
+    [ranking?.grossMargin, filterByIndustry],
+  );
+  const dividendYieldData = useMemo(
+    () =>
+      filterByIndustry(
+        Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : [],
+      ),
+    [ranking?.dividendYield, filterByIndustry],
+  );
+  const peRatioData = useMemo(
+    () => filterByIndustry(Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : []),
+    [ranking?.peRatio, filterByIndustry],
+  );
 
   const industries = useMemo(() => {
-    let list: { industry: string }[] = []
+    let list: { industry: string }[] = [];
     switch (activeTab) {
-      case "revenue": list = Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : []; break
-      case "gross-margin": list = Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : []; break
-      case "dividend-yield": list = Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : []; break
-      case "pe-ratio": list = Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : []; break
+      case "revenue":
+        list = Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : [];
+        break;
+      case "gross-margin":
+        list = Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : [];
+        break;
+      case "dividend-yield":
+        list = Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : [];
+        break;
+      case "pe-ratio":
+        list = Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : [];
+        break;
     }
-    const set = new Set(list.map((r) => r.industry).filter(Boolean))
-    return Array.from(set).sort()
-  }, [activeTab, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio])
+    const set = new Set(list.map((r) => r.industry).filter(Boolean));
+    return Array.from(set).sort();
+  }, [activeTab, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio]);
 
   const getPeriod = () => {
     switch (activeTab) {
       case "change":
-        return "當日漲跌幅排行"
-      case "top-volume": return "即時成交量排行"
+        return "當日漲跌幅排行";
+      case "top-volume":
+        return "即時成交量排行";
       case "revenue": {
-        const y = ranking?.revenue?.year
-        const q = ranking?.revenue?.quarter
-        return y ? `${y} 年第 ${q} 季` : ""
+        const y = ranking?.revenue?.year;
+        const q = ranking?.revenue?.quarter;
+        return y ? `${y} 年第 ${q} 季` : "";
       }
       case "gross-margin": {
-        const y = ranking?.grossMargin?.year
-        const q = ranking?.grossMargin?.quarter
-        return y ? `${y} 年第 ${q} 季` : ""
+        const y = ranking?.grossMargin?.year;
+        const q = ranking?.grossMargin?.quarter;
+        return y ? `${y} 年第 ${q} 季` : "";
       }
-      default: return "即時資料"
+      default:
+        return "即時資料";
     }
-  }
+  };
 
   const isLoading = () => {
     switch (activeTab) {
       case "change":
-        return !dailyAll
-      case "top-volume": return !topVolume
-      case "revenue": return !ranking?.revenue
-      case "gross-margin": return !ranking?.grossMargin
-      case "dividend-yield": return !ranking?.dividendYield
-      case "pe-ratio": return !ranking?.peRatio
-      default: return false
+        return !dailyAll;
+      case "top-volume":
+        return !topVolume;
+      case "revenue":
+        return !ranking?.revenue;
+      case "gross-margin":
+        return !ranking?.grossMargin;
+      case "dividend-yield":
+        return !ranking?.dividendYield;
+      case "pe-ratio":
+        return !ranking?.peRatio;
+      default:
+        return false;
     }
-  }
+  };
 
-  const isBottomLoading = !ranking?.peRatio || !ranking?.dividendYield || !ranking?.grossMargin || !ranking?.revenue || !topVolume
+  const isBottomLoading =
+    !ranking?.peRatio ||
+    !ranking?.dividendYield ||
+    !ranking?.grossMargin ||
+    !ranking?.revenue ||
+    !topVolume;
 
-  const showIndustryFilter = !["top-volume", "change"].includes(activeTab)
+  const showIndustryFilter = !["top-volume", "change"].includes(activeTab);
 
   return (
     <div className="space-y-4 p-4">
       <PageHeader
         title="排行榜"
-        subtitle={<>{getPeriod() && `${getPeriod()}`}</>}
+        subtitle={getPeriod() || undefined}
         controls={
           <div className="flex items-center gap-2">
             {showIndustryFilter && (
@@ -546,7 +687,9 @@ export default function RankingClient() {
                 <SelectContent>
                   <SelectItem value="all">全部產業</SelectItem>
                   {industries.map((ind) => (
-                    <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                    <SelectItem key={ind} value={ind}>
+                      {ind}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -663,7 +806,14 @@ export default function RankingClient() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="space-y-2">
-              <PageHeader title="毛利率排行" subtitle={ranking?.grossMargin?.year ? `${ranking.grossMargin.year} 年第 ${ranking.grossMargin.quarter} 季` : ""} />
+              <PageHeader
+                title="毛利率排行"
+                subtitle={
+                  ranking?.grossMargin?.year
+                    ? `${ranking.grossMargin.year} 年第 ${ranking.grossMargin.quarter} 季`
+                    : ""
+                }
+              />
               <RankingTable
                 data={grossMarginData}
                 columns={grossMarginColumns}
@@ -672,7 +822,14 @@ export default function RankingClient() {
               />
             </div>
             <div className="space-y-2">
-              <PageHeader title="營收排行" subtitle={ranking?.revenue?.year ? `${ranking.revenue.year} 年第 ${ranking.revenue.quarter} 季` : ""} />
+              <PageHeader
+                title="營收排行"
+                subtitle={
+                  ranking?.revenue?.year
+                    ? `${ranking.revenue.year} 年第 ${ranking.revenue.quarter} 季`
+                    : ""
+                }
+              />
               <RankingTable
                 data={revenueData}
                 columns={revenueColumns}
@@ -696,11 +853,16 @@ export default function RankingClient() {
 
       <p className="text-xs text-muted-foreground/60 pt-2">
         資料來源：
-        <a href="https://openapi.twse.com.tw" target="_blank" rel="noopener noreferrer" className="underline">
+        <a
+          href="https://openapi.twse.com.tw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
           臺灣證券交易所 OpenAPI
         </a>
         ，僅供投資研究參考，不構成任何投資建議。
       </p>
     </div>
-  )
+  );
 }

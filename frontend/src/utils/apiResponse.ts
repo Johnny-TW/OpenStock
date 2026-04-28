@@ -1,10 +1,6 @@
 import { BUSINESS_STATUS_CODE } from "@/config/constants";
 
-export function success<T>(
-  data: T,
-  message = "Success",
-  status = BUSINESS_STATUS_CODE.SUCCESS,
-) {
+export function success<T>(data: T, message = "Success", status = BUSINESS_STATUS_CODE.SUCCESS) {
   return { status, message, data };
 }
 

@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header/page-header"
-import { StockValuationTable } from "@/components/data-table/stock/valuation-table"
-import { Badge } from "@/components/commons/badge"
+import { Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Badge } from "@/components/commons/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/commons/card"
+} from "@/components/commons/card";
+import { PageHeader } from "@/components/commons/page-header/page-header";
+import { StockValuationTable } from "@/components/data-table/stock/valuation-table";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 
 function parseNum(val: string): number {
-  return parseFloat(val?.replace(/,/g, "") || "0") || 0
+  return parseFloat(val?.replace(/,/g, "") || "0") || 0;
 }
 
 const QUICK_FILTERS = [
@@ -23,62 +23,66 @@ const QUICK_FILTERS = [
   { label: "本益比 ≤ 15", key: "lowPE" },
   { label: "淨值比 < 1", key: "lowPB" },
   { label: "全部", key: "all" },
-] as const
+] as const;
 
-type QuickFilterKey = typeof QUICK_FILTERS[number]["key"]
+type QuickFilterKey = (typeof QUICK_FILTERS)[number]["key"];
 
 export default function ValuationClient() {
-  const dispatch = useAppDispatch()
-  const valuation = useAppSelector((state) => state.stock?.valuation)
-  const [activeFilter, setActiveFilter] = useState<QuickFilterKey>("all")
+  const dispatch = useAppDispatch();
+  const valuation = useAppSelector((state) => state.stock?.valuation);
+  const [activeFilter, setActiveFilter] = useState<QuickFilterKey>("all");
 
   useEffect(() => {
-    dispatch({ type: "GET_STOCK_VALUATION" })
-  }, [dispatch])
+    dispatch({ type: "GET_STOCK_VALUATION" });
+  }, [dispatch]);
 
-  const list = valuation?.data ?? []
-  const title = valuation?.title ?? ""
-  const date = valuation?.date ?? ""
+  const list = valuation?.data ?? [];
+  const title = valuation?.title ?? "";
+  const date = valuation?.date ?? "";
 
   const stats = useMemo(() => {
-    if (!list.length) return null
-    const highYield = list.filter((s) => parseNum(s.dividendYield) >= 5).length
+    if (!list.length) return null;
+    const highYield = list.filter((s) => parseNum(s.dividendYield) >= 5).length;
     const lowPE = list.filter((s) => {
-      const pe = parseNum(s.peRatio)
-      return pe > 0 && pe <= 15
-    }).length
+      const pe = parseNum(s.peRatio);
+      return pe > 0 && pe <= 15;
+    }).length;
     const lowPB = list.filter((s) => {
-      const pb = parseNum(s.pbRatio)
-      return pb > 0 && pb < 1
-    }).length
-    const withPE = list.filter((s) => s.peRatio && s.peRatio !== "-" && parseNum(s.peRatio) > 0).length
+      const pb = parseNum(s.pbRatio);
+      return pb > 0 && pb < 1;
+    }).length;
+    const withPE = list.filter(
+      (s) => s.peRatio && s.peRatio !== "-" && parseNum(s.peRatio) > 0,
+    ).length;
 
-    const peValues = list.map((s) => parseNum(s.peRatio)).filter((v) => v > 0)
-    const yieldValues = list.map((s) => parseNum(s.dividendYield)).filter((v) => v > 0)
-    const avgPE = peValues.length ? (peValues.reduce((a, b) => a + b, 0) / peValues.length) : 0
-    const avgYield = yieldValues.length ? (yieldValues.reduce((a, b) => a + b, 0) / yieldValues.length) : 0
+    const peValues = list.map((s) => parseNum(s.peRatio)).filter((v) => v > 0);
+    const yieldValues = list.map((s) => parseNum(s.dividendYield)).filter((v) => v > 0);
+    const avgPE = peValues.length ? peValues.reduce((a, b) => a + b, 0) / peValues.length : 0;
+    const avgYield = yieldValues.length
+      ? yieldValues.reduce((a, b) => a + b, 0) / yieldValues.length
+      : 0;
 
-    return { highYield, lowPE, lowPB, withPE, avgPE, avgYield }
-  }, [list])
+    return { highYield, lowPE, lowPB, withPE, avgPE, avgYield };
+  }, [list]);
 
   const filteredList = useMemo(() => {
     switch (activeFilter) {
       case "highYield":
-        return list.filter((s) => parseNum(s.dividendYield) >= 5)
+        return list.filter((s) => parseNum(s.dividendYield) >= 5);
       case "lowPE":
         return list.filter((s) => {
-          const pe = parseNum(s.peRatio)
-          return pe > 0 && pe <= 15
-        })
+          const pe = parseNum(s.peRatio);
+          return pe > 0 && pe <= 15;
+        });
       case "lowPB":
         return list.filter((s) => {
-          const pb = parseNum(s.pbRatio)
-          return pb > 0 && pb < 1
-        })
+          const pb = parseNum(s.pbRatio);
+          return pb > 0 && pb < 1;
+        });
       default:
-        return list
+        return list;
     }
-  }, [list, activeFilter])
+  }, [list, activeFilter]);
 
   if (!valuation) {
     return (
@@ -86,14 +90,18 @@ export default function ValuationClient() {
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         <span className="ml-2 text-muted-foreground">載入資料中...</span>
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-6 p-4">
       <PageHeader
         title="本益比 / 殖利率 / 淨值比"
-        subtitle={<>{title} {date && `· 資料日期：${date}`}</>}
+        subtitle={
+          <>
+            {title} {date && `· 資料日期：${date}`}
+          </>
+        }
       />
 
       {/* 統計卡片 */}
@@ -179,5 +187,5 @@ export default function ValuationClient() {
       {/* 資料表 */}
       <StockValuationTable data={filteredList} title={title} />
     </div>
-  )
+  );
 }

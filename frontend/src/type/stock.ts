@@ -1,10 +1,10 @@
 export interface WatchlistItem {
-  id: number
-  userId: string
-  stockNo: string
-  stockName: string
-  groupName: string
-  createdAt: string
+  id: number;
+  userId: string;
+  stockNo: string;
+  stockName: string;
+  groupName: string;
+  createdAt: string;
 }
 
 /** 股票日成交資訊 DTO (與後端對應) */

@@ -1,5 +1,5 @@
-import Header from "./Header"
-import Sidebar from "./sidebar/Sidebar"
-import Footer from "./Footer"
+import Footer from "./Footer";
+import Header from "./Header";
+import Sidebar from "./sidebar/Sidebar";
 
-export { Header, Sidebar, Footer }
+export { Footer, Header, Sidebar };

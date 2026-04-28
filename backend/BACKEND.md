@@ -296,8 +296,9 @@ credentials: true
 pnpm dev              # 開發模式（watch mode）
 pnpm build            # 建置正式版
 pnpm start:prod       # 啟動正式版（node dist/main）
-pnpm lint             # ESLint 檢查 + 自動修正
-pnpm format           # Prettier 格式化
+pnpm lint             # Biome 檢查（lint + format）
+pnpm lint:fix          # Biome 自動修復
+pnpm format           # Biome 格式化
 pnpm test             # 單元測試
 pnpm test:e2e         # E2E 測試
 pnpm test:cov         # 測試覆蓋率

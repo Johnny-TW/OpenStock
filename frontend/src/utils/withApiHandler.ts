@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { error } from "@/utils/apiResponse";
 import { BUSINESS_STATUS_CODE } from "@/config/constants";
+import { error } from "@/utils/apiResponse";
 
 export function withApiHandler(
   handler: (req: NextRequest) => Promise<Response>,
@@ -11,10 +11,9 @@ export function withApiHandler(
       return await handler(req);
     } catch (err: any) {
       console.error("API Error:", err);
-      return Response.json(
-        error(err.message || "Internal Server Error", defaultStatus),
-        { status: defaultStatus },
-      );
+      return Response.json(error(err.message || "Internal Server Error", defaultStatus), {
+        status: defaultStatus,
+      });
     }
   };
 }

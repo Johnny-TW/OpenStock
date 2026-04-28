@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  ColumnFiltersState,
-  type ColumnDef,
-  type SortingState,
-} from "@tanstack/react-table"
 import {
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-} from "@tabler/icons-react"
-
-import { Button } from "@/components/commons/button"
-import { Input } from "@/components/commons/input"
+} from "@tabler/icons-react";
+import {
+  type ColumnDef,
+  ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+import * as React from "react";
+import { Badge } from "@/components/commons/badge";
+import { Button } from "@/components/commons/button";
+import { Input } from "@/components/commons/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/commons/select"
+} from "@/components/commons/select";
 import {
   Table,
   TableBody,
@@ -35,26 +35,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/commons/table"
-import { Badge } from "@/components/commons/badge"
-import type { StockValuationDto } from "@/type/stock"
-import { parseNumber, SortHeader } from "@/components/data-table/shared"
+} from "@/components/commons/table";
+import { parseNumber, SortHeader } from "@/components/data-table/shared";
+import type { StockValuationDto } from "@/type/stock";
 
 function getDividendYieldColor(value: string): string {
-  const num = parseNumber(value)
-  if (num >= 5) return "text-red-500"
-  if (num >= 3) return "text-orange-500"
-  if (num <= 0) return "text-muted-foreground"
-  return ""
+  const num = parseNumber(value);
+  if (num >= 5) return "text-red-500";
+  if (num >= 3) return "text-orange-500";
+  if (num <= 0) return "text-muted-foreground";
+  return "";
 }
 
 const columns: ColumnDef<StockValuationDto>[] = [
   {
     accessorKey: "code",
     header: "證券代號",
-    cell: ({ row }) => (
-      <span className="font-mono font-medium">{row.original.code}</span>
-    ),
+    cell: ({ row }) => <span className="font-mono font-medium">{row.original.code}</span>,
     size: 100,
   },
   {
@@ -77,50 +74,40 @@ const columns: ColumnDef<StockValuationDto>[] = [
   {
     accessorKey: "peRatio",
     header: "本益比",
-    cell: ({ row }) => (
-      <div className="text-right font-mono">{row.original.peRatio}</div>
-    ),
-    sortingFn: (a, b) =>
-      parseNumber(a.original.peRatio) - parseNumber(b.original.peRatio),
+    cell: ({ row }) => <div className="text-right font-mono">{row.original.peRatio}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.peRatio) - parseNumber(b.original.peRatio),
     size: 100,
   },
   {
     accessorKey: "pbRatio",
     header: "股價淨值比",
-    cell: ({ row }) => (
-      <div className="text-right font-mono">{row.original.pbRatio}</div>
-    ),
-    sortingFn: (a, b) =>
-      parseNumber(a.original.pbRatio) - parseNumber(b.original.pbRatio),
+    cell: ({ row }) => <div className="text-right font-mono">{row.original.pbRatio}</div>,
+    sortingFn: (a, b) => parseNumber(a.original.pbRatio) - parseNumber(b.original.pbRatio),
     size: 110,
   },
   {
     accessorKey: "dividendYear",
     header: "股利年度",
-    cell: ({ row }) => (
-      <div className="text-center">{row.original.dividendYear}</div>
-    ),
+    cell: ({ row }) => <div className="text-center">{row.original.dividendYear}</div>,
     size: 100,
   },
   {
     accessorKey: "financialYear",
     header: "財報年/季",
-    cell: ({ row }) => (
-      <div className="text-center">{row.original.financialYear}</div>
-    ),
+    cell: ({ row }) => <div className="text-center">{row.original.financialYear}</div>,
     size: 110,
   },
-]
+];
 
 interface StockValuationTableProps {
-  data: StockValuationDto[]
-  title?: string
+  data: StockValuationDto[];
+  title?: string;
 }
 
 export function StockValuationTable({ data, title }: StockValuationTableProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = React.useState("")
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = React.useState("");
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
   const table = useReactTable({
     data,
@@ -136,7 +123,7 @@ export function StockValuationTable({ data, title }: StockValuationTableProps) {
     initialState: {
       pagination: { pageSize: 20 },
     },
-  })
+  });
 
   return (
     <div className="space-y-4">
@@ -159,10 +146,7 @@ export function StockValuationTable({ data, title }: StockValuationTableProps) {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                  >
+                  <TableHead key={header.id} style={{ width: header.getSize() }}>
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
                       <SortHeader
                         column={header.column as any}
@@ -189,7 +173,10 @@ export function StockValuationTable({ data, title }: StockValuationTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   沒有符合的資料
                 </TableCell>
               </TableRow>
@@ -262,5 +249,5 @@ export function StockValuationTable({ data, title }: StockValuationTableProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

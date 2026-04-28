@@ -1,10 +1,10 @@
-import type { ReactNode } from "react"
-import styles from "./section-header.module.scss"
+import type { ReactNode } from "react";
+import styles from "./section-header.module.scss";
 
 interface SectionHeaderProps {
-  title: string
-  subtitle?: ReactNode
-  controls?: ReactNode
+  title: string;
+  subtitle?: ReactNode;
+  controls?: ReactNode;
 }
 
 export function SectionHeader({ title, subtitle, controls }: SectionHeaderProps) {
@@ -19,5 +19,5 @@ export function SectionHeader({ title, subtitle, controls }: SectionHeaderProps)
       </div>
       {controls && <div className={styles.controls}>{controls}</div>}
     </div>
-  )
+  );
 }

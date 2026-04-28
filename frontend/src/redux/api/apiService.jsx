@@ -1,25 +1,25 @@
-import axios from "axios"
-import { CANCEL } from "redux-saga"
+import axios from "axios";
+import { CANCEL } from "redux-saga";
 
 const APIKIT = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_HOST,
   timeout: 60000,
-})
+});
 
 export const call = ({ method, path, params: originParams = {}, data, timeout }) => {
-  let controller = new AbortController()
+  const controller = new AbortController();
 
-  const signal = controller.signal
-  const params = { ...originParams, signal, ...(timeout ? { timeout } : {}) }
+  const signal = controller.signal;
+  const params = { ...originParams, signal, ...(timeout ? { timeout } : {}) };
   const promise =
     method === API_METHOD.GET || method === API_METHOD.DELETE
       ? APIKIT[method](path, params)
-      : APIKIT[method](path, data, params)
+      : APIKIT[method](path, data, params);
 
-  promise[CANCEL] = () => controller.abort()
+  promise[CANCEL] = () => controller.abort();
 
-  return promise
-}
+  return promise;
+};
 
 export const API_METHOD = {
   GET: "get",
@@ -27,4 +27,4 @@ export const API_METHOD = {
   PUT: "put",
   PATCH: "patch",
   DELETE: "delete",
-}
+};

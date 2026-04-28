@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("登入頁面", () => {
   test("應該顯示登入表單", async ({ page }) => {
@@ -13,9 +13,7 @@ test.describe("登入頁面", () => {
   test("應該顯示第三方登入按鈕", async ({ page }) => {
     await page.goto("/login");
 
-    await expect(
-      page.getByRole("button", { name: /Microsoft/ })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Microsoft/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Google/ })).toBeVisible();
   });
 

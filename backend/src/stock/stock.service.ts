@@ -1,49 +1,46 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  NotFoundException,
-} from '@nestjs/common';
+import * as https from 'node:https';
 import { HttpService } from '@nestjs/axios';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { firstValueFrom } from 'rxjs';
 import type { AxiosRequestConfig } from 'axios';
-import * as https from 'https';
+import { firstValueFrom } from 'rxjs';
 import YahooFinance from 'yahoo-finance2';
+
 const yahooFinance = new YahooFinance();
+
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  TwseResponse,
-  StockDailyDto,
-  StockDailyAllResponse,
-  StockValuationDto,
-  StockValuationResponse,
-  MarketIndexDto,
-  MarketIndexResponse,
-  TopVolumeDto,
-  TopVolumeResponse,
-  IntradayTickDto,
-  IntradayResponse,
-  IndexHistoryDto,
-  IndexHistoryResponse,
-  RevenueRankingDto,
-  RevenueRankingResponse,
-  GrossMarginRankingDto,
-  GrossMarginRankingResponse,
+  AllNewsResponse,
   DividendYieldRankingDto,
   DividendYieldRankingResponse,
-  PeRatioRankingDto,
-  PeRatioRankingResponse,
-  HeatmapStockDto,
+  GrossMarginRankingDto,
+  GrossMarginRankingResponse,
   HeatmapIndustryDto,
   HeatmapResponse,
+  HeatmapStockDto,
+  IndexHistoryDto,
+  IndexHistoryResponse,
+  IntradayResponse,
+  IntradayTickDto,
+  MarketIndexDto,
+  MarketIndexResponse,
   NewsDto,
   NewsResponse,
-  AllNewsResponse,
+  PeRatioRankingDto,
+  PeRatioRankingResponse,
+  RevenueRankingDto,
+  RevenueRankingResponse,
+  StockDailyAllResponse,
+  StockDailyDto,
   StockDetailDto,
   StockDetailResponse,
   StockHistoryPointDto,
   StockHistoryResponse,
+  StockValuationDto,
+  StockValuationResponse,
+  TopVolumeDto,
+  TopVolumeResponse,
+  TwseResponse,
 } from './dto/stock.dto';
 
 @Injectable()
@@ -84,8 +81,7 @@ export class StockService implements OnModuleInit {
       hour12: false,
     }).formatToParts(new Date());
 
-    const get = (type: string) =>
-      taipei.find((p) => p.type === type)?.value ?? '';
+    const get = (type: string) => taipei.find((p) => p.type === type)?.value ?? '';
     const weekday = get('weekday');
     if (weekday === 'Sat' || weekday === 'Sun') return;
 
@@ -115,16 +111,12 @@ export class StockService implements OnModuleInit {
     this.logger.log('Fetching TWSE daily stock data...');
 
     const [{ data }, industryMap] = await Promise.all([
-      firstValueFrom(
-        this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL),
-      ),
+      firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
       this.getIndustryMap(),
     ]);
 
     if (data.stat !== 'OK' || !Array.isArray(data.data)) {
-      this.logger.warn(
-        `TWSE API returned stat: ${data.stat}, data: ${typeof data.data}`,
-      );
+      this.logger.warn(`TWSE API returned stat: ${data.stat}, data: ${typeof data.data}`);
       return {
         date: '',
         title: '',
@@ -208,12 +200,12 @@ export class StockService implements OnModuleInit {
     );
 
     const items: MarketIndexDto[] = data.map((row) => ({
-      date: row['日期'] ?? '',
-      name: row['指數'] ?? '',
-      closingIndex: row['收盤指數'] ?? '',
-      direction: row['漲跌'] ?? '',
-      changePoints: row['漲跌點數'] ?? '',
-      changePercent: row['漲跌百分比'] ?? '',
+      date: row.日期 ?? '',
+      name: row.指數 ?? '',
+      closingIndex: row.收盤指數 ?? '',
+      direction: row.漲跌 ?? '',
+      changePoints: row.漲跌點數 ?? '',
+      changePercent: row.漲跌百分比 ?? '',
     }));
 
     return { data: items, total: items.length };
@@ -229,18 +221,18 @@ export class StockService implements OnModuleInit {
     );
 
     const items: TopVolumeDto[] = data.map((row) => ({
-      date: row['Date'] ?? '',
-      rank: row['Rank'] ?? '',
-      code: row['Code'] ?? '',
-      name: row['Name'] ?? '',
-      tradeVolume: row['TradeVolume'] ?? '',
-      transaction: row['Transaction'] ?? '',
-      openingPrice: row['OpeningPrice'] ?? '',
-      highestPrice: row['HighestPrice'] ?? '',
-      lowestPrice: row['LowestPrice'] ?? '',
-      closingPrice: row['ClosingPrice'] ?? '',
-      direction: row['Dir'] ?? '',
-      change: row['Change'] ?? '',
+      date: row.Date ?? '',
+      rank: row.Rank ?? '',
+      code: row.Code ?? '',
+      name: row.Name ?? '',
+      tradeVolume: row.TradeVolume ?? '',
+      transaction: row.Transaction ?? '',
+      openingPrice: row.OpeningPrice ?? '',
+      highestPrice: row.HighestPrice ?? '',
+      lowestPrice: row.LowestPrice ?? '',
+      closingPrice: row.ClosingPrice ?? '',
+      direction: row.Dir ?? '',
+      change: row.Change ?? '',
     }));
 
     return { data: items, total: items.length };
@@ -256,10 +248,10 @@ export class StockService implements OnModuleInit {
     );
 
     const items: IntradayTickDto[] = data.map((row) => ({
-      time: row['Time'] ?? '',
-      accTradeVolume: row['AccTradeVolume'] ?? '',
-      accTradeValue: row['AccTradeValue'] ?? '',
-      accTransaction: row['AccTransaction'] ?? '',
+      time: row.Time ?? '',
+      accTradeVolume: row.AccTradeVolume ?? '',
+      accTradeValue: row.AccTradeValue ?? '',
+      accTransaction: row.AccTransaction ?? '',
     }));
 
     return { data: items, total: items.length };
@@ -275,11 +267,11 @@ export class StockService implements OnModuleInit {
     );
 
     const items: IndexHistoryDto[] = data.map((row) => ({
-      date: row['Date'] ?? row['日期'] ?? '',
-      openingIndex: row['OpeningIndex'] ?? row['開盤指數'] ?? '',
-      highestIndex: row['HighestIndex'] ?? row['最高指數'] ?? '',
-      lowestIndex: row['LowestIndex'] ?? row['最低指數'] ?? '',
-      closingIndex: row['ClosingIndex'] ?? row['收盤指數'] ?? '',
+      date: row.Date ?? row.日期 ?? '',
+      openingIndex: row.OpeningIndex ?? row.開盤指數 ?? '',
+      highestIndex: row.HighestIndex ?? row.最高指數 ?? '',
+      lowestIndex: row.LowestIndex ?? row.最低指數 ?? '',
+      closingIndex: row.ClosingIndex ?? row.收盤指數 ?? '',
     }));
 
     return { data: items, total: items.length };
@@ -292,22 +284,17 @@ export class StockService implements OnModuleInit {
 
   private async getIndustryMap(): Promise<Map<string, string>> {
     const now = Date.now();
-    if (
-      this.industryMapCache &&
-      now - this.industryMapCacheTime < this.INDUSTRY_CACHE_TTL
-    ) {
+    if (this.industryMapCache && now - this.industryMapCacheTime < this.INDUSTRY_CACHE_TTL) {
       return this.industryMapCache;
     }
     this.logger.log('Fetching industry map from t187ap14_L...');
     const { data } = await firstValueFrom(
-      this.httpService.get<Record<string, string>[]>(
-        `${this.OPENAPI_BASE}/opendata/t187ap14_L`,
-      ),
+      this.httpService.get<Record<string, string>[]>(`${this.OPENAPI_BASE}/opendata/t187ap14_L`),
     );
     const map = new Map<string, string>();
     for (const row of data) {
-      const code = row['公司代號']?.trim();
-      const industry = row['產業別']?.trim();
+      const code = row.公司代號?.trim();
+      const industry = row.產業別?.trim();
       if (code && industry) map.set(code, industry);
     }
     this.industryMapCache = map;
@@ -319,22 +306,20 @@ export class StockService implements OnModuleInit {
   async getRevenueRanking(): Promise<RevenueRankingResponse> {
     this.logger.log('Fetching revenue ranking...');
     const { data } = await firstValueFrom(
-      this.httpService.get<Record<string, string>[]>(
-        `${this.OPENAPI_BASE}/opendata/t187ap14_L`,
-      ),
+      this.httpService.get<Record<string, string>[]>(`${this.OPENAPI_BASE}/opendata/t187ap14_L`),
     );
 
-    const year = data[0]?.['年度'] ?? '';
-    const quarter = data[0]?.['季別'] ?? '';
+    const year = data[0]?.年度 ?? '';
+    const quarter = data[0]?.季別 ?? '';
 
     const items: RevenueRankingDto[] = data
       .map((row) => ({
-        code: row['公司代號']?.trim() ?? '',
-        name: row['公司名稱']?.trim() ?? '',
-        industry: row['產業別']?.trim() ?? '',
-        revenue: this.parseNumber(row['營業收入']),
-        operatingIncome: this.parseNumber(row['營業利益']),
-        netIncome: this.parseNumber(row['稅後淨利']),
+        code: row.公司代號?.trim() ?? '',
+        name: row.公司名稱?.trim() ?? '',
+        industry: row.產業別?.trim() ?? '',
+        revenue: this.parseNumber(row.營業收入),
+        operatingIncome: this.parseNumber(row.營業利益),
+        netIncome: this.parseNumber(row.稅後淨利),
         eps: this.parseNumber(row['基本每股盈餘(元)']),
       }))
       .filter((item) => item.revenue > 0)
@@ -355,22 +340,21 @@ export class StockService implements OnModuleInit {
       this.getIndustryMap(),
     ]);
 
-    const year = data[0]?.['年度'] ?? '';
-    const quarter = data[0]?.['季別'] ?? '';
+    const year = data[0]?.年度 ?? '';
+    const quarter = data[0]?.季別 ?? '';
 
     const items: GrossMarginRankingDto[] = data
       .map((row) => {
-        const revenue = this.parseNumber(row['營業收入']);
-        const cost = this.parseNumber(row['營業成本']);
+        const revenue = this.parseNumber(row.營業收入);
+        const cost = this.parseNumber(row.營業成本);
         const grossProfit = this.parseNumber(
           row['營業毛利（毛損）淨額'] || row['營業毛利（毛損）'],
         );
-        const grossMarginRate =
-          revenue > 0 ? Math.round((grossProfit / revenue) * 10000) / 100 : 0;
-        const code = row['公司代號']?.trim() ?? '';
+        const grossMarginRate = revenue > 0 ? Math.round((grossProfit / revenue) * 10000) / 100 : 0;
+        const code = row.公司代號?.trim() ?? '';
         return {
           code,
-          name: row['公司名稱']?.trim() ?? '',
+          name: row.公司名稱?.trim() ?? '',
           industry: industryMap.get(code) ?? '',
           revenue,
           cost,
@@ -398,14 +382,14 @@ export class StockService implements OnModuleInit {
 
     const items: DividendYieldRankingDto[] = data
       .map((row) => {
-        const code = row['Code']?.trim() ?? '';
+        const code = row.Code?.trim() ?? '';
         return {
           code,
-          name: row['Name']?.trim() ?? '',
+          name: row.Name?.trim() ?? '',
           industry: industryMap.get(code) ?? '',
-          dividendYield: this.parseNumber(row['DividendYield']),
-          peRatio: this.parseNumber(row['PEratio']),
-          pbRatio: this.parseNumber(row['PBratio']),
+          dividendYield: this.parseNumber(row.DividendYield),
+          peRatio: this.parseNumber(row.PEratio),
+          pbRatio: this.parseNumber(row.PBratio),
         };
       })
       .filter((item) => item.dividendYield > 0)
@@ -428,14 +412,14 @@ export class StockService implements OnModuleInit {
 
     const items: PeRatioRankingDto[] = data
       .map((row) => {
-        const code = row['Code']?.trim() ?? '';
+        const code = row.Code?.trim() ?? '';
         return {
           code,
-          name: row['Name']?.trim() ?? '',
+          name: row.Name?.trim() ?? '',
           industry: industryMap.get(code) ?? '',
-          peRatio: this.parseNumber(row['PEratio']),
-          dividendYield: this.parseNumber(row['DividendYield']),
-          pbRatio: this.parseNumber(row['PBratio']),
+          peRatio: this.parseNumber(row.PEratio),
+          dividendYield: this.parseNumber(row.DividendYield),
+          pbRatio: this.parseNumber(row.PBratio),
         };
       })
       .filter((item) => item.peRatio > 0)
@@ -448,13 +432,11 @@ export class StockService implements OnModuleInit {
   async getNews(): Promise<NewsResponse> {
     this.logger.log('Fetching TWSE news...');
     const { data } = await firstValueFrom(
-      this.httpService.get<Record<string, string>[]>(
-        `${this.OPENAPI_BASE}/news/newsList`,
-      ),
+      this.httpService.get<Record<string, string>[]>(`${this.OPENAPI_BASE}/news/newsList`),
     );
 
     const items: NewsDto[] = data.map((row) => {
-      const raw = row['Date'] ?? '';
+      const raw = row.Date ?? '';
       const rocYear = raw.substring(0, 3);
       const month = raw.substring(3, 5);
       const day = raw.substring(5, 7);
@@ -462,8 +444,8 @@ export class StockService implements OnModuleInit {
       const date = `${adYear}-${month}-${day}`;
 
       return {
-        title: row['Title'] ?? '',
-        url: row['Url'] ?? '',
+        title: row.Title ?? '',
+        url: row.Url ?? '',
         date,
       };
     });
@@ -503,17 +485,13 @@ export class StockService implements OnModuleInit {
         .replace(/\s*-\s*[\w.-]+\.(com|tw|net|org)(\.\w+)*\s*$/i, '')
         .trim();
 
-      const rawDesc = description
-        ? description.replace(/<!\[CDATA\[|\]\]>/g, '')
-        : '';
+      const rawDesc = description ? description.replace(/<!\[CDATA\[|\]\]>/g, '') : '';
 
       const imgMatch = rawDesc.match(/<img[^>]+src=["']([^"']+)["']/i);
       const image = imgMatch?.[1] || undefined;
 
       const enclosure = block.match(/<enclosure[^>]+url=["']([^"']+)["']/i);
-      const mediaContent = block.match(
-        /<media:content[^>]+url=["']([^"']+)["']/i,
-      );
+      const mediaContent = block.match(/<media:content[^>]+url=["']([^"']+)["']/i);
 
       items.push({
         title: cleanTitle,
@@ -544,10 +522,7 @@ export class StockService implements OnModuleInit {
     this.logger.log('Fetching Yahoo TW stock news...');
     try {
       const { data } = await firstValueFrom(
-        this.httpService.get<string>(
-          'https://tw.stock.yahoo.com/rss',
-          this.RSS_CONFIG,
-        ),
+        this.httpService.get<string>('https://tw.stock.yahoo.com/rss', this.RSS_CONFIG),
       );
       const items = this.parseRssXml(data, 'Yahoo奇摩股市').filter((item) =>
         item.url.includes('tw.stock.yahoo.com'),
@@ -560,10 +535,7 @@ export class StockService implements OnModuleInit {
   }
 
   /** Google News 搜尋新聞 */
-  private async getGoogleNews(
-    query: string,
-    source: string,
-  ): Promise<NewsResponse> {
+  private async getGoogleNews(query: string, source: string): Promise<NewsResponse> {
     this.logger.log(`Fetching Google News: ${query}`);
     try {
       const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
@@ -580,18 +552,12 @@ export class StockService implements OnModuleInit {
 
   /** 美股新聞 */
   async getUsStockNews(): Promise<NewsResponse> {
-    return this.getGoogleNews(
-      '美股 OR 華爾街 OR 那斯達克 OR 道瓊',
-      'Google 新聞',
-    );
+    return this.getGoogleNews('美股 OR 華爾街 OR 那斯達克 OR 道瓊', 'Google 新聞');
   }
 
   /** 國際財經新聞 */
   async getInternationalNews(): Promise<NewsResponse> {
-    return this.getGoogleNews(
-      '國際財經 OR 油價 OR 原物料 OR 全球經濟',
-      'Google 新聞',
-    );
+    return this.getGoogleNews('國際財經 OR 油價 OR 原物料 OR 全球經濟', 'Google 新聞');
   }
 
   /** 全部新聞（整合） */
@@ -611,9 +577,7 @@ export class StockService implements OnModuleInit {
     this.logger.log('排程：開始儲存每日收盤資料...');
 
     const [{ data }, industryMap] = await Promise.all([
-      firstValueFrom(
-        this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL),
-      ),
+      firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
       this.getIndustryMap(),
     ]);
 
@@ -660,9 +624,7 @@ export class StockService implements OnModuleInit {
       skipDuplicates: true,
     });
 
-    this.logger.log(
-      `排程：已儲存 ${result.count} 筆收盤資料（日期 ${dateStr}）`,
-    );
+    this.logger.log(`排程：已儲存 ${result.count} 筆收盤資料（日期 ${dateStr}）`);
     return result.count;
   }
 
@@ -686,9 +648,7 @@ export class StockService implements OnModuleInit {
     this.logger.log(`Fetching heatmap data (period: ${period})...`);
 
     const [{ data }, industryMap] = await Promise.all([
-      firstValueFrom(
-        this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL),
-      ),
+      firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
       this.getIndustryMap(),
     ]);
 
@@ -746,8 +706,7 @@ export class StockService implements OnModuleInit {
         const changeRaw = row[8]?.trim() ?? '0';
         const changeVal = this.parseNumber(changeRaw);
         const prevClose = closingPrice - changeVal;
-        changePercent =
-          prevClose > 0 ? Math.round((changeVal / prevClose) * 10000) / 100 : 0;
+        changePercent = prevClose > 0 ? Math.round((changeVal / prevClose) * 10000) / 100 : 0;
         change = changeRaw;
       }
 
@@ -768,9 +727,7 @@ export class StockService implements OnModuleInit {
 
     const industries: HeatmapIndustryDto[] = [];
     for (const [industry, stocks] of industryGroups) {
-      stocks.sort(
-        (a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent),
-      );
+      stocks.sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent));
       const sum = stocks.reduce((acc, s) => acc + s.changePercent, 0);
       const avgChangePercent = Math.round((sum / stocks.length) * 100) / 100;
       industries.push({ industry, avgChangePercent, stocks });
@@ -795,12 +752,7 @@ export class StockService implements OnModuleInit {
         number | string | undefined
       >;
       const summary = (await yahooFinance.quoteSummary(yahooSymbol, {
-        modules: [
-          'financialData',
-          'defaultKeyStatistics',
-          'summaryDetail',
-          'assetProfile',
-        ],
+        modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail', 'assetProfile'],
       })) as {
         financialData?: Record<string, number | string | undefined>;
         defaultKeyStatistics?: Record<string, number | string | undefined>;
@@ -818,9 +770,7 @@ export class StockService implements OnModuleInit {
 
       const exDivRaw = summaryDetail.exDividendDate;
       const exDividendDate =
-        exDivRaw &&
-        typeof exDivRaw === 'object' &&
-        'toISOString' in (exDivRaw as object)
+        exDivRaw && typeof exDivRaw === 'object' && 'toISOString' in (exDivRaw as object)
           ? (exDivRaw as Date).toISOString().split('T')[0]
           : typeof exDivRaw === 'string'
             ? exDivRaw
@@ -828,8 +778,7 @@ export class StockService implements OnModuleInit {
 
       const detail: StockDetailDto = {
         symbol,
-        name:
-          (quote.shortName as string) || (quote.longName as string) || symbol,
+        name: (quote.shortName as string) || (quote.longName as string) || symbol,
         price,
         change: (quote.regularMarketChange as number) ?? 0,
         changePercent: (quote.regularMarketChangePercent as number) ?? 0,
@@ -839,10 +788,7 @@ export class StockService implements OnModuleInit {
         volume: (quote.regularMarketVolume as number) ?? 0,
         marketCap: (quote.marketCap as number) ?? 0,
         peRatio: trailingPE,
-        forwardPE:
-          (summaryDetail.forwardPE as number) ??
-          (keyStats.forwardPE as number) ??
-          0,
+        forwardPE: (summaryDetail.forwardPE as number) ?? (keyStats.forwardPE as number) ?? 0,
         eps: (financial.earningsGrowth as number)
           ? price / (trailingPE || 1)
           : ((keyStats.trailingEps as number) ?? 0),
@@ -874,9 +820,7 @@ export class StockService implements OnModuleInit {
         exDividendDate,
         dividendRate: (summaryDetail.dividendRate as number) ?? 0,
         sharesOutstanding:
-          (keyStats.sharesOutstanding as number) ??
-          (keyStats.floatShares as number) ??
-          0,
+          (keyStats.sharesOutstanding as number) ?? (keyStats.floatShares as number) ?? 0,
         sector: (profile.sector as string) ?? '',
         industry: (profile.industry as string) ?? '',
       };
@@ -889,54 +833,37 @@ export class StockService implements OnModuleInit {
     }
   }
 
-  async getStockHistory(
-    symbol: string,
-    period: string,
-  ): Promise<StockHistoryResponse> {
+  async getStockHistory(symbol: string, period: string): Promise<StockHistoryResponse> {
     const isTwStock = /^\d{4,6}$/.test(symbol);
     const yahooSymbol = isTwStock ? `${symbol}.TW` : symbol;
 
     const periodMap: Record<string, { period1: string; interval: string }> = {
       '1d': {
-        period1: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        period1: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '5m',
       },
       '5d': {
-        period1: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        period1: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '15m',
       },
       '1m': {
-        period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '1d',
       },
       '3m': {
-        period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '1d',
       },
       '6m': {
-        period1: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        period1: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '1d',
       },
       '1y': {
-        period1: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        period1: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '1wk',
       },
       '5y': {
-        period1: new Date(Date.now() - 5 * 365 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        period1: new Date(Date.now() - 5 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '1wk',
       },
       all: {

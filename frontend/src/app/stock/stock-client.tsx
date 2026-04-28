@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { StockDataTable } from "@/components/data-table/stock/data-table";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useEffect } from "react";
+import { MarketIndexChart } from "@/components/commons/market-index-chart/market-index-chart";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { TopNews } from "@/components/commons/top-news/top-news";
-import { MarketIndexChart } from "@/components/commons/market-index-chart/market-index-chart";
+import { StockDataTable } from "@/components/data-table/stock/data-table";
+import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 
 export default function StockClient() {
   const dispatch = useAppDispatch();
@@ -22,7 +22,9 @@ export default function StockClient() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (userId) { dispatch({ type: "GET_WATCHLIST" });}
+    if (userId) {
+      dispatch({ type: "GET_WATCHLIST" });
+    }
   }, [dispatch, userId]);
 
   if (!dailyAll) {
@@ -41,7 +43,11 @@ export default function StockClient() {
     <div className="space-y-4 p-4">
       <PageHeader
         title={"EE39 - StockSmart System"}
-        subtitle={<>{stockTitle} - 共 {stockList.length} 檔</>}
+        subtitle={
+          <>
+            {stockTitle} - 共 {stockList.length} 檔
+          </>
+        }
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <TopNews />

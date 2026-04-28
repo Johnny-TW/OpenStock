@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation"
+import { redirect } from "next/navigation";
 
 export default function IndexHistoryPage() {
-  redirect("/stock/market-overview")
+  redirect("/stock/market-overview");
 }

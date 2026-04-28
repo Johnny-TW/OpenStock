@@ -1,17 +1,17 @@
-import { put, select, takeLatest } from "redux-saga/effects"
-import { API_METHOD } from "../api/apiService"
-import { API_WATCHLIST } from "../api/API"
-import { fetchApi } from "."
+import { put, select, takeLatest } from "redux-saga/effects";
+import { API_WATCHLIST } from "../api/API";
+import { API_METHOD } from "../api/apiService";
+import { fetchApi } from ".";
 
 function* getWatchlist() {
-  const userId = yield select((state) => state.auth?.user?.email ?? "")
-  if (!userId) return
+  const userId = yield select((state) => state.auth?.user?.email ?? "");
+  if (!userId) return;
   yield fetchApi({
     method: API_METHOD.GET,
     path: API_WATCHLIST,
     reducer: "SET_WATCHLIST",
     params: { params: { userId } },
-  })
+  });
 }
 
 function* addWatchlist(action) {
@@ -20,8 +20,8 @@ function* addWatchlist(action) {
     path: API_WATCHLIST,
     data: action.data,
     successMessage: "已加入自選股",
-  })
-  yield put({ type: "GET_WATCHLIST" })
+  });
+  yield put({ type: "GET_WATCHLIST" });
 }
 
 function* updateWatchlistGroup(action) {
@@ -30,8 +30,8 @@ function* updateWatchlistGroup(action) {
     path: `${API_WATCHLIST}/${action.id}/group`,
     data: { groupName: action.groupName, userId: action.userId },
     successMessage: "已更新群組",
-  })
-  yield put({ type: "GET_WATCHLIST" })
+  });
+  yield put({ type: "GET_WATCHLIST" });
 }
 
 function* removeWatchlist(action) {
@@ -40,13 +40,13 @@ function* removeWatchlist(action) {
     path: `${API_WATCHLIST}/${action.id}`,
     params: { params: { userId: action.userId } },
     successMessage: "已移除自選股",
-  })
-  yield put({ type: "GET_WATCHLIST" })
+  });
+  yield put({ type: "GET_WATCHLIST" });
 }
 
 export default function* watchlistSaga() {
-  yield takeLatest("GET_WATCHLIST", getWatchlist)
-  yield takeLatest("ADD_WATCHLIST", addWatchlist)
-  yield takeLatest("UPDATE_WATCHLIST_GROUP", updateWatchlistGroup)
-  yield takeLatest("REMOVE_WATCHLIST", removeWatchlist)
+  yield takeLatest("GET_WATCHLIST", getWatchlist);
+  yield takeLatest("ADD_WATCHLIST", addWatchlist);
+  yield takeLatest("UPDATE_WATCHLIST_GROUP", updateWatchlistGroup);
+  yield takeLatest("REMOVE_WATCHLIST", removeWatchlist);
 }

@@ -1,52 +1,47 @@
-"use client"
+"use client";
 
-import { signIn } from "next-auth/react"
-import { useSearchParams } from "next/navigation"
-import Image from "next/image"
-import { azure_ad, google } from "@/images"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/commons/button"
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { Button } from "@/components/commons/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/commons/card"
-import { Input } from "@/components/commons/input"
-import { Label } from "@/components/commons/label"
+} from "@/components/commons/card";
+import { Input } from "@/components/commons/input";
+import { Label } from "@/components/commons/label";
+import { azure_ad, google } from "@/images";
+import { cn } from "@/lib/utils";
 
 const ERROR_MAP: Record<string, string> = {
   Callback: "登入過程發生錯誤，請嘗試使用其他帳號。",
   OAuthSignin: "無法啟動 OAuth 登入流程，請稍後再試。",
   OAuthCallback: "OAuth 回呼發生錯誤，請稍後再試。",
   default: "登入時發生未知錯誤，請重新嘗試。",
-}
+};
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  const searchParams = useSearchParams()
-  const error = searchParams.get("error")
-  const errorMessage = error ? (ERROR_MAP[error] ?? ERROR_MAP.default) : null
+export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  const errorMessage = error ? (ERROR_MAP[error] ?? ERROR_MAP.default) : null;
 
   const handleAzureLogin = () => {
-    signIn("azure-ad", { callbackUrl: "/stock" })
-  }
+    signIn("azure-ad", { callbackUrl: "/stock" });
+  };
 
   const handleGoogleLogin = () => {
-    signIn("google", { callbackUrl: "/stock" })
-  }
+    signIn("google", { callbackUrl: "/stock" });
+  };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">系統登入</CardTitle>
-          <CardDescription>
-            使用電子郵件或 Microsoft 帳號登入
-          </CardDescription>
+          <CardDescription>使用電子郵件或 Microsoft 帳號登入</CardDescription>
         </CardHeader>
         <CardContent>
           {errorMessage && (
@@ -58,12 +53,7 @@ export function LoginForm({
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="email">電子郵件</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  required
-                />
+                <Input id="email" type="email" placeholder="name@example.com" required />
               </div>
               <div className="grid gap-3">
                 <div className="flex items-center">
@@ -119,5 +109,5 @@ export function LoginForm({
         。
       </div>
     </div>
-  )
+  );
 }

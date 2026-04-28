@@ -1,5 +1,5 @@
-import { Suspense } from "react"
-import { LoginForm } from "@/components/commons/login-form"
+import { Suspense } from "react";
+import { LoginForm } from "@/components/commons/login-form";
 
 export default function LoginPage() {
   return (
@@ -10,5 +10,5 @@ export default function LoginPage() {
         </Suspense>
       </div>
     </div>
-  )
+  );
 }

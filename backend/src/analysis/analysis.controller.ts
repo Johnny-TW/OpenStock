@@ -1,12 +1,7 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import {
-  ApiOperation,
-  ApiTags,
-  ApiBearerAuth,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AnalysisService } from './analysis.service';
-import { AnalyzeMarketDto, AnalysisResultDto } from './dto/analysis.dto';
+import { AnalysisResultDto, AnalyzeMarketDto } from './dto/analysis.dto';
 
 @ApiTags('AI 股票分析')
 @ApiBearerAuth('bearer')

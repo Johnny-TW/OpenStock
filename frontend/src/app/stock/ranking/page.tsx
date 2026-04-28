@@ -1,5 +1,5 @@
-import RankingClient from "./ranking-client"
+import RankingClient from "./ranking-client";
 
 export default function RankingPage() {
-  return <RankingClient />
+  return <RankingClient />;
 }

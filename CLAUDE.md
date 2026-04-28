@@ -38,6 +38,14 @@ cd backend && pnpm test          # 執行測試
 cd backend && pnpm test:cov      # 測試覆蓋率
 cd backend && pnpm test:e2e      # E2E 測試
 cd backend && pnpm lint          # Lint
+
+# Biome（根目錄執行）
+pnpm lint                        # 檢查全部（lint + format）
+pnpm lint:fix                    # 自動修復
+pnpm format                      # 格式化
+npx biome check --write .        # 等同 lint:fix
+npx biome ci .                   # CI 用（不寫入，有錯回傳非零）
+npx biome explain <rule>         # 查看規則說明
 ```
 
 ## 認證架構
@@ -70,6 +78,13 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - Subject 使用繁體中文，動詞開頭
 - Body 說明元件/檔案名稱與原因
 - 禁止 `update files`、`fix bug` 等模糊描述
+
+## 程式碼品質
+
+- **Linter / Formatter**：Biome（取代 ESLint + Prettier）
+- 配置檔：根目錄 `biome.json`，前後端共用
+- lint-staged：commit 前自動執行 `biome check --write`
+- 後端 single quote、前端 double quote
 
 ## 環境變數
 

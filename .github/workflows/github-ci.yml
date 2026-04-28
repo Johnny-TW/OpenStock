@@ -46,15 +46,13 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: frontend
 
-      - name: Run ESLint
-        run: pnpm lint
-        working-directory: frontend
+      - name: Run Biome (frontend)
+        run: npx biome ci frontend/
 
   backend-lint:
     name: Backend Lint
@@ -72,23 +70,13 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: backend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: backend
 
-      - name: Generate Prisma Client
-        run: pnpm exec prisma generate
-        working-directory: backend
-
-      - name: Run ESLint
-        run: pnpm lint
-        working-directory: backend
-
-      - name: Check formatting
-        run: pnpm format
-        working-directory: backend
+      - name: Run Biome (backend)
+        run: npx biome ci backend/src/ backend/test/
 
   frontend-typecheck:
     name: Frontend Type Check
@@ -233,14 +221,14 @@ jobs:
         working-directory: backend
         run: pnpm audit --audit-level=critical
 
-      - name: Frontend — 已知漏洞檢查（retire.js）
+      - name: Frontend — 已知漏洞檢查(retire.js)
         if: needs.detect-changes.outputs.frontend == 'true'
         working-directory: frontend
         run: |
           pnpm install --frozen-lockfile
           npx retire --severity critical --exitwith 1
 
-      - name: Backend — 已知漏洞檢查（retire.js）
+      - name: Backend — 已知漏洞檢查(retire.js)
         if: needs.detect-changes.outputs.backend == 'true'
         working-directory: backend
         run: |

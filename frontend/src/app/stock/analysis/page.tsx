@@ -1,5 +1,5 @@
-import AnalysisClient from "./analysis-client"
+import AnalysisClient from "./analysis-client";
 
 export default function AnalysisPage() {
-  return <AnalysisClient />
+  return <AnalysisClient />;
 }

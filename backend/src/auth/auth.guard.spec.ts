@@ -1,6 +1,6 @@
-import { AuthGuard } from './auth.guard';
-import { JwtService } from '@nestjs/jwt';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { AuthGuard } from './auth.guard';
 
 describe('AuthGuard', () => {
   let guard: AuthGuard;
@@ -64,9 +64,7 @@ describe('AuthGuard', () => {
   });
 
   it('應在 token 無效時拋出 UnauthorizedException', async () => {
-    jest
-      .spyOn(jwtService, 'verifyAsync')
-      .mockRejectedValue(new Error('invalid token'));
+    jest.spyOn(jwtService, 'verifyAsync').mockRejectedValue(new Error('invalid token'));
     const ctx = createMockContext('Bearer bad-token');
 
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);

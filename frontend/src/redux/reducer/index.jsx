@@ -1,4 +1,4 @@
-import { importAll } from "@utils/import"
+import { importAll } from "@utils/import";
 
-const context = require.context("./", false, /\.jsx$/)
-export default importAll(context)
+const context = require.context("./", false, /\.jsx$/);
+export default importAll(context);

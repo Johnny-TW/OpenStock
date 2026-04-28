@@ -1,10 +1,10 @@
-import type { ReactNode } from "react"
-import styles from "./page-header.module.scss"
+import type { ReactNode } from "react";
+import styles from "./page-header.module.scss";
 
 interface PageHeaderProps {
-  title: string
-  subtitle: ReactNode
-  controls?: ReactNode
+  title: string;
+  subtitle: ReactNode;
+  controls?: ReactNode;
 }
 
 export function PageHeader({ title, subtitle, controls }: PageHeaderProps) {
@@ -19,5 +19,5 @@ export function PageHeader({ title, subtitle, controls }: PageHeaderProps) {
       </div>
       {controls && <div className={styles.controls}>{controls}</div>}
     </div>
-  )
+  );
 }
