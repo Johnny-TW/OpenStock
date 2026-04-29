@@ -225,6 +225,7 @@ export interface HeatmapResponse {
 export interface StockDetailDto {
   symbol: string;
   name: string;
+  longName: string;
   price: number;
   change: number;
   changePercent: number;

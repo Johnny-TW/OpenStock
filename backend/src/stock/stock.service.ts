@@ -57,6 +57,8 @@ export class StockService implements OnModuleInit {
 
   private industryMapCache: Map<string, string> | null = null;
   private industryMapCacheTime = 0;
+  private stockNameCache: Map<string, string> | null = null;
+  private stockNameCacheTime = 0;
   private readonly INDUSTRY_CACHE_TTL = 30 * 60 * 1000;
   private readonly RSS_CONFIG: AxiosRequestConfig = { responseType: 'text' };
   private readonly GOOGLE_RSS_CONFIG: AxiosRequestConfig = {
@@ -300,6 +302,24 @@ export class StockService implements OnModuleInit {
     this.industryMapCache = map;
     this.industryMapCacheTime = now;
     return map;
+  }
+
+  private async getTwseStockName(code: string): Promise<string> {
+    const now = Date.now();
+    if (!this.stockNameCache || now - this.stockNameCacheTime >= this.INDUSTRY_CACHE_TTL) {
+      const { data } = await firstValueFrom(
+        this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL),
+      );
+      const map = new Map<string, string>();
+      if (data.stat === 'OK' && data.data) {
+        for (const row of data.data) {
+          if (row[0] && row[1]) map.set(row[0].trim(), row[1].trim());
+        }
+      }
+      this.stockNameCache = map;
+      this.stockNameCacheTime = now;
+    }
+    return this.stockNameCache.get(code) ?? '';
   }
 
   /** 營收排行 (t187ap14_L 簡明損益表) */
@@ -747,18 +767,18 @@ export class StockService implements OnModuleInit {
     const yahooSymbol = isTwStock ? `${symbol}.TW` : symbol;
 
     try {
-      const quote = (await yahooFinance.quote(yahooSymbol)) as Record<
-        string,
-        number | string | undefined
-      >;
-      const summary = (await yahooFinance.quoteSummary(yahooSymbol, {
-        modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail', 'assetProfile'],
-      })) as {
-        financialData?: Record<string, number | string | undefined>;
-        defaultKeyStatistics?: Record<string, number | string | undefined>;
-        summaryDetail?: Record<string, number | string | undefined>;
-        assetProfile?: Record<string, number | string | undefined>;
-      };
+      const [quote, summary, twseName] = await Promise.all([
+        yahooFinance.quote(yahooSymbol) as Promise<Record<string, number | string | undefined>>,
+        yahooFinance.quoteSummary(yahooSymbol, {
+          modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail', 'assetProfile'],
+        }) as Promise<{
+          financialData?: Record<string, number | string | undefined>;
+          defaultKeyStatistics?: Record<string, number | string | undefined>;
+          summaryDetail?: Record<string, number | string | undefined>;
+          assetProfile?: Record<string, number | string | undefined>;
+        }>,
+        isTwStock ? this.getTwseStockName(symbol) : Promise.resolve(''),
+      ]);
 
       const financial = summary.financialData ?? {};
       const keyStats = summary.defaultKeyStatistics ?? {};
@@ -778,7 +798,8 @@ export class StockService implements OnModuleInit {
 
       const detail: StockDetailDto = {
         symbol,
-        name: (quote.shortName as string) || (quote.longName as string) || symbol,
+        name: twseName || (quote.shortName as string) || (quote.longName as string) || symbol,
+        longName: (quote.longName as string) || (quote.shortName as string) || '',
         price,
         change: (quote.regularMarketChange as number) ?? 0,
         changePercent: (quote.regularMarketChangePercent as number) ?? 0,

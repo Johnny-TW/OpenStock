@@ -471,6 +471,9 @@ export class StockDetailDto {
   @ApiProperty({ example: '台積電', description: '股票名稱' })
   name: string;
 
+  @ApiProperty({ example: 'Taiwan Semiconductor Manufacturing', description: '公司英文名稱' })
+  longName: string;
+
   @ApiProperty({ example: 904.84, description: '目前股價' })
   price: number;
 

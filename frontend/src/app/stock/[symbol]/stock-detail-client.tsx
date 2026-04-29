@@ -166,7 +166,12 @@ export default function StockDetailClient({ symbol }: StockDetailClientProps) {
             <div className={styles.chartSection}>
               <div className={styles.chartHeader}>
                 <div className={styles.stockTitle}>
-                  {detail.name} · {formatExchange(detail.symbol)}
+                  {detail.name}
+                  {detail.longName && detail.longName !== detail.name && (
+                    <span className={styles.longName}> · {detail.longName}</span>
+                  )}
+                  {" · "}
+                  {formatExchange(detail.symbol)}
                   {detail.sector && <span className={styles.sectorBadge}>{detail.sector}</span>}
                   {detail.industry && (
                     <span className={styles.industryBadge}>{detail.industry}</span>
