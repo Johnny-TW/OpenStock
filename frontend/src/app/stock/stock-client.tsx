@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MarketIndexChart } from "@/components/commons/market-index-chart/market-index-chart";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { TopNews } from "@/components/commons/top-news/top-news";
@@ -13,19 +13,26 @@ export default function StockClient() {
   const dispatch = useAppDispatch();
   const { data: session } = useSession();
   const dailyAll = useAppSelector((state) => state.stock?.dailyAll);
+  const allNews = useAppSelector((state) => state.news?.allNews);
   const watchlist = useAppSelector((state) => state.watchlist?.list ?? []);
   const userId = (session?.user as any)?.email ?? "";
+  const fetchedRef = useRef(false);
+  const watchlistFetchedRef = useRef(false);
 
   useEffect(() => {
-    dispatch({ type: "GET_STOCK_DAILY_ALL" });
-    dispatch({ type: "GET_ALL_NEWS" });
-  }, [dispatch]);
+    if (!fetchedRef.current) {
+      fetchedRef.current = true;
+      if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" });
+      if (!allNews) dispatch({ type: "GET_ALL_NEWS" });
+    }
+  }, [dispatch, dailyAll, allNews]);
 
   useEffect(() => {
-    if (userId) {
+    if (userId && watchlist.length === 0 && !watchlistFetchedRef.current) {
+      watchlistFetchedRef.current = true;
       dispatch({ type: "GET_WATCHLIST" });
     }
-  }, [dispatch, userId]);
+  }, [dispatch, userId, watchlist.length]);
 
   if (!dailyAll) {
     return (

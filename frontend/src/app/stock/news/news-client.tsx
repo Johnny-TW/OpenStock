@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Newspaper } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/commons/badge";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { Tabs, TabsList, TabsTrigger } from "@/components/commons/tabs";
@@ -27,10 +27,14 @@ export default function NewsClient() {
   const [activeTab, setActiveTab] = useState<TabKey>("twStock");
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
-    dispatch({ type: "GET_ALL_NEWS" });
-  }, [dispatch]);
+    if (!fetchedRef.current && !allNews) {
+      fetchedRef.current = true;
+      dispatch({ type: "GET_ALL_NEWS" });
+    }
+  }, [dispatch, allNews]);
 
   const currentList: NewsDto[] = useMemo(() => {
     if (!allNews) return [];

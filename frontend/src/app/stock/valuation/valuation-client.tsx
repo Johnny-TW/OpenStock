@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/commons/badge";
 import {
   Card,
@@ -31,10 +31,14 @@ export default function ValuationClient() {
   const dispatch = useAppDispatch();
   const valuation = useAppSelector((state) => state.stock?.valuation);
   const [activeFilter, setActiveFilter] = useState<QuickFilterKey>("all");
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
-    dispatch({ type: "GET_STOCK_VALUATION" });
-  }, [dispatch]);
+    if (!fetchedRef.current && !valuation) {
+      fetchedRef.current = true;
+      dispatch({ type: "GET_STOCK_VALUATION" });
+    }
+  }, [dispatch, valuation]);
 
   const list = valuation?.data ?? [];
   const title = valuation?.title ?? "";

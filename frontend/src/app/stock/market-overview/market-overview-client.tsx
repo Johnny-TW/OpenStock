@@ -12,7 +12,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Loader2, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -377,13 +377,17 @@ export default function MarketOverviewClient() {
   const [indexFilter, setIndexFilter] = useState("");
   const [historyFilter, setHistoryFilter] = useState("");
   const [chartView, setChartView] = useState("intraday");
+  const fetchedRef = useRef(false);
 
   useEffect(() => {
-    dispatch({ type: "GET_STOCK_MARKET_INDEX" });
-    dispatch({ type: "GET_STOCK_INTRADAY" });
-    dispatch({ type: "GET_STOCK_INDEX_HISTORY" });
-    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" });
-  }, [dispatch, dailyAll]);
+    if (!fetchedRef.current) {
+      fetchedRef.current = true;
+      if (!marketIndex) dispatch({ type: "GET_STOCK_MARKET_INDEX" });
+      if (!intraday) dispatch({ type: "GET_STOCK_INTRADAY" });
+      if (!indexHistory) dispatch({ type: "GET_STOCK_INDEX_HISTORY" });
+      if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" });
+    }
+  }, [dispatch, marketIndex, intraday, indexHistory, dailyAll]);
 
   const intradayList: IntradayTickDto[] = useMemo(() => {
     const d = intraday?.data;

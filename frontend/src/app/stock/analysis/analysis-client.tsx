@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Trophy,
 } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/commons/badge";
 import { Button } from "@/components/commons/button";
 import { Checkbox } from "@/components/commons/checkbox";
@@ -501,6 +501,7 @@ export default function AnalysisClient() {
   });
   const [watchlistOnly, setWatchlistOnly] = useState(false);
   const watchlist = useAppSelector((state) => state.watchlist?.list ?? []);
+  const fetchedRef = useRef(false);
 
   const handleAnalyze = useCallback(() => {
     const data =
@@ -511,8 +512,11 @@ export default function AnalysisClient() {
   }, [watchlistOnly, watchlist, dispatch]);
 
   useEffect(() => {
-    dispatch({ type: "GET_CACHED_ANALYSIS" });
-  }, [dispatch]);
+    if (!fetchedRef.current && !result) {
+      fetchedRef.current = true;
+      dispatch({ type: "GET_CACHED_ANALYSIS" });
+    }
+  }, [dispatch, result]);
 
   const sortedPicks = useMemo(() => {
     if (!result?.topPicks) return [];
