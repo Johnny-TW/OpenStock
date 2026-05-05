@@ -8,6 +8,8 @@
 | 語言 | TypeScript | 5.7.3 |
 | ORM | Prisma Client | 6.16.3 |
 | 資料庫 | PostgreSQL | Docker 容器 (port 5435) |
+| 快取 | @nestjs/cache-manager + cache-manager + @keyv/redis | 3.1.2 / 7.2.8 / 5.1.6 |
+| 快取存儲 | Redis | Docker 容器 (port 6379) |
 | HTTP 客戶端 | @nestjs/axios + axios | 4.0.1 / 1.13.5 |
 | API 文件 | @nestjs/swagger + swagger-ui-express | 11.2.6 / 5.0.1 |
 | 驗證 | class-validator + class-transformer | 0.15.1 / 0.5.1 |
@@ -94,10 +96,14 @@ NestFactory.create(AppModule)
 
 ```
 AppModule
+├── ScheduleModule    # 排程任務（@Cron 等）
+├── JwtModule         # 全域 JWT 簽章與驗證
+├── CacheModule       # 全域雙層快取（記憶體 + Redis）
 ├── PrismaModule      # @Global() — 全域資料庫存取
 ├── StockModule       # 台灣證交所資料代理
 ├── PortfolioModule   # 持股 CRUD
-└── WatchlistModule   # 自選股 CRUD
+├── WatchlistModule   # 自選股 CRUD
+└── AnalysisModule    # AI 股市分析（Claude）
 ```
 
 ---
@@ -221,6 +227,60 @@ PrismaModule (@Global)
 
 ---
 
+## 快取模組（Redis）
+
+雙層快取設計（two-tier cache），降低 TWSE 外部 API 請求次數與回應延遲。
+
+```
+CacheModule.registerAsync({ isGlobal: true })
+    │
+    ├─ L1：CacheableMemory（程序內記憶體）
+    │     ├─ TTL：60 秒
+    │     └─ LRU：5000 筆
+    │
+    └─ L2：Redis（跨實例共享，選用）
+          ├─ 啟用條件：環境變數 REDIS_HOST 有值
+          ├─ 連線：redis://${REDIS_HOST}:${REDIS_PORT || 6379}
+          └─ 套件：@keyv/redis
+```
+
+**讀取順序**：L1 命中 → 直接回 → 否則 L2 命中 → 回填 L1 → 否則回源（TWSE / DB）。
+
+**Service 使用方式**：
+
+```typescript
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { Inject, Injectable } from '@nestjs/common';
+
+@Injectable()
+export class StockService {
+  constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) {}
+
+  async getDailyAll() {
+    const key = 'stock:daily-all';
+    const cached = await this.cache.get(key);
+    if (cached) return cached;
+
+    const data = await this.fetchFromTwse();
+    await this.cache.set(key, data, 60_000); // TTL 60 秒
+    return data;
+  }
+}
+```
+
+**Docker 啟動**：
+
+```bash
+docker compose up -d        # 同時啟動 Postgres + Redis
+docker logs -f redis-stocksmart   # 看 Redis log
+docker exec -it redis-stocksmart redis-cli   # 進 Redis CLI
+```
+
+**降級策略**：未設定 `REDIS_HOST` 時自動只用 L1（記憶體），方便本機開發。
+
+---
+
 ## 請求驗證
 
 全域啟用 `ValidationPipe`：
@@ -312,3 +372,8 @@ pnpm test:cov         # 測試覆蓋率
 |------|------|
 | `DATABASE_URL` | PostgreSQL 連線字串 |
 | `PORT` | 伺服器監聽埠（預設 3004） |
+| `JWT_SECRET` | JWT 簽章密鑰（前後端必須一致） |
+| `ANTHROPIC_API_KEY` | Claude API 金鑰（AI 分析模組使用） |
+| `REDIS_HOST` | Redis 主機位址（未設定則停用 Redis 層） |
+| `REDIS_PORT` | Redis 埠（預設 6379） |
+| `CORS_ORIGIN` | 額外允許的 CORS 來源 |

@@ -63,6 +63,17 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - ORM：Prisma，schema 在 `backend/prisma/schema.prisma`
 - 主要 Model：`Portfolio`（持股）、`Watchlist`（自選股）
 
+## 快取（Redis）
+
+- Redis 7（alpine），Docker 化，開發環境 port 6379
+- 雙層快取（two-tier cache）：
+  - L1 — `CacheableMemory`（Node 程序內記憶體，TTL 60s、LRU 5000）
+  - L2 — Redis（跨實例共享，僅在 `REDIS_HOST` 環境變數有值時啟用）
+- 套件：`@nestjs/cache-manager` + `cache-manager` + `@keyv/redis` + `keyv` + `cacheable`
+- 註冊位置：`backend/src/app.module.ts`（`CacheModule.registerAsync({ isGlobal: true })`）
+- 使用方式：在 Service 注入 `@Inject(CACHE_MANAGER) private cache: Cache`
+- 啟動：根目錄執行 `docker compose up -d` 會同時啟動 Postgres 與 Redis
+
 ## 外部 API
 
 - **TWSE OpenAPI**：`https://openapi.twse.com.tw/v1` — 股票行情、指數、新聞
@@ -93,4 +104,5 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - `JWT_SECRET`（前後端必須一致）
 - `DATABASE_URL`（後端）
 - `ANTHROPIC_API_KEY`（後端）
+- `REDIS_HOST` / `REDIS_PORT`（後端，未設定時自動降級為僅記憶體快取）
 - `AZURE_AD_CLIENT_ID` / `AZURE_AD_TENANT_ID`（前端）
