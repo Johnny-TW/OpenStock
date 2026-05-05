@@ -24,10 +24,9 @@ async function bootstrap() {
     .setDescription(
       '本平臺提供臺灣證券交易所服務 API 的二次封裝，資料來源為 [TWSE OpenAPI](https://openapi.twse.com.tw/)。\n\n' +
         '## 認證方式\n' +
-        '需認證的 API 請在 Header 帶入 `Authorization: Bearer <token>`，點擊右上角 🔓 Authorize 按鈕輸入 JWT Token。',
+        '需認證的 API 請點擊右上角 🔓 Authorize 按鈕輸入 JWT Token。',
     )
     .setVersion('1.0')
-    .setExternalDoc('TWSE OpenAPI 原始文件', 'https://openapi.twse.com.tw/')
     .addBearerAuth(
       {
         type: 'http',
@@ -63,8 +62,28 @@ async function bootstrap() {
       docExpansion: 'list',
       defaultModelsExpandDepth: 1,
       defaultModelExpandDepth: 2,
+      displayRequestDuration: true,
     },
-    customSiteTitle: '臺灣證券交易所 OpenAPI',
+    customSiteTitle: 'EE39 StockSmart System OpenAPI',
+    customCss: `.topbar-wrapper a::after { content: " | OpenAPI JSON"; font-size: 12px; color: #89bf04; }
+      .swagger-ui .info .base-url { font-size: 14px; font-weight: bold; }`,
+    customfavIcon: '',
+    customJsStr: `
+      setTimeout(() => {
+        const info = document.querySelector('.info');
+        if (info && !document.querySelector('.custom-json-link')) {
+          const link = document.createElement('a');
+          link.className = 'custom-json-link';
+          link.href = '/api/docs-json';
+          link.target = '_blank';
+          link.style.cssText = 'display:inline-block;margin-top:8px;font-size:13px;text-decoration:underline;';
+          link.textContent = '/api/docs-json';
+          const desc = info.querySelector('.description');
+          if (desc) desc.parentNode.insertBefore(link, desc);
+          else info.appendChild(link);
+        }
+      }, 500);
+    `,
   });
 
   const corsOrigins = [
