@@ -119,7 +119,7 @@ export class StockController {
     summary: '毛利率排行',
     description:
       '取得全部上市公司最新一季毛利率排行，含營業收入、營業成本、營業毛利。\n\n' +
-      '資料來源：TWSE OpenAPI `opendata/t187ap06_X_ci`',
+      '資料來源：TWSE OpenAPI `opendata/t187ap06_L_ci`',
   })
   @ApiResponse({ status: 200, description: '成功取得毛利率排行資料' })
   @Get('ranking/gross-margin')

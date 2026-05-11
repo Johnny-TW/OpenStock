@@ -61,6 +61,13 @@ interface TechnicalIndicators {
   bollingerLower: number;
   trend: string;
   recentCloses: number[];
+  recentDates: string[];
+  momentum5d: number;
+  momentum10d: number;
+  momentum20d: number;
+  candlePatterns: string[];
+  supportLevel: number;
+  resistanceLevel: number;
 }
 
 interface EnrichedStock extends StockSnapshotDto {
@@ -157,36 +164,54 @@ export class AnalysisService {
       }
     }
 
-    const [stocks, valuations, news, marketIndex] = await Promise.all([
-      this.fetchStocks(),
-      this.fetchValuations(),
-      this.fetchNews(),
-      this.fetchMarketIndex(),
-    ]);
+    const [stocks, valuations, news, marketIndex, institutional, industryMap, monthlyRevenue] =
+      await Promise.all([
+        this.fetchStocks(),
+        this.fetchValuations(),
+        this.fetchNews(),
+        this.fetchMarketIndex(),
+        this.fetchInstitutional(),
+        this.fetchIndustryMap(),
+        this.fetchMonthlyRevenue(),
+      ]);
 
-    const mergedStocks = this.mergeStockData(stocks, valuations);
+    const mergedStocks = this.mergeStockData(stocks, valuations, industryMap, monthlyRevenue);
 
     let targetStocks: StockSnapshotDto[];
     if (dto.stockCodes && dto.stockCodes.length > 0) {
       targetStocks = mergedStocks.filter((s) => dto.stockCodes!.includes(s.code));
     } else {
-      targetStocks = mergedStocks
-        .filter((s) => this.isIndividualStock(s.code))
-        .filter((s) => {
-          const vol = parseInt(s.tradeVolume?.replace(/,/g, '') ?? '0', 10);
-          return vol > 0;
-        })
-        .sort((a, b) => {
-          const volA = parseInt(a.tradeVolume?.replace(/,/g, '') ?? '0', 10);
-          const volB = parseInt(b.tradeVolume?.replace(/,/g, '') ?? '0', 10);
-          return volB - volA;
-        })
-        .slice(0, 30);
+      targetStocks = this.selectCandidates(mergedStocks, institutional);
     }
 
     const enrichedStocks = await this.enrichWithTechnicals(targetStocks);
 
-    const result = await this.callAI(enrichedStocks, news, marketIndex);
+    const marketChangePercent = this.parseMarketChangePercent(marketIndex);
+    const stocksWithRelativeStrength = enrichedStocks.map((s) => {
+      const close = parseFloat(s.closingPrice?.replace(/,/g, '') ?? '0');
+      const change = parseFloat(s.change?.replace(/,/g, '') ?? '0');
+      const prev = close - change;
+      const stockPct = prev > 0 ? (change / prev) * 100 : 0;
+      return {
+        ...s,
+        relativeStrength: Math.round((stockPct - marketChangePercent) * 100) / 100,
+      };
+    });
+
+    const allNews = [
+      ...news.twStock.map((n) => n),
+      ...news.usStock.map((n) => n),
+      ...news.international.map((n) => n),
+      ...news.twse.map((n) => n),
+    ];
+
+    const result = await this.callAI(
+      stocksWithRelativeStrength,
+      news,
+      marketIndex,
+      institutional,
+      allNews,
+    );
 
     if (!dto.stockCodes || dto.stockCodes.length === 0) {
       const today = this.getTodayDate();
@@ -249,12 +274,110 @@ export class AnalysisService {
   private mergeStockData(
     stocks: StockSnapshotDto[],
     valuations: Record<string, { peRatio: string; dividendYield: string }>,
+    industryMap: Map<string, string>,
+    monthlyRevenue: Map<string, { revenue: number; yoyGrowth: number }>,
   ): StockSnapshotDto[] {
     return stocks.map((s) => ({
       ...s,
       peRatio: valuations[s.code]?.peRatio,
       dividendYield: valuations[s.code]?.dividendYield,
+      industry: industryMap.get(s.code) ?? '',
+      revenueYoY: monthlyRevenue.get(s.code)?.yoyGrowth,
     }));
+  }
+
+  private selectCandidates(stocks: StockSnapshotDto[], institutional: string): StockSnapshotDto[] {
+    const validStocks = stocks
+      .filter((s) => this.isIndividualStock(s.code))
+      .filter((s) => parseInt(s.tradeVolume?.replace(/,/g, '') ?? '0', 10) > 0);
+
+    const byVolume = [...validStocks]
+      .sort((a, b) => {
+        const volA = parseInt(a.tradeVolume?.replace(/,/g, '') ?? '0', 10);
+        const volB = parseInt(b.tradeVolume?.replace(/,/g, '') ?? '0', 10);
+        return volB - volA;
+      })
+      .slice(0, 25);
+
+    const byChange = [...validStocks]
+      .map((s) => {
+        const close = parseFloat(s.closingPrice?.replace(/,/g, '') ?? '0');
+        const change = parseFloat(s.change?.replace(/,/g, '') ?? '0');
+        const prev = close - change;
+        const pct = prev > 0 ? Math.abs(change / prev) * 100 : 0;
+        return { stock: s, absPct: pct };
+      })
+      .sort((a, b) => b.absPct - a.absPct)
+      .slice(0, 15)
+      .map((r) => r.stock);
+
+    const institutionalCodes = new Set<string>();
+    for (const line of institutional.split('\n')) {
+      const match = line.match(/^(\d{4})\s/);
+      if (match) institutionalCodes.add(match[1]);
+    }
+    const byInstitutional = validStocks.filter((s) => institutionalCodes.has(s.code)).slice(0, 20);
+
+    const seen = new Set<string>();
+    const result: StockSnapshotDto[] = [];
+    for (const s of [...byVolume, ...byChange, ...byInstitutional]) {
+      if (!seen.has(s.code)) {
+        seen.add(s.code);
+        result.push(s);
+      }
+    }
+
+    return result.slice(0, 50);
+  }
+
+  private async fetchIndustryMap(): Promise<Map<string, string>> {
+    try {
+      return await this.stockService.getIndustryMapPublic();
+    } catch {
+      this.logger.warn('無法取得產業別資料');
+      return new Map();
+    }
+  }
+
+  private async fetchMonthlyRevenue(): Promise<
+    Map<string, { revenue: number; yoyGrowth: number }>
+  > {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get<Record<string, string>[]>(
+          'https://openapi.twse.com.tw/v1/opendata/t187ap05_L',
+        ),
+      );
+      const map = new Map<string, { revenue: number; yoyGrowth: number }>();
+      for (const row of data) {
+        const code = row.公司代號?.trim();
+        if (!code) continue;
+        const revenue = parseFloat(row.當月營收?.replace(/,/g, '') ?? '0') || 0;
+        const yoyGrowth = parseFloat(row['去年同月增減(%)']?.replace(/,/g, '') ?? '0') || 0;
+        map.set(code, { revenue, yoyGrowth });
+      }
+      return map;
+    } catch {
+      this.logger.warn('無法取得月營收資料');
+      return new Map();
+    }
+  }
+
+  private parseMarketChangePercent(marketIndex: string): number {
+    const lines = marketIndex.split('\n');
+    for (const line of lines) {
+      if (line.includes('發行量加權')) {
+        const match = line.match(/漲跌\s*([-\d.]+)/);
+        const closeMatch = line.match(/：([\d,.]+)/);
+        if (match && closeMatch) {
+          const change = parseFloat(match[1]);
+          const close = parseFloat(closeMatch[1].replace(/,/g, ''));
+          const prev = close - change;
+          return prev > 0 ? (change / prev) * 100 : 0;
+        }
+      }
+    }
+    return 0;
   }
 
   private async fetchNews(): Promise<{
@@ -302,6 +425,31 @@ export class AnalysisService {
         .join('\n');
     } catch {
       this.logger.warn('無法取得大盤指數');
+      return '';
+    }
+  }
+
+  private async fetchInstitutional(): Promise<string> {
+    try {
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+      const url = `https://www.twse.com.tw/fund/T86?response=json&date=${dateStr}&selectType=ALL`;
+      const { data } = await firstValueFrom(
+        this.httpService.get<{ stat: string; data?: string[][] }>(url),
+      );
+      if (data.stat !== 'OK' || !data.data) return '';
+      const top20 = data.data.slice(0, 20).map((row) => {
+        const code = row[0]?.trim();
+        const name = row[1]?.trim();
+        const foreign = row[2]?.trim();
+        const trust = row[3]?.trim();
+        const dealer = row[4]?.trim();
+        const total = row[5]?.trim();
+        return `${code} ${name}: 外資${foreign} 投信${trust} 自營${dealer} 合計${total}`;
+      });
+      return top20.join('\n');
+    } catch {
+      this.logger.warn('無法取得三大法人買賣超資料');
       return '';
     }
   }
@@ -430,8 +578,24 @@ export class AnalysisService {
     if (ma60 > 0 && ma5 > ma10 && ma10 > ma20 && ma20 > ma60) trend = '多頭排列';
     else if (ma60 > 0 && ma5 < ma10 && ma10 < ma20 && ma20 < ma60) trend = '空頭排列';
 
-    // 近 60 日收盤價（用於走勢圖）
-    const recentCloses = closes.slice(Math.max(0, len - 60)).map((c) => Math.round(c * 100) / 100);
+    // 近 30 日收盤價（約一個月，用於走勢圖）
+    const sliceStart = Math.max(0, len - 30);
+    const recentCloses = closes.slice(sliceStart).map((c) => Math.round(c * 100) / 100);
+    const recentDates = history.slice(sliceStart).map((h) => h.date);
+
+    // 動能指標（漲跌幅%）
+    const momentum5d = len >= 6 ? ((closes[len - 1] - closes[len - 6]) / closes[len - 6]) * 100 : 0;
+    const momentum10d =
+      len >= 11 ? ((closes[len - 1] - closes[len - 11]) / closes[len - 11]) * 100 : 0;
+    const momentum20d =
+      len >= 21 ? ((closes[len - 1] - closes[len - 21]) / closes[len - 21]) * 100 : 0;
+
+    // K 線形態辨識
+    const candlePatterns = this.detectCandlePatterns(history);
+
+    // 支撐壓力位計算
+    const { support: supportLevel, resistance: resistanceLevel } =
+      this.calculateSupportResistance(history);
 
     return {
       ma5: Math.round(ma5 * 100) / 100,
@@ -454,6 +618,117 @@ export class AnalysisService {
       bollingerLower: Math.round(bollingerLower * 100) / 100,
       trend,
       recentCloses,
+      recentDates,
+      momentum5d: Math.round(momentum5d * 100) / 100,
+      momentum10d: Math.round(momentum10d * 100) / 100,
+      momentum20d: Math.round(momentum20d * 100) / 100,
+      candlePatterns,
+      supportLevel,
+      resistanceLevel,
+    };
+  }
+
+  private detectCandlePatterns(history: HistoryRow[]): string[] {
+    const patterns: string[] = [];
+    const len = history.length;
+    if (len < 3) return patterns;
+
+    const last = history[len - 1];
+    const prev = history[len - 2];
+    const prev2 = history[len - 3];
+
+    const bodySize = (h: HistoryRow) => Math.abs(h.close - h.open);
+    const upperShadow = (h: HistoryRow) => h.high - Math.max(h.open, h.close);
+    const lowerShadow = (h: HistoryRow) => Math.min(h.open, h.close) - h.low;
+    const range = (h: HistoryRow) => h.high - h.low;
+
+    // 十字線 (Doji)
+    if (range(last) > 0 && bodySize(last) / range(last) < 0.1) {
+      patterns.push('十字線');
+    }
+
+    // 錘子線 (Hammer) - 下影線長、實體小、出現在低點
+    if (lowerShadow(last) > bodySize(last) * 2 && upperShadow(last) < bodySize(last) * 0.5) {
+      if (last.close < prev.close) patterns.push('錘子線（潛在反轉）');
+    }
+
+    // 吊人線 (Hanging Man) - 類似錘子但出現在高點
+    if (lowerShadow(last) > bodySize(last) * 2 && upperShadow(last) < bodySize(last) * 0.5) {
+      if (last.close > prev.close && prev.close > prev2.close) patterns.push('吊人線（潛在見頂）');
+    }
+
+    // 射擊之星 (Shooting Star) - 上影線長
+    if (upperShadow(last) > bodySize(last) * 2 && lowerShadow(last) < bodySize(last) * 0.5) {
+      if (last.close > prev.low) patterns.push('射擊之星（空方訊號）');
+    }
+
+    // 吞噬形態 (Engulfing)
+    if (
+      last.close > last.open &&
+      prev.close < prev.open &&
+      last.open <= prev.close &&
+      last.close >= prev.open
+    ) {
+      patterns.push('多方吞噬（強勢反轉）');
+    }
+    if (
+      last.close < last.open &&
+      prev.close > prev.open &&
+      last.open >= prev.close &&
+      last.close <= prev.open
+    ) {
+      patterns.push('空方吞噬（弱勢反轉）');
+    }
+
+    // 連續紅K / 連續黑K
+    const last5 = history.slice(-5);
+    const redCount = last5.filter((h) => h.close > h.open).length;
+    const blackCount = last5.filter((h) => h.close < h.open).length;
+    if (redCount >= 4) patterns.push('連續紅K（強勢）');
+    if (blackCount >= 4) patterns.push('連續黑K（弱勢）');
+
+    // 跳空缺口
+    if (last.low > prev.high) patterns.push('向上跳空缺口');
+    if (last.high < prev.low) patterns.push('向下跳空缺口');
+
+    // 量價背離
+    if (last.close > prev.close && last.volume < prev.volume * 0.7) {
+      patterns.push('價漲量縮（量價背離）');
+    }
+    if (last.close < prev.close && last.volume < prev.volume * 0.7) {
+      patterns.push('價跌量縮（賣壓減輕）');
+    }
+
+    return patterns;
+  }
+
+  private calculateSupportResistance(history: HistoryRow[]): {
+    support: number;
+    resistance: number;
+  } {
+    const len = history.length;
+    const recent = history.slice(Math.max(0, len - 60));
+
+    const lows = recent.map((h) => h.low);
+    const highs = recent.map((h) => h.high);
+    const closes = recent.map((h) => h.close);
+    const currentPrice = closes[closes.length - 1];
+
+    // 找出低於目前價格的支撐位（取最近的低點區）
+    const belowLows = lows.filter((l) => l < currentPrice).sort((a, b) => b - a);
+    const support =
+      belowLows.length > 0 ? belowLows[Math.min(2, belowLows.length - 1)] : lows[lows.length - 1];
+
+    // 找出高於目前價格的壓力位（取最近的高點區）
+    const aboveHighs = highs.filter((h) => h > currentPrice).sort((a, b) => a - b);
+    const resistance =
+      aboveHighs.length > 0
+        ? aboveHighs[Math.min(2, aboveHighs.length - 1)]
+        : highs[highs.length - 1];
+
+    return {
+      support: Math.round(support * 100) / 100,
+      resistance: Math.round(resistance * 100) / 100,
     };
   }
 
@@ -483,7 +758,7 @@ export class AnalysisService {
   }
 
   private async callAI(
-    stocks: EnrichedStock[],
+    stocks: (EnrichedStock & { relativeStrength?: number })[],
     news: {
       twStock: string[];
       usStock: string[];
@@ -491,10 +766,20 @@ export class AnalysisService {
       twse: string[];
     },
     marketIndex: string,
+    institutional: string,
+    allNewsFlat: string[],
   ): Promise<AnalysisResultDto> {
     const stockSummary = stocks
       .map((s) => {
-        let line = `${s.code} ${s.name}: 收盤${s.closingPrice} 漲跌${s.change} 成交量${s.tradeVolume} 本益比${s.peRatio ?? 'N/A'} 殖利率${s.dividendYield ?? 'N/A'}%`;
+        let line = `${s.code} ${s.name} [${s.industry ?? '未知'}]`;
+        line += `: 收盤${s.closingPrice} 漲跌${s.change} 成交量${s.tradeVolume}`;
+        line += ` 本益比${s.peRatio ?? 'N/A'} 殖利率${s.dividendYield ?? 'N/A'}%`;
+        if (s.revenueYoY !== undefined) {
+          line += ` 月營收年增率${s.revenueYoY > 0 ? '+' : ''}${s.revenueYoY}%`;
+        }
+        if (s.relativeStrength !== undefined) {
+          line += ` 相對大盤強弱${s.relativeStrength > 0 ? '+' : ''}${s.relativeStrength}%`;
+        }
         if (s.indicators) {
           const ind = s.indicators;
           line += `\n  均線: MA5=${ind.ma5} MA10=${ind.ma10} MA20=${ind.ma20} MA60=${ind.ma60} 趨勢=${ind.trend}`;
@@ -502,8 +787,19 @@ export class AnalysisService {
           line += `\n  MACD=${ind.macdLine} Signal=${ind.signalLine} Histogram=${ind.macdHistogram}`;
           line += `\n  布林通道: 上=${ind.bollingerUpper} 中=${ind.bollingerMiddle} 下=${ind.bollingerLower}`;
           line += `\n  量比=${ind.volumeRatio}(今量${ind.latestVolume}/均量${ind.avgVolume20}) 20日高=${ind.high20} 20日低=${ind.low20}`;
+          line += `\n  動能: 5日${ind.momentum5d}% 10日${ind.momentum10d}% 20日${ind.momentum20d}%`;
+          line += `\n  支撐=${ind.supportLevel} 壓力=${ind.resistanceLevel}`;
+          if (ind.candlePatterns.length > 0) {
+            line += `\n  K線形態: ${ind.candlePatterns.join('、')}`;
+          }
           line += `\n  近五日收盤: ${ind.recentCloses.slice(-5).join(' → ')}`;
         }
+
+        const matched = allNewsFlat.filter((n) => n.includes(s.code) || n.includes(s.name));
+        if (matched.length > 0) {
+          line += `\n  相關新聞:\n    ${matched.slice(0, 3).join('\n    ')}`;
+        }
+
         return line;
       })
       .join('\n\n');
@@ -514,37 +810,76 @@ export class AnalysisService {
       news.international.length > 0 ? news.international.join('\n') : '（目前無國際財經新聞）';
     const twseNews = news.twse.length > 0 ? news.twse.join('\n') : '（目前無證交所公告）';
 
-    const systemPrompt = `你是一位擁有 20 年經驗的台灣股市專業投資分析師與技術分析專家。
-你精通以下分析方法：
-- 技術分析：均線系統（MA5/10/20/60）、RSI、KD隨機指標、MACD、布林通道、成交量分析、支撐壓力位
-- 基本面分析：本益比、殖利率、營收成長
-- 籌碼面分析：成交量變化、量價關係、法人買賣超
-- 新聞面分析：台股新聞、美股動態、國際財經趨勢、證交所公告、地緣政治風險、政策影響
-- 戰略面分析：產業定位、競爭優勢、長期發展
+    const systemPrompt = `你是一位擁有 20 年經驗的台灣股市專業投資分析師與技術分析專家，擅長做多與放空雙向操作。
 
-你的分析框架：
-1. 先判斷大盤趨勢方向（多頭/空頭/盤整），確認系統性風險
-2. 從基本面、技術面、籌碼面、新聞面、戰略面五個維度給每檔股票打分（0-100）
-3. 用 RSI + KD 確認超買超賣狀態，避免追高殺低
-4. 用 MACD 交叉確認趨勢轉折點
-5. 用布林通道判斷波動率與突破訊號
-6. 結合近五日走勢判斷短期動能方向
-7. 以 20 日高低點設定支撐壓力，計算進退場價位
-8. 綜合分析後給出看多與看空因素，標記重要程度
+重要原則：
+- 每項評分和判斷都必須引用提供給你的「具體數據」（數字、指標值、新聞標題），嚴禁憑空捏造
+- 若該股票沒有相關新聞，新聞面分數不得超過 50 分，且不得編造題材
+- 「相對大盤強弱」為正表示強於大盤，為負表示弱於大盤，這是判斷個股強弱的關鍵指標
+- 「月營收年增率」反映基本面動能，年增率 > 20% 為成長股，< -10% 為衰退
+
+你精通以下分析方法：
+- 技術分析：均線系統（MA5/10/20/60）、RSI、KD隨機指標、MACD、布林通道、成交量分析、支撐壓力位、K線形態辨識
+- 基本面分析：本益比、殖利率、月營收年增率、營收成長趨勢
+- 籌碼面分析：三大法人買賣超、成交量變化、量價關係
+- 新聞面分析：只根據「相關新聞」區段中列出的新聞來評分，沒有新聞就不要編
+- 相對強弱分析：個股漲跌幅 vs 大盤漲跌幅的差值
+- 動能分析：短中長期動能（5/10/20日漲跌幅）、趨勢加速/減速判斷
+- K線形態：十字線、錘子線、吊人線、射擊之星、吞噬形態、跳空缺口、量價背離
+
+你的分析框架（三種操作方向）：
+
+【做多條件】（以下符合 3 項以上）：
+- 均線多頭排列或即將黃金交叉
+- RSI 40-70 區間（非超買），KD 黃金交叉
+- MACD 柱狀體由負轉正或持續放大
+- 三大法人連續買超
+- K線出現多方吞噬、錘子線等反轉訊號
+- 5日動能 > 0 且 20日動能 > 0
+- 股價站上布林中軌且向上軌靠近
+- 量增價漲
+- 相對大盤強弱 > 0（強於大盤）
+- 月營收年增率 > 0%
+
+【放空條件】（以下符合 3 項以上）：
+- 均線空頭排列或即將死亡交叉
+- RSI > 75 超買區或持續下降
+- KD 死亡交叉且 K < D
+- MACD 柱狀體由正轉負或持續擴大（負向）
+- 三大法人連續賣超
+- K線出現空方吞噬、射擊之星、吊人線
+- 5日動能 < 0 且 20日動能 < 0
+- 量增價跌或量價背離
+- 跌破布林中軌且向下軌靠近
+- 相對大盤強弱 < -1%（明顯弱於大盤）
+- 月營收年增率 < -10%
+
+【觀望條件】：
+- 多空指標矛盾（如技術面偏多但籌碼面偏空）
+- 處於盤整格局，方向不明
+- 即將遇到重大支撐/壓力位但尚未突破
+- RSI 在 45-55 中性區間
+- 成交量萎縮，無明確方向
 
 你的分析風格：
-- 嚴謹且保守，不輕易推薦
-- 明確給出進退場價位與停損點
-- 每個評分必須有具體理由支撐
-- 看多看空因素要具體引用數據
-- 停損價通常設在支撐位下方 2-3%，目標價設在壓力位`;
+- 嚴謹且務實，同時關注做多和放空機會
+- 明確給出進場價、停損價、目標價
+- 每個推薦必須標明操作方向與時間框架
+- 特別注意 AI/半導體/科技相關題材的影響
+- 結合三大法人籌碼面驗證技術面訊號
+- 每一項 bullishFactor / bearishFactor 的 description 裡必須引用至少一個具體數字`;
 
-    const prompt = `請根據以下台股即時資料、技術指標與多來源新聞，產出完整的投資分析報告。
+    const prompt = `請根據以下台股即時資料、技術指標、K線形態、三大法人籌碼與多來源新聞，產出完整的投資分析報告。
+重點：明確區分「可做多」、「可放空」、「建議觀望」三類股票。
+注意：每個個股下方已附上「相關新聞」，若該股無相關新聞，新聞面評分不得超過 50。
 
 「大盤指數」
 ${marketIndex || '（目前無大盤資料）'}
 
-「今日個股資料與技術指標」
+「三大法人買賣超（今日前 20 大）」
+${institutional || '（目前無法人資料）'}
+
+「今日個股資料與技術指標（含產業別、月營收年增率、相對大盤強弱、相關新聞）」
 ${stockSummary}
 
 「台股新聞」（Yahoo 奇摩股市）
@@ -561,13 +896,13 @@ ${twseNews}
 
 請以 JSON 格式回覆，結構如下：
 {
-  "marketOverview": "整體市場概況分析，包含大盤趨勢判斷、均線排列、量能狀況（300字內，繁體中文）",
+  "marketOverview": "整體市場概況分析，包含大盤趨勢、法人動向、量能狀況、近期題材熱點（300字內，繁體中文）",
   "topPicks": [
     {
       "code": "股票代號",
       "name": "股票名稱",
       "reason": "綜合推薦理由摘要（100字內）",
-      "direction": "偏多 / 中性 / 偏空（三選一）",
+      "direction": "做多 / 放空 / 觀望（三選一）",
       "scores": {
         "fundamental": 0-100,
         "technical": 0-100,
@@ -577,50 +912,55 @@ ${twseNews}
         "total": 0-100
       },
       "bullishFactors": [
-        { "category": "題材 / 基本 / 技術 / 籌碼 / 新聞（五選一）", "description": "看多原因的具體描述，須引用數據（150字內）", "importance": "重要 / 一般" }
+        { "category": "題材 / 基本 / 技術 / 籌碼 / 新聞（五選一）", "description": "看多原因，必須引用具體數字（如 RSI=65.3、量比=2.1x、月營收年增率+35%），禁止空泛描述（150字內）", "importance": "重要 / 一般" }
       ],
       "bearishFactors": [
-        { "category": "題材 / 基本 / 技術 / 籌碼 / 新聞（五選一）", "description": "看空原因的具體描述，須引用數據（150字內）", "importance": "重要 / 一般" }
+        { "category": "題材 / 基本 / 技術 / 籌碼 / 新聞（五選一）", "description": "看空原因，必須引用具體數字，禁止空泛描述（150字內）", "importance": "重要 / 一般" }
       ],
-      "entryPrice": "建議進場價位（具體數字）",
-      "stopLoss": "建議停損價位（支撐位下方 2-3%）",
-      "targetPrice": "目標價位（壓力位或布林上軌）",
+      "entryPrice": "建議進場價位（做多為買進價，放空為放空價）",
+      "stopLoss": "建議停損價位（做多為支撐下方2-3%，放空為壓力上方2-3%）",
+      "targetPrice": "目標價位（做多為壓力位，放空為支撐位）",
       "signal": "強烈買進 / 買進 / 觀望 / 賣出 / 強烈賣出（五選一）",
       "timeframe": "短線(1-5日) / 波段(1-4週) / 長期(1月以上)（三選一）",
-      "technicalSummary": "技術面關鍵訊號摘要（80字內）"
+      "technicalSummary": "技術面關鍵訊號摘要，含K線形態與動能方向（100字內）"
     }
   ],
   "risks": "當前主要風險提示，含具體數據佐證（200字內，繁體中文）",
-  "newsImpact": "國際新聞對台股的潛在影響分析（200字內，繁體中文）",
-  "technicalOutlook": "整體技術面展望（250字內，繁體中文）"
+  "newsImpact": "國際新聞與AI/科技題材對台股的潛在影響分析（200字內，繁體中文）",
+  "technicalOutlook": "整體技術面展望，包含支撐壓力位與可能走勢（250字內，繁體中文）"
 }
 
+分類規則（direction 判定）：
+- 「做多」：技術面偏多 + 籌碼面偏多 + 動能向上 + 相對大盤強弱 > 0，signal 給「買進」或「強烈買進」
+- 「放空」：技術面偏空 + 籌碼面偏空 + 動能向下，signal 給「賣出」或「強烈賣出」
+- 「觀望」：多空訊號矛盾或方向不明確，signal 給「觀望」
+
 評分規則：
-- fundamental（基本面）：根據本益比、殖利率、營收成長趨勢評分
-- technical（技術面）：根據均線排列、RSI、KD、MACD、布林通道等判斷
-- chip（籌碼面）：根據成交量變化、量比、量價配合度判斷
-- news（新聞面）：根據相關產業新聞、政策利多利空判斷
-- strategic（戰略面）：根據產業趨勢、公司競爭定位、長線發展潛力
-- total（綜合）：五維度加權，技術面與籌碼面各佔 25%，基本面 20%，新聞面 15%，戰略面 15%
-- 80 分以上為強力推薦，60-79 為一般推薦，60 以下為觀望
-- direction：total >= 70 為偏多，50-69 為中性，< 50 為偏空
+- fundamental（基本面）：本益比合理度、殖利率、月營收年增率（年增率>20%加分，<-10%扣分）
+- technical（技術面）：均線排列、RSI、KD、MACD、布林通道、K線形態、相對大盤強弱
+- chip（籌碼面）：三大法人買賣超方向、量比、量價配合
+- news（新聞面）：只根據個股下方「相關新聞」評分，沒有相關新聞則不超過 50 分
+- strategic（戰略面）：產業趨勢、競爭定位、長線發展潛力
+- total（綜合）：技術面 25%、籌碼面 25%、基本面 20%、新聞面 15%、戰略面 15%
 
-看多/看空因素規則：
-- bullishFactors 列出 2-3 個看多因素，每個須具體引用數據
-- bearishFactors 列出 1-2 個看空因素（風險提示）
-- category 為分類標籤：題材 / 基本 / 技術 / 籌碼 / 新聞（五選一）
-- importance 標記為 "重要" 或 "一般"
+topPicks 排序規則：
+- 先按 direction 分組：做多 → 放空 → 觀望
+- 組內按 total 分數由高到低排序
+- 做多類：列出 5-8 檔最佳做多標的
+- 放空類：列出 3-5 檔最佳放空標的（RSI超買、KD死叉、弱於大盤的股票）
+- 觀望類：列出 3-5 檔值得追蹤但尚未進場的標的
+- 合計 10-18 檔
 
-其他規則：
-- topPicks 依 total 分數由高到低排序，列出 10-15 檔
-- 進場價、停損價、目標價必須是具體數字
-- signal 訊號必須與技術指標一致（如 RSI>70 且 K>80 不應給買進訊號）
+嚴格禁止：
+- 編造不存在的新聞標題或題材
+- description 中只寫「表現不錯」「前景看好」等空話，必須有數據
+- 對沒有相關新聞的股票給超過 50 的新聞面分數
 - 所有文字使用繁體中文
 - 只回傳 JSON，不要加任何前後說明`;
 
     const completion = await this.anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 8192,
+      max_tokens: 16384,
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -669,6 +1009,13 @@ ${twseNews}
               low20: ind.low20,
               trend: ind.trend,
               recentCloses: ind.recentCloses,
+              recentDates: ind.recentDates,
+              momentum5d: ind.momentum5d,
+              momentum10d: ind.momentum10d,
+              momentum20d: ind.momentum20d,
+              candlePatterns: ind.candlePatterns,
+              supportLevel: ind.supportLevel,
+              resistanceLevel: ind.resistanceLevel,
             }
           : undefined;
         const scores: ScoresDto = p.scores

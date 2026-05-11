@@ -20,6 +20,8 @@ export class StockSnapshotDto {
   @ApiProperty() tradeVolume: string;
   @ApiProperty() peRatio?: string;
   @ApiProperty() dividendYield?: string;
+  @ApiPropertyOptional() industry?: string;
+  @ApiPropertyOptional() revenueYoY?: number;
 }
 
 export class TechnicalIndicatorsDto {
@@ -41,6 +43,13 @@ export class TechnicalIndicatorsDto {
   @ApiProperty() low20: number;
   @ApiProperty() trend: string;
   @ApiProperty() recentCloses: number[];
+  @ApiProperty() recentDates: string[];
+  @ApiProperty() momentum5d: number;
+  @ApiProperty() momentum10d: number;
+  @ApiProperty() momentum20d: number;
+  @ApiProperty() candlePatterns: string[];
+  @ApiProperty() supportLevel: number;
+  @ApiProperty() resistanceLevel: number;
 }
 
 export class ScoresDto {
@@ -67,7 +76,7 @@ export class TopPickDto {
   @ApiProperty({ description: '建議停損價' }) stopLoss: string;
   @ApiProperty({ description: '目標價位' }) targetPrice: string;
   @ApiProperty({
-    description: '方向：偏多 / 中性 / 偏空',
+    description: '方向：做多 / 放空 / 觀望',
   })
   direction: string;
   @ApiProperty({

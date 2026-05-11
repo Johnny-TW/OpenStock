@@ -136,49 +136,57 @@ export class StockService implements OnModuleInit {
   }
 
   async getDailyAll(): Promise<StockDailyAllResponse> {
-    return this.cachedFetch('stock:daily-all', StockService.CACHE_TTL.DAILY, async () => {
-      this.logger.log('Fetching TWSE daily stock data...');
+    const cached = await this.cacheManager.get<StockDailyAllResponse>('stock:daily-all');
+    if (cached) {
+      this.logger.debug('Cache HIT: stock:daily-all');
+      return cached;
+    }
+    this.logger.debug('Cache MISS: stock:daily-all');
+    this.logger.log('Fetching TWSE daily stock data...');
 
-      const [{ data }, industryMap] = await Promise.all([
-        firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
-        this.getIndustryMap(),
-      ]);
+    const [{ data }, industryMap] = await Promise.all([
+      firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
+      this.getIndustryMap(),
+    ]);
 
-      if (data.stat !== 'OK' || !Array.isArray(data.data)) {
-        this.logger.warn(`TWSE API returned stat: ${data.stat}, data: ${typeof data.data}`);
-        return {
-          date: '',
-          title: '',
-          notes: [],
-          fields: [],
-          data: [],
-          total: 0,
-        };
-      }
-
-      const stocks: StockDailyDto[] = data.data.map((row) => ({
-        code: row[0],
-        name: row[1],
-        tradeVolume: row[2],
-        tradeValue: row[3],
-        openingPrice: row[4],
-        highestPrice: row[5],
-        lowestPrice: row[6],
-        closingPrice: row[7],
-        change: row[8],
-        transaction: row[9],
-        industry: industryMap.get(row[0]?.trim()) ?? '',
-      }));
-
+    if (data.stat !== 'OK' || !Array.isArray(data.data)) {
+      this.logger.warn(
+        `TWSE API returned stat: ${data.stat}, data: ${typeof data.data} — 不快取空結果`,
+      );
       return {
-        date: data.date,
-        title: data.title,
-        notes: data.notes,
-        fields: data.fields,
-        data: stocks,
-        total: stocks.length,
+        date: '',
+        title: '',
+        notes: [],
+        fields: [],
+        data: [],
+        total: 0,
       };
-    });
+    }
+
+    const stocks: StockDailyDto[] = data.data.map((row) => ({
+      code: row[0],
+      name: row[1],
+      tradeVolume: row[2],
+      tradeValue: row[3],
+      openingPrice: row[4],
+      highestPrice: row[5],
+      lowestPrice: row[6],
+      closingPrice: row[7],
+      change: row[8],
+      transaction: row[9],
+      industry: industryMap.get(row[0]?.trim()) ?? '',
+    }));
+
+    const result: StockDailyAllResponse = {
+      date: data.date,
+      title: data.title,
+      notes: data.notes,
+      fields: data.fields,
+      data: stocks,
+      total: stocks.length,
+    };
+    await this.cacheManager.set('stock:daily-all', result, StockService.CACHE_TTL.DAILY);
+    return result;
   }
 
   async getValuation(): Promise<StockValuationResponse> {
@@ -322,6 +330,10 @@ export class StockService implements OnModuleInit {
     return parseFloat(value.replace(/,/g, '')) || 0;
   }
 
+  async getIndustryMapPublic(): Promise<Map<string, string>> {
+    return this.getIndustryMap();
+  }
+
   private async getIndustryMap(): Promise<Map<string, string>> {
     const now = Date.now();
     if (this.industryMapCache && now - this.industryMapCacheTime < this.INDUSTRY_CACHE_TTL) {
@@ -398,7 +410,7 @@ export class StockService implements OnModuleInit {
         const [{ data }, industryMap] = await Promise.all([
           firstValueFrom(
             this.httpService.get<Record<string, string>[]>(
-              `${this.OPENAPI_BASE}/opendata/t187ap06_X_ci`,
+              `${this.OPENAPI_BASE}/opendata/t187ap06_L_ci`,
             ),
           ),
           this.getIndustryMap(),
