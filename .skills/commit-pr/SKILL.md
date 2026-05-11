@@ -96,9 +96,8 @@ git commit -m "<message>"
 ```
 🔧 fix(frontend): 修正 AI 分析逾時問題
 
-- apiService.jsx call() 支援自訂 timeout 參數
-- saga/index.jsx fetchApi 傳遞 timeout 給 call()
-- saga/analysis.jsx analyzeMarket 設定 180 秒 timeout
+- api-client.ts axios timeout 調整為 300 秒
+- use-analysis-query.ts useAnalyzeMarket 新增 Toast 回饋
 
-影響 3 個檔案，涵蓋 redux
+影響 2 個檔案，涵蓋 hooks, lib
 ```

@@ -884,17 +884,16 @@ export const authOptions = {
 
 ### 9.2 前端：呼叫 API 時帶 Token
 
-```javascript
-// 前端 Redux Saga 中的 fetchApi
-const token = yield select(state => state.auth.token)
+```typescript
+// 前端 api-client.ts 的 axios 攔截器自動附帶 Token
+import { fetchAPI } from "@/lib/api-client";
 
-const response = yield axios({
-  method: 'GET',
-  url: `http://localhost:3004/stock/daily-all`,
-  headers: {
-    Authorization: `Bearer ${token}`,  // ← 帶上 JWT
-  },
-})
+// React Query Hook 呼叫範例
+const { data } = useQuery({
+  queryKey: ["stock", "daily-all"],
+  queryFn: () => fetchAPI("stock/daily-all"),
+  // axios 攔截器會自動加上 Authorization: Bearer {cachedToken}
+});
 ```
 
 ### 9.3 後端：AuthGuard（JWT 驗證守衛）

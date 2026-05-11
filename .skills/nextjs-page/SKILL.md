@@ -1,6 +1,6 @@
 ---
 name: nextjs-page
-description: "Use when: creating new pages under /stock, scaffolding Next.js page structure with page.tsx, client component, and SCSS module. Includes Redux-Saga integration and shadcn/ui conventions."
+description: "Use when: creating new pages under /stock, scaffolding Next.js page structure with page.tsx, client component, and SCSS module. Includes React Query integration and shadcn/ui conventions."
 ---
 
 # Skill: Next.js 頁面開發
@@ -32,17 +32,21 @@ export default function Page() {
 ```tsx
 "use client"
 
-import { useEffect } from "react"
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux"
-import { PageHeader } from "@/components/commons/page-header"
+import { Loader2 } from "lucide-react"
+import { use<Resource> } from "@/hooks/use-stock-query"
+import { PageHeader } from "@/components/commons/page-header/page-header"
 import styles from "./page.module.scss"
 
 export default function PageClient() {
-  const dispatch = useAppDispatch()
+  const { data, isLoading } = use<Resource>()
 
-  useEffect(() => {
-    dispatch({ type: "GET_<ACTION>", data: {} })
-  }, [dispatch])
+  if (isLoading || !data) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className={styles.container}>
@@ -53,10 +57,9 @@ export default function PageClient() {
 ```
 
 ### 狀態管理
-- Redux action type 命名：`GET_<RESOURCE>`、`SET_<RESOURCE>`
-- Saga 檔案放 `src/redux/saga/<name>.jsx`
-- Reducer 檔案放 `src/redux/reducer/<name>.jsx`
-- API 常數放 `src/redux/api/API.jsx`
+- API 呼叫使用 React Query Hooks（`use-stock-query.ts`、`use-watchlist-query.ts`、`use-analysis-query.ts`）
+- 底層透過 `api-client.ts` 的 `fetchAPI` / `postAPI` / `patchAPI` / `deleteAPI` 呼叫後端
+- 新增 Query Hook 放在 `src/hooks/use-<module>-query.ts`
 
 ### 樣式規則
 - 使用 SCSS Module（`.module.scss`）

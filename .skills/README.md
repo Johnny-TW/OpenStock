@@ -35,7 +35,7 @@ ln -s ~/.agent-skills/prisma-db .skills/prisma-db
 | nextjs-page | `.skills/nextjs-page/` | Next.js 頁面開發模板 |
 | nestjs-module | `.skills/nestjs-module/` | NestJS 模組開發模板 |
 | prisma-db | `.skills/prisma-db/` | Prisma 資料庫操作 |
-| redux-saga | `.skills/redux-saga/` | Redux-Saga 狀態管理 |
+| react-query | `.skills/react-query/` | React Query 狀態管理 |
 | sdd | `.skills/sdd/` | 規格驅動開發流程 |
 | git-worktree | `.skills/git-worktree/` | Git Worktree 並行開發 |
 | commit-pr | `.skills/commit-pr/` | 自動生成 Commit 與 PR |

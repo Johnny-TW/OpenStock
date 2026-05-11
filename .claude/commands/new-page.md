@@ -21,5 +21,5 @@ content.tsx 注意事項：
 - 加上 `'use client'` 指令
 - 使用 useImmer 管理變數
 - 表單使用 react-hook-form
-- API 呼叫透過 Redux dispatch
+- API 呼叫透過 React Query Hooks（use-stock-query / use-watchlist-query / use-analysis-query）
 - UI 元件優先使用 shadcn/ui

@@ -312,9 +312,9 @@ DTO 使用 `class-validator` 裝飾器（`@IsString`, `@IsNumber`, `@Min`, `@IsD
 ```
 前端 (Next.js)
     │
-    │ dispatch({ type: "GET_STOCK_DAILY_ALL" })
+    │ useStockDailyAll() → fetchAPI("stock/daily-all")
     ▼
-Redux-Saga (fetchApi)
+React Query + api-client (axios)
     │
     │ axios.get("/stock/daily-all")
     │ Header: Authorization: Bearer {自簽 JWT}

@@ -6,7 +6,7 @@
 |------|------|------|
 | 框架 | Next.js (App Router) | 15.4.3 |
 | UI 層 | React / React DOM | 19.1.0 |
-| 狀態管理 | @reduxjs/toolkit + redux-saga | 2.11.2 / 1.4.2 |
+| 狀態管理 | @tanstack/react-query | 5.90.21 |
 | 認證 | next-auth (Azure AD) | 4.24.13 |
 | HTTP 客戶端 | axios | 1.13.5 |
 | UI 元件庫 | shadcn/ui (Radix UI) | new-york style |
@@ -52,23 +52,23 @@ frontend/src/
 │   │   └── sidebar/            # 側邊欄（NavMain, NavUser, TeamSwitcher）
 │   └── views/                  # 頁面專屬 View 元件（預留）
 │
-├── redux/
-│   ├── store.jsx               # Redux Store + Saga middleware
-│   ├── types.ts                # RootState / AppDispatch 型別
-│   ├── reducer/                # auth, stock, api reducers
-│   ├── saga/                   # fetchApi 核心 saga + stock watchers
-│   └── api/                    # API 路徑常數 + axios 封裝
+├── hooks/
+│   ├── use-stock-query.ts      # 股票行情、指數、排行榜、新聞 Hooks
+│   ├── use-watchlist-query.ts  # 自選股 CRUD Hooks（含 Toast 回饋）
+│   └── use-analysis-query.ts   # AI 分析 Hooks
+│
+├── lib/
+│   └── api-client.ts           # axios 封裝（fetchAPI / postAPI / patchAPI / deleteAPI）
 │
 ├── providers/
 │   ├── SessionProvider.tsx     # next-auth session wrapper
-│   ├── ReduxProvider.tsx       # Redux Provider
-│   ├── QueryProvider.tsx       # React Query（staleTime: 60s）
-│   ├── AuthSync.tsx            # 同步 next-auth session → Redux
+│   ├── QueryProvider.tsx       # React Query Provider
+│   ├── AuthSync.tsx            # 同步 next-auth session → api-client cachedToken
 │   ├── PermissionGuard.tsx     # 路由權限守衛
 │   └── LoginHandler.tsx        # login() / logout() 函式
 │
 ├── server/auth.jsx             # Azure AD + next-auth 核心設定
-├── hooks/                      # 自訂 Hooks（useAppDispatch, useRouter, useIsMobile）
+├── hooks/                      # 自訂 Hooks（useIsMobile, React Query hooks）
 ├── api/stock.ts                # Next.js server fetch（revalidate: 60s）
 ├── config/constants.ts         # 業務常數（SUCCESS: 1, ERROR: 0）
 ├── constants/azure.ts          # Azure AD 登出 URL
@@ -93,7 +93,7 @@ src/app/[feature]/
 └── page.module.scss    # 頁面專屬樣式
 ```
 
-範例：`/stock/page.tsx` → import `StockClient` → dispatch `GET_STOCK_DAILY_ALL` → 渲染 `<StockDataTable />`
+範例：`/stock/page.tsx` → import `StockClient` → `useStockDailyAll()` → 渲染 `<StockDataTable />`
 
 ---
 
@@ -102,12 +102,11 @@ src/app/[feature]/
 ```
 SessionProvider (next-auth)
   → QueryProvider (React Query)
-    → ReduxProvider (Redux)
-      → AuthSync (session → Redux 同步)
-        → DialogProvider (全域對話框)
-          → PermissionGuard (路由保護)
-            → SidebarProvider
-              → [ Sidebar + Header + Main + Footer ]
+    → AuthSync (session → api-client token 同步)
+      → DialogProvider (Toaster 通知)
+        → PermissionGuard (路由保護)
+          → SidebarProvider
+            → [ Sidebar + Header + Main + Footer ]
 ```
 
 ---
@@ -156,12 +155,12 @@ SessionProvider (next-auth)
 │                   │                   │
 │                   ▼                   ▼
 │                ④ 用 JWT_SECRET       ⑤ 監聽 session
-│                  自簽新 JWT            同步到 Redux
-│                  （含 user 資訊）       dispatch AUTH_RESULT
+│                  自簽新 JWT            呼叫 setAccessToken()
+│                  （含 user 資訊）       快取至 api-client 模組
 │                  expiresIn: 3h        │
 │                   │                   ▼
-│                   ▼                Redux saga 送 API 時
-│               session.accessToken   附帶 Authorization:
+│                   ▼                api-client axios 攔截器
+│               session.accessToken   自動附帶 Authorization:
 │               = 自簽 JWT            Bearer {自簽 JWT}
 │                                      │
 ▼                                      ▼
@@ -187,35 +186,43 @@ Azure AD token                      驗證 → 取得 user
 
 ---
 
-## 狀態管理：Redux + Redux-Saga
+## 狀態管理：React Query（TanStack Query）
 
-### Reducer 一覽
+### Hook 檔案一覽
 
-| Reducer | State | 對應 Actions |
-|---------|-------|-------------|
-| auth | `session`, `token`, `user` | `AUTH_RESULT`, `LOGOUT` |
-| stock | `dailyAll`, `valuation`, `marketIndex`, `topVolume`, `intraday`, `indexHistory` | `SET_STOCK_*` |
-| api | `loading`, `loadingStack`, `error`, `success`, `deleted` | `SET_LOADING`, `SET_API_ERROR`, `SET_API_SUCCESS` |
+| 檔案 | 用途 | 主要 Hooks |
+|------|------|------------|
+| `use-stock-query.ts` | 股票行情、指數、排行榜、新聞 | `useStockDailyAll`, `useStockValuation`, `useMarketIndex`, `useAllNews` 等 |
+| `use-watchlist-query.ts` | 自選股 CRUD | `useWatchlist`, `useAddWatchlist`, `useRemoveWatchlist`, `useUpdateWatchlistGroup` |
+| `use-analysis-query.ts` | AI 分析 | `useCachedAnalysis`, `useAnalyzeMarket` |
 
 ### API 呼叫流程
 
 ```
-元件 dispatch({ type: "GET_STOCK_DAILY_ALL" })
-    ↓ (Redux-Saga 攔截)
-fetchApi({ method: GET, path: "stock/daily-all", reducer: "SET_STOCK_DAILY_ALL" })
-    ↓ (apiService.jsx / axios)
-axios.get("stock/daily-all", { headers: { Authorization: Bearer {token} } })
+元件呼叫 useStockDailyAll()
+    ↓ (React Query)
+fetchAPI<StockDailyAllResponse>("stock/daily-all")
+    ↓ (api-client.ts / axios)
+axios.get("stock/daily-all", { headers: { Authorization: Bearer {cachedToken} } })
     ↓
-Reducer: SET_STOCK_DAILY_ALL → 更新 state.stock.dailyAll
+自動解包 { success, data } → 回傳 data
+React Query 管理快取、重新取得、loading/error 狀態
 ```
 
-### 錯誤處理策略
+### API Client（api-client.ts）
 
-| HTTP 狀態碼 | 處理方式 |
-|------------|---------|
-| 401 | 觸發重新登入 |
-| 502 / 400 | 清除 cookie + 重新載入頁面 |
-| 其他 | 顯示錯誤訊息 |
+| 函式 | HTTP Method | 說明 |
+|------|-------------|------|
+| `fetchAPI<T>(path, params?)` | GET | 取得資料，自動解包回應 |
+| `postAPI<T>(path, body?)` | POST | 新增資料 |
+| `patchAPI<T>(path, body?)` | PATCH | 更新資料 |
+| `deleteAPI<T>(path)` | DELETE | 刪除資料 |
+
+### Mutation 回饋
+
+自選股操作（新增/移除/更新群組）使用 `useMutation` 搭配 `sonner` Toast 通知：
+- 成功時自動 `invalidateQueries(["watchlist"])` 重新取得清單
+- 失敗時顯示錯誤 Toast
 
 ---
 
@@ -238,7 +245,6 @@ Reducer: SET_STOCK_DAILY_ALL → 更新 state.stock.dailyAll
   "@/*": ["./src/*"],
   "@components/*": ["./src/components/*"],
   "@config/*": ["./src/config/*"],
-  "@redux/*": ["./src/redux/*"],
   "@providers/*": ["./src/providers/*"],
   "@hooks/*": ["./src/hooks/*"],
   "@server/*": ["./src/server/*"],

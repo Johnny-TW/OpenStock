@@ -5,7 +5,7 @@
 - React 19 + Next.js 15 + TypeScript
 - 樣式：SCSS 優先，Tailwind CSS 輔助
 - UI 元件庫：shadcn/ui
-- 狀態管理：Redux Toolkit + Redux-Saga
+- 狀態管理：TanStack React Query
 - 表單：react-hook-form
 - 資料表格：TanStack React Table
 - 變數管理：useImmer
@@ -31,5 +31,6 @@
 
 ## API 呼叫
 
-- 使用專案既有的 Redux + Saga 模式
+- 使用 React Query Hooks（`use-stock-query.ts`、`use-watchlist-query.ts`、`use-analysis-query.ts`）
+- 底層透過 `api-client.ts` 的 `fetchAPI` / `postAPI` / `patchAPI` / `deleteAPI` 呼叫後端
 - 呼叫後端 API 時帶 `Authorization: Bearer <token>`

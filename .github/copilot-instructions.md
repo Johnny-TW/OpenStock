@@ -61,7 +61,7 @@ applyTo: "**"
 - 優先使用 scss 進行樣式設計。
 - 主要元件使用 shadcn ui 庫。
 - 遵循 Biome 規則（根目錄 `biome.json`），確保程式碼一致性。
-- API 呼叫使用目前專案 Redux 用法。
+- API 呼叫使用 React Query Hooks（`use-stock-query.ts`、`use-watchlist-query.ts`、`use-analysis-query.ts`）。
 - 認證使用 NextAuth（next-auth）搭配 Azure AD Provider，session 策略為 JWT。
 - 前端在 session callback 用 `JWT_SECRET` 自簽 JWT（3h），呼叫後端 API 時帶 `Authorization: Bearer <token>`。
 - 新開發頁面都會在 /stock 下建立資料夾。
