@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/commons/alert-dialog";
 import { Button } from "@/components/commons/button";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useStockDetail } from "@/hooks/use-stock-query";
 import type { StockDetailDto } from "@/type/stock";
 import styles from "./page.module.scss";
 
@@ -94,22 +94,10 @@ interface StockDetailClientProps {
 }
 
 export default function StockDetailClient({ symbol }: StockDetailClientProps) {
-  const dispatch = useAppDispatch();
   const router = useRouter();
-  const stockDetail = useAppSelector(
-    (state) => state.stock?.stockDetail,
-  ) as StockDetailResponse | null;
-  const stockDetailLoaded = useAppSelector((state) => state.stock?.stockDetailLoaded ?? false);
+  const { data: stockDetail, isLoading: stockDetailLoading } = useStockDetail(symbol);
+  const stockDetailLoaded = !stockDetailLoading;
   const [alertOpen, setAlertOpen] = useState(false);
-
-  useEffect(() => {
-    setAlertOpen(false);
-    dispatch({ type: "CLEAR_STOCK_DETAIL" });
-    dispatch({ type: "GET_STOCK_DETAIL", symbol });
-    return () => {
-      dispatch({ type: "CLEAR_STOCK_DETAIL" });
-    };
-  }, [dispatch, symbol]);
 
   const rawDetail: StockDetailDto | null = stockDetail?.data ?? null;
   const detail: StockDetailDto | null = rawDetail && rawDetail.symbol === symbol ? rawDetail : null;
@@ -120,9 +108,8 @@ export default function StockDetailClient({ symbol }: StockDetailClientProps) {
   useEffect(() => {
     if (isNotFound) {
       setAlertOpen(true);
-      dispatch({ type: "CLEAR_API_ERROR" });
     }
-  }, [isNotFound, dispatch]);
+  }, [isNotFound]);
 
   return (
     <div className={styles.detailPage}>
@@ -250,66 +237,65 @@ export default function StockDetailClient({ symbol }: StockDetailClientProps) {
           </div>
 
           <div className={styles.rightCol}>
-            <div className={styles.infoSection}>
-              <div className={styles.sectionTitle}>基本面數據</div>
-              <div className={styles.metricGrid}>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>市值</span>
-                  <span className={styles.metricValue}>{formatNumber(detail.marketCap)}</span>
+            <div className={styles.infoCard}>
+              <div className={styles.cardHeader}>
+                <TrendingUp className="size-4" />
+                基本面數據
+              </div>
+              <div className={styles.cardBody}>
+                <div className={styles.infoRow}>
+                  <span>市值</span>
+                  <span>{formatNumber(detail.marketCap)}</span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>本益比 P/E</span>
-                  <span className={styles.metricValue}>
-                    {detail.peRatio ? `${detail.peRatio.toFixed(1)}x` : "-"}
-                  </span>
+                <div className={styles.infoRow}>
+                  <span>本益比 P/E</span>
+                  <span>{detail.peRatio ? `${detail.peRatio.toFixed(1)}x` : "-"}</span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>預估本益比</span>
-                  <span className={styles.metricValue}>
-                    {detail.forwardPE ? `${detail.forwardPE.toFixed(1)}x` : "-"}
-                  </span>
+                <div className={styles.infoRow}>
+                  <span>預估本益比</span>
+                  <span>{detail.forwardPE ? `${detail.forwardPE.toFixed(1)}x` : "-"}</span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>EPS</span>
-                  <span className={styles.metricValue}>{formatPrice(detail.eps)}</span>
+                <div className={styles.infoRow}>
+                  <span>EPS</span>
+                  <span>{formatPrice(detail.eps)}</span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>殖息率</span>
-                  <span className={styles.metricValue}>
-                    {detail.dividendYield ? `${detail.dividendYield.toFixed(2)}%` : "-"}
-                  </span>
+                <div className={styles.infoRow}>
+                  <span>殖息率</span>
+                  <span>{detail.dividendYield ? `${detail.dividendYield.toFixed(2)}%` : "-"}</span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>市淨率 P/B</span>
-                  <span className={styles.metricValue}>
-                    {detail.pbRatio ? `${detail.pbRatio.toFixed(1)}x` : "-"}
-                  </span>
+                <div className={styles.infoRow}>
+                  <span>市淨率 P/B</span>
+                  <span>{detail.pbRatio ? `${detail.pbRatio.toFixed(1)}x` : "-"}</span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>ROE</span>
-                  <span
-                    className={`${styles.metricValue} ${detail.returnOnEquity > 0.15 ? styles.highlight : ""}`}
-                  >
+                <div className={styles.infoRow}>
+                  <span>ROE</span>
+                  <span className={detail.returnOnEquity > 0.15 ? styles.highlight : ""}>
                     {formatPercent(detail.returnOnEquity)}
                   </span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>毛利率</span>
-                  <span className={styles.metricValue}>{formatPercent(detail.grossMargins)}</span>
+                <div className={styles.infoRow}>
+                  <span>毛利率</span>
+                  <span>{formatPercent(detail.grossMargins)}</span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>營收年增</span>
+                <div className={styles.infoRow}>
+                  <span>營收年增</span>
                   <span
-                    className={`${styles.metricValue} ${detail.revenueGrowth > 0 ? styles.up : detail.revenueGrowth < 0 ? styles.down : ""}`}
+                    className={
+                      detail.revenueGrowth > 0
+                        ? styles.up
+                        : detail.revenueGrowth < 0
+                          ? styles.down
+                          : ""
+                    }
                   >
                     {detail.revenueGrowth
                       ? `${detail.revenueGrowth > 0 ? "+" : ""}${(detail.revenueGrowth * 100).toFixed(1)}%`
                       : "-"}
                   </span>
                 </div>
-                <div className={styles.metricCell}>
-                  <span className={styles.metricLabel}>Beta</span>
-                  <span className={styles.metricValue}>{formatRatio(detail.beta)}</span>
+                <div className={styles.infoRow}>
+                  <span>Beta</span>
+                  <span>{formatRatio(detail.beta)}</span>
                 </div>
               </div>
             </div>
@@ -452,8 +438,4 @@ export default function StockDetailClient({ symbol }: StockDetailClientProps) {
       )}
     </div>
   );
-}
-
-interface StockDetailResponse {
-  data: StockDetailDto;
 }

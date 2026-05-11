@@ -12,7 +12,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Loader2, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -54,7 +54,12 @@ import {
 } from "@/components/commons/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs";
 import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import {
+  useIndexHistory,
+  useIntraday,
+  useMarketIndex,
+  useStockDailyAll,
+} from "@/hooks/use-stock-query";
 import type { IndexHistoryDto, IntradayTickDto, MarketIndexDto } from "@/type/stock";
 
 // 圖表配置：定義不同圖表類型的顏色和標籤
@@ -364,11 +369,10 @@ function HistoryChartSection({ list }: { list: IndexHistoryDto[] }) {
 
 // 這是
 export default function MarketOverviewClient() {
-  const dispatch = useAppDispatch();
-  const marketIndex = useAppSelector((state) => state.stock?.marketIndex);
-  const intraday = useAppSelector((state) => state.stock?.intraday);
-  const indexHistory = useAppSelector((state) => state.stock?.indexHistory);
-  const dailyAll = useAppSelector((state) => state.stock?.dailyAll);
+  const { data: marketIndex } = useMarketIndex();
+  const { data: intraday } = useIntraday();
+  const { data: indexHistory } = useIndexHistory();
+  const { data: dailyAll } = useStockDailyAll();
 
   const [indexSorting, setIndexSorting] = useState<SortingState>([
     { id: "closingIndex", desc: true },
@@ -377,17 +381,6 @@ export default function MarketOverviewClient() {
   const [indexFilter, setIndexFilter] = useState("");
   const [historyFilter, setHistoryFilter] = useState("");
   const [chartView, setChartView] = useState("intraday");
-  const fetchedRef = useRef(false);
-
-  useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
-      if (!marketIndex) dispatch({ type: "GET_STOCK_MARKET_INDEX" });
-      if (!intraday) dispatch({ type: "GET_STOCK_INTRADAY" });
-      if (!indexHistory) dispatch({ type: "GET_STOCK_INDEX_HISTORY" });
-      if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" });
-    }
-  }, [dispatch, marketIndex, intraday, indexHistory, dailyAll]);
 
   const intradayList: IntradayTickDto[] = useMemo(() => {
     const d = intraday?.data;

@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useStockHistory } from "@/hooks/use-stock-query";
 import type { StockHistoryPointDto, StockHistoryResponse } from "@/type/stock";
 import styles from "./lightweight-chart.module.scss";
 
@@ -148,7 +148,6 @@ function macd(closes: number[]) {
 }
 
 export function LightweightChart({ symbol, stockName }: LightweightChartProps) {
-  const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -168,20 +167,10 @@ export function LightweightChart({ symbol, stockName }: LightweightChartProps) {
   );
   const [hover, setHover] = useState<OHLCInfo | null>(null);
 
-  const historyData = useAppSelector(
-    (state) => state.stock?.stockHistory,
-  ) as StockHistoryResponse | null;
-
-  useEffect(() => {
-    dispatch({ type: "CLEAR_STOCK_HISTORY" });
-    dispatch({ type: "GET_STOCK_HISTORY", symbol, period: activePeriod });
-  }, [dispatch, symbol, activePeriod]);
-
-  useEffect(() => {
-    return () => {
-      dispatch({ type: "CLEAR_STOCK_HISTORY" });
-    };
-  }, [dispatch]);
+  const { data: historyData, refetch } = useStockHistory(symbol, activePeriod) as {
+    data: StockHistoryResponse | undefined;
+    refetch: () => void;
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -505,8 +494,7 @@ export function LightweightChart({ symbol, stockName }: LightweightChartProps) {
   };
 
   const handleReload = () => {
-    dispatch({ type: "CLEAR_STOCK_HISTORY" });
-    dispatch({ type: "GET_STOCK_HISTORY", symbol, period: activePeriod });
+    refetch();
   };
 
   const isLoading = !historyData || historyData.symbol !== symbol;

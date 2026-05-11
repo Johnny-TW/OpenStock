@@ -2,7 +2,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { toast } from "sonner";
+import { setAccessToken } from "@/lib/api-client";
 
 interface ExtendedSession {
   accessToken?: string;
@@ -10,23 +11,21 @@ interface ExtendedSession {
   user?: Record<string, unknown>;
 }
 
-//  AuthSync - 同步 NextAuth session 到 Redux store
-//  這個組件只負責同步認證狀態,不包含 UI
-
 const AuthSync = () => {
-  const dispatch = useDispatch();
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const extSession = session as ExtendedSession | null;
 
   useEffect(() => {
-    // 載入中,不處理
+    setAccessToken(extSession?.accessToken ?? null);
+  }, [extSession?.accessToken]);
+
+  useEffect(() => {
     if (status === "loading" || pathname === "/forbidden") return;
 
     const isPublic = pathname.startsWith("/login") || pathname.startsWith("/auth");
 
-    // 未認證：公開頁面不處理，其他頁面導向 /login 讓使用者選擇登入方式
     if (status === "unauthenticated" || !extSession?.accessToken) {
       if (!isPublic) {
         router.push("/login");
@@ -34,26 +33,11 @@ const AuthSync = () => {
       return;
     }
 
-    // 同步 session 到 Redux
-    dispatch({
-      type: "AUTH_RESULT",
-      data: { session: extSession },
-    });
-
-    // 處理登入錯誤
     if (extSession?.error) {
-      dispatch({
-        type: "SET_API_ERROR",
-        data: {
-          message: extSession.error,
-          action: () => {
-            signOut();
-            dispatch({ type: "LOGOUT" });
-          },
-        },
-      });
+      toast.error(extSession.error);
+      signOut();
     }
-  }, [status, dispatch, pathname, extSession, router.push]);
+  }, [status, pathname, extSession, router]);
 
   return null;
 };

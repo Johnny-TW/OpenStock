@@ -87,7 +87,11 @@ import {
 } from "@/components/commons/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs";
 import { parseNumber } from "@/components/data-table/shared";
-import { useAppDispatch } from "@/hooks/use-redux";
+import {
+  useAddWatchlist,
+  useRemoveWatchlist,
+  useUpdateWatchlistGroup,
+} from "@/hooks/use-watchlist-query";
 import type { StockDailyDto, WatchlistItem } from "@/type/stock";
 
 function getChangeColor(change: string): string {
@@ -111,12 +115,14 @@ export type StockRow = StockDailyDto & { _rowId: number };
 const WatchlistButton = React.memo(function WatchlistButton({
   item,
   watchlist,
-  dispatch,
+  onAdd,
+  onRemove,
   userId,
 }: {
   item: StockRow;
   watchlist: WatchlistItem[];
-  dispatch: ReturnType<typeof useAppDispatch>;
+  onAdd: (data: { userId: string; stockNo: string; stockName: string; groupName: string }) => void;
+  onRemove: (params: { id: number; userId: string }) => void;
   userId: string;
 }) {
   const watchlistItem = watchlist.find((w) => w.stockNo === item.code);
@@ -135,7 +141,7 @@ const WatchlistButton = React.memo(function WatchlistButton({
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation();
     if (isInWatchlist && watchlistItem) {
-      dispatch({ type: "REMOVE_WATCHLIST", id: watchlistItem.id, userId });
+      onRemove({ id: watchlistItem.id, userId });
     } else {
       const defaultGroup = allGroupNames[0] ?? "未分類";
       setSelectedGroup(defaultGroup);
@@ -147,10 +153,7 @@ const WatchlistButton = React.memo(function WatchlistButton({
 
   function handleConfirm() {
     const groupName = isCreatingNew ? newGroupName.trim() || "未分類" : selectedGroup;
-    dispatch({
-      type: "ADD_WATCHLIST",
-      data: { userId, stockNo: item.code, stockName: item.name, groupName },
-    });
+    onAdd({ userId, stockNo: item.code, stockName: item.name, groupName });
     setDialogOpen(false);
   }
 
@@ -228,13 +231,13 @@ const WatchlistButton = React.memo(function WatchlistButton({
 function WatchlistGroupSelect({
   currentGroup,
   watchlistItem,
-  dispatch,
+  onUpdateGroup,
   userId,
   allGroupNames,
 }: {
   currentGroup: string;
   watchlistItem: WatchlistItem;
-  dispatch: ReturnType<typeof useAppDispatch>;
+  onUpdateGroup: (params: { id: number; userId: string; groupName: string }) => void;
   userId: string;
   allGroupNames: string[];
 }) {
@@ -247,8 +250,7 @@ function WatchlistGroupSelect({
       setNewName("");
       return;
     }
-    dispatch({
-      type: "UPDATE_WATCHLIST_GROUP",
+    onUpdateGroup({
       id: watchlistItem.id,
       groupName: value,
       userId,
@@ -258,8 +260,7 @@ function WatchlistGroupSelect({
   function handleNewGroupSubmit() {
     const name = newName.trim();
     if (!name) return;
-    dispatch({
-      type: "UPDATE_WATCHLIST_GROUP",
+    onUpdateGroup({
       id: watchlistItem.id,
       groupName: name,
       userId,
@@ -387,14 +388,16 @@ const WATCHLIST_COLUMNS: { key: WatchlistSortKey; label: string; className?: str
 function WatchlistGroupSection({
   groupName,
   items,
-  dispatch,
+  onRemove,
+  onUpdateGroup,
   userId,
   allGroupNames,
   columnVisibility,
 }: {
   groupName: string;
   items: GroupedItem[];
-  dispatch: ReturnType<typeof useAppDispatch>;
+  onRemove: (params: { id: number; userId: string }) => void;
+  onUpdateGroup: (params: { id: number; userId: string; groupName: string }) => void;
   userId: string;
   allGroupNames: string[];
   columnVisibility: VisibilityState;
@@ -497,7 +500,7 @@ function WatchlistGroupSection({
               <TableRow key={stock.code}>
                 <TableCell>
                   <button
-                    onClick={() => dispatch({ type: "REMOVE_WATCHLIST", id: wItem.id, userId })}
+                    onClick={() => onRemove({ id: wItem.id, userId })}
                     className="flex items-center justify-center size-7 rounded hover:bg-muted transition-colors text-red-500 hover:text-red-600"
                   >
                     <IconHeartFilled className="size-4" />
@@ -515,7 +518,7 @@ function WatchlistGroupSection({
                   <WatchlistGroupSelect
                     currentGroup={groupName}
                     watchlistItem={wItem}
-                    dispatch={dispatch}
+                    onUpdateGroup={onUpdateGroup}
                     userId={userId}
                     allGroupNames={allGroupNames}
                   />
@@ -735,7 +738,30 @@ export function StockDataTable({
   watchlist: WatchlistItem[];
   userId: string;
 }) {
-  const dispatch = useAppDispatch();
+  const addWatchlist = useAddWatchlist();
+  const removeWatchlist = useRemoveWatchlist();
+  const updateWatchlistGroup = useUpdateWatchlistGroup();
+
+  const handleAdd = React.useCallback(
+    (data: { userId: string; stockNo: string; stockName: string; groupName: string }) => {
+      addWatchlist.mutate(data);
+    },
+    [addWatchlist],
+  );
+
+  const handleRemove = React.useCallback(
+    (params: { id: number; userId: string }) => {
+      removeWatchlist.mutate(params);
+    },
+    [removeWatchlist],
+  );
+
+  const handleUpdateGroup = React.useCallback(
+    (params: { id: number; userId: string; groupName: string }) => {
+      updateWatchlistGroup.mutate(params);
+    },
+    [updateWatchlistGroup],
+  );
 
   // 加上 _rowId 供拖曳排序使用
   const [data, setData] = React.useState<StockRow[]>(() =>
@@ -808,7 +834,8 @@ export function StockDataTable({
           <WatchlistButton
             item={row.original}
             watchlist={watchlist}
-            dispatch={dispatch}
+            onAdd={handleAdd}
+            onRemove={handleRemove}
             userId={userId}
           />
         ),
@@ -817,7 +844,7 @@ export function StockDataTable({
       },
       ...columns,
     ],
-    [watchlist, userId, dispatch],
+    [watchlist, userId, handleAdd, handleRemove],
   );
 
   const sortableId = React.useId();
@@ -1141,7 +1168,8 @@ export function StockDataTable({
                     key={groupName}
                     groupName={groupName}
                     items={items}
-                    dispatch={dispatch}
+                    onRemove={handleRemove}
+                    onUpdateGroup={handleUpdateGroup}
                     userId={userId}
                     allGroupNames={Object.keys(groupedDisplayData)}
                     columnVisibility={columnVisibility}

@@ -2,11 +2,11 @@
 
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Newspaper } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/commons/badge";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { Tabs, TabsList, TabsTrigger } from "@/components/commons/tabs";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useAllNews } from "@/hooks/use-stock-query";
 import type { NewsDto } from "@/type/stock";
 import styles from "./page.module.scss";
 
@@ -22,19 +22,10 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 export default function NewsClient() {
-  const dispatch = useAppDispatch();
-  const allNews = useAppSelector((state) => state.news?.allNews ?? null);
+  const { data: allNews, isLoading } = useAllNews();
   const [activeTab, setActiveTab] = useState<TabKey>("twStock");
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const fetchedRef = useRef(false);
-
-  useEffect(() => {
-    if (!fetchedRef.current && !allNews) {
-      fetchedRef.current = true;
-      dispatch({ type: "GET_ALL_NEWS" });
-    }
-  }, [dispatch, allNews]);
 
   const currentList: NewsDto[] = useMemo(() => {
     if (!allNews) return [];
@@ -59,7 +50,7 @@ export default function NewsClient() {
     setCurrentPage(1);
   }, []);
 
-  if (!allNews) {
+  if (isLoading || !allNews) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

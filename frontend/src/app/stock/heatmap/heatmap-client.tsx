@@ -7,7 +7,7 @@ import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from "re
 import { type ChartConfig, ChartContainer } from "@/components/commons/chart";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useHeatmap } from "@/hooks/use-stock-query";
 import type { HeatmapIndustryDto } from "@/type/stock";
 import styles from "./page.module.scss";
 
@@ -309,8 +309,6 @@ function IndustryFilter({
 }
 
 export default function HeatmapClient() {
-  const dispatch = useAppDispatch();
-  const heatmapData = useAppSelector((state) => state.heatmap?.data);
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [topN, setTopN] = useState(15);
@@ -322,10 +320,7 @@ export default function HeatmapClient() {
   } | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [period, setPeriod] = useState("1d");
-
-  useEffect(() => {
-    dispatch({ type: "GET_HEATMAP", data: period });
-  }, [dispatch, period]);
+  const { data: heatmapData } = useHeatmap(period);
 
   const industries: HeatmapIndustryDto[] = useMemo(() => {
     if (!heatmapData?.data) return [];

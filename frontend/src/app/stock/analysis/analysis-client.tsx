@@ -11,13 +11,14 @@ import {
   TrendingUp,
   Trophy,
 } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/commons/badge";
 import { Button } from "@/components/commons/button";
 import { Checkbox } from "@/components/commons/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/dialog";
 import { PageHeader } from "@/components/commons/page-header/page-header";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useAnalyzeMarket, useCachedAnalysis } from "@/hooks/use-analysis-query";
+import { useWatchlist } from "@/hooks/use-watchlist-query";
 
 interface Scores {
   fundamental: number;
@@ -53,6 +54,7 @@ interface TechnicalIndicators {
   low20: number;
   trend: string;
   recentCloses: number[];
+  recentDates?: string[];
 }
 
 interface TopPick {
@@ -176,31 +178,148 @@ const ScoreBar = React.memo(function ScoreBar({ label, score }: { label: string;
   );
 });
 
-const MiniLineChart = React.memo(function MiniLineChart({ data }: { data: number[] }) {
+const MiniLineChart = React.memo(function MiniLineChart({
+  data,
+  dates,
+}: {
+  data: number[];
+  dates?: string[];
+}) {
+  const [hover, setHover] = useState<number | null>(null);
   if (!data || data.length < 2) return null;
-  const w = 560;
-  const h = 160;
-  const pad = { top: 10, right: 10, bottom: 10, left: 10 };
+
+  const w = 640;
+  const h = 220;
+  const pad = { top: 12, right: 16, bottom: 28, left: 44 };
   const iw = w - pad.left - pad.right;
   const ih = h - pad.top - pad.bottom;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const points = data.map((v, i) => {
-    const x = pad.left + (i / (data.length - 1)) * iw;
-    const y = pad.top + ih - ((v - min) / range) * ih;
-    return `${x},${y}`;
-  });
+
+  const xAt = (i: number) => pad.left + (i / (data.length - 1)) * iw;
+  const yAt = (v: number) => pad.top + ih - ((v - min) / range) * ih;
+
+  const points = data.map((v, i) => `${xAt(i)},${yAt(v)}`);
   const isUp = data[data.length - 1] >= data[0];
   const stroke = isUp ? "#ef4444" : "#22c55e";
-  const fill = isUp ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)";
-  const areaPath = `M${points[0]} ${points.join(" L")} L${pad.left + iw},${pad.top + ih} L${pad.left},${pad.top + ih} Z`;
+  const fill = isUp ? "rgba(239,68,68,0.10)" : "rgba(34,197,94,0.10)";
+  const areaPath = `M${points[0]} L${points.join(" L")} L${pad.left + iw},${pad.top + ih} L${pad.left},${pad.top + ih} Z`;
+
+  // Y 軸刻度（5 等分）
+  const yTicks = Array.from({ length: 5 }, (_, i) => min + (range * i) / 4);
+
+  // X 軸標記：以月份交替點為主，沒有 dates 則退化為等分索引
+  type XLabel = { x: number; text: string };
+  const xLabels: XLabel[] = [];
+  if (dates && dates.length === data.length) {
+    let lastMonth = "";
+    dates.forEach((d, i) => {
+      const m = d.slice(0, 7); // YYYY-MM
+      if (m !== lastMonth) {
+        xLabels.push({ x: xAt(i), text: d.slice(5, 10) }); // MM-DD
+        lastMonth = m;
+      }
+    });
+  } else {
+    const step = Math.max(1, Math.floor(data.length / 5));
+    for (let i = 0; i < data.length; i += step) {
+      xLabels.push({ x: xAt(i), text: String(i + 1) });
+    }
+  }
+
+  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * w;
+    const idx = Math.round(((px - pad.left) / iw) * (data.length - 1));
+    if (idx >= 0 && idx < data.length) setHover(idx);
+    else setHover(null);
+  };
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 160 }}>
-      <path d={areaPath} fill={fill} />
-      <polyline points={points.join(" ")} fill="none" stroke={stroke} strokeWidth="2" />
-    </svg>
+    <div className="relative">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="w-full"
+        style={{ height: 220 }}
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        {/* Y 軸虛線 + 價格標記 */}
+        {yTicks.map((v) => (
+          <g key={v}>
+            <line
+              x1={pad.left}
+              x2={pad.left + iw}
+              y1={yAt(v)}
+              y2={yAt(v)}
+              stroke="currentColor"
+              strokeOpacity={0.08}
+              strokeDasharray="3 3"
+            />
+            <text
+              x={pad.left - 6}
+              y={yAt(v)}
+              textAnchor="end"
+              dominantBaseline="middle"
+              fontSize={10}
+              fill="currentColor"
+              opacity={0.55}
+            >
+              {v.toFixed(2)}
+            </text>
+          </g>
+        ))}
+
+        {/* 面積 + 折線 */}
+        <path d={areaPath} fill={fill} />
+        <polyline points={points.join(" ")} fill="none" stroke={stroke} strokeWidth={1.8} />
+
+        {/* X 軸標記 */}
+        {xLabels.map((l) => (
+          <text
+            key={l.x}
+            x={l.x}
+            y={h - 8}
+            textAnchor="middle"
+            fontSize={10}
+            fill="currentColor"
+            opacity={0.55}
+          >
+            {l.text}
+          </text>
+        ))}
+
+        {/* Hover 十字線 + 點 */}
+        {hover !== null && (
+          <g pointerEvents="none">
+            <line
+              x1={xAt(hover)}
+              x2={xAt(hover)}
+              y1={pad.top}
+              y2={pad.top + ih}
+              stroke={stroke}
+              strokeOpacity={0.45}
+              strokeDasharray="3 3"
+            />
+            <circle cx={xAt(hover)} cy={yAt(data[hover])} r={3.5} fill={stroke} />
+          </g>
+        )}
+      </svg>
+
+      {hover !== null && (
+        <div
+          className="absolute pointer-events-none rounded border bg-popover text-popover-foreground px-2 py-1 text-[11px] shadow"
+          style={{
+            left: `calc(${(xAt(hover) / w) * 100}% + 8px)`,
+            top: 8,
+          }}
+        >
+          <div className="text-muted-foreground">{dates?.[hover] ?? `第 ${hover + 1} 筆`}</div>
+          <div className="font-mono font-semibold">{data[hover].toFixed(2)}</div>
+        </div>
+      )}
+    </div>
   );
 });
 
@@ -275,7 +394,7 @@ function StockDetailDialog({
             <div className="border rounded-lg overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
                 <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  日線走勢（近 {closes.length} 日）
+                  日線走勢（近一個月）
                 </span>
                 <div className="flex items-center gap-2">
                   <span
@@ -291,7 +410,7 @@ function StockDetailDialog({
                   </span>
                 </div>
               </div>
-              <MiniLineChart data={closes} />
+              <MiniLineChart data={closes} dates={pick.indicators?.recentDates} />
             </div>
           )}
 
@@ -493,30 +612,19 @@ const StockRankCard = React.memo(function StockRankCard({
 });
 
 export default function AnalysisClient() {
-  const dispatch = useAppDispatch();
-  const result = useAppSelector((state) => state.analysis?.result ?? null) as AnalysisResult | null;
-  const loading = useAppSelector((state) => {
-    const loadingStack = state.api?.loadingStack ?? [];
-    return loadingStack.some((item) => item.path?.startsWith("analysis") && item.loading);
-  });
+  const { data: result } = useCachedAnalysis() as { data: AnalysisResult | null | undefined };
+  const { data: watchlist = [] } = useWatchlist();
+  const analyzeMarket = useAnalyzeMarket();
+  const loading = analyzeMarket.isPending;
   const [watchlistOnly, setWatchlistOnly] = useState(false);
-  const watchlist = useAppSelector((state) => state.watchlist?.list ?? []);
-  const fetchedRef = useRef(false);
 
   const handleAnalyze = useCallback(() => {
     const data =
       watchlistOnly && watchlist.length > 0
         ? { stockCodes: watchlist.map((w: any) => w.stockNo) }
         : {};
-    dispatch({ type: "ANALYZE_MARKET", data });
-  }, [watchlistOnly, watchlist, dispatch]);
-
-  useEffect(() => {
-    if (!fetchedRef.current && !result) {
-      fetchedRef.current = true;
-      dispatch({ type: "GET_CACHED_ANALYSIS" });
-    }
-  }, [dispatch, result]);
+    analyzeMarket.mutate(data);
+  }, [watchlistOnly, watchlist, analyzeMarket]);
 
   const sortedPicks = useMemo(() => {
     if (!result?.topPicks) return [];

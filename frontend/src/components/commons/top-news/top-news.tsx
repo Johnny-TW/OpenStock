@@ -3,14 +3,14 @@
 import { ArrowRight, ExternalLink, Flame } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useAppSelector } from "@/hooks/use-redux";
+import { useAllNews } from "@/hooks/use-stock-query";
 import type { NewsDto } from "@/type/stock";
 import styles from "./top-news.module.scss";
 
 const TOP_COUNT = 5;
 
 export function TopNews() {
-  const allNews = useAppSelector((state) => state.news?.allNews ?? null);
+  const { data: allNews } = useAllNews();
 
   const topList: NewsDto[] = useMemo(() => {
     if (!allNews) return [];

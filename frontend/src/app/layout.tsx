@@ -9,7 +9,6 @@ import AuthLayout from "@/components/layouts/AuthLayout";
 import AuthSync from "@/providers/AuthSync";
 import PermissionGuard from "@/providers/PermissionGuard";
 import QueryProvider from "@/providers/QueryProvider";
-import ReduxProvider from "@/providers/ReduxProvider";
 import SessionProvider from "@/providers/SessionProvider";
 
 const geistSans = Geist({
@@ -57,14 +56,12 @@ export default function RootLayout({
       >
         <SessionProvider>
           <QueryProvider>
-            <ReduxProvider>
-              <AuthSync />
-              <DialogProvider>
-                <PermissionGuard>
-                  <AuthLayout>{children}</AuthLayout>
-                </PermissionGuard>
-              </DialogProvider>
-            </ReduxProvider>
+            <AuthSync />
+            <DialogProvider>
+              <PermissionGuard>
+                <AuthLayout>{children}</AuthLayout>
+              </PermissionGuard>
+            </DialogProvider>
           </QueryProvider>
         </SessionProvider>
       </body>

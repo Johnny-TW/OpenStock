@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/commons/badge";
 import {
   Card,
@@ -12,7 +12,7 @@ import {
 } from "@/components/commons/card";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { StockValuationTable } from "@/components/data-table/stock/valuation-table";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useStockValuation } from "@/hooks/use-stock-query";
 
 function parseNum(val: string): number {
   return parseFloat(val?.replace(/,/g, "") || "0") || 0;
@@ -28,17 +28,8 @@ const QUICK_FILTERS = [
 type QuickFilterKey = (typeof QUICK_FILTERS)[number]["key"];
 
 export default function ValuationClient() {
-  const dispatch = useAppDispatch();
-  const valuation = useAppSelector((state) => state.stock?.valuation);
+  const { data: valuation, isLoading } = useStockValuation();
   const [activeFilter, setActiveFilter] = useState<QuickFilterKey>("all");
-  const fetchedRef = useRef(false);
-
-  useEffect(() => {
-    if (!fetchedRef.current && !valuation) {
-      fetchedRef.current = true;
-      dispatch({ type: "GET_STOCK_VALUATION" });
-    }
-  }, [dispatch, valuation]);
 
   const list = valuation?.data ?? [];
   const title = valuation?.title ?? "";
@@ -88,7 +79,7 @@ export default function ValuationClient() {
     }
   }, [list, activeFilter]);
 
-  if (!valuation) {
+  if (isLoading || !valuation) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

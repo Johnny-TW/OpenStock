@@ -11,7 +11,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/commons/badge";
 import { Input } from "@/components/commons/input";
 import { PageHeader } from "@/components/commons/page-header/page-header";
@@ -32,7 +32,14 @@ import {
 } from "@/components/commons/table";
 import { Tabs, TabsContent } from "@/components/commons/tabs";
 import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import {
+  useRankingDividendYield,
+  useRankingGrossMargin,
+  useRankingPeRatio,
+  useRankingRevenue,
+  useStockDailyAll,
+  useTopVolume,
+} from "@/hooks/use-stock-query";
 import type {
   DividendYieldRankingDto,
   GrossMarginRankingDto,
@@ -487,55 +494,15 @@ function RankingTable<T>({
 }
 
 export default function RankingClient() {
-  const dispatch = useAppDispatch();
-  const ranking = useAppSelector((state) => state.ranking);
-  const topVolume = useAppSelector((state) => state.stock?.topVolume);
-  const dailyAll = useAppSelector((state) => state.stock?.dailyAll);
+  const { data: dailyAll } = useStockDailyAll();
+  const { data: topVolume } = useTopVolume();
+  const { data: rankingRevenue } = useRankingRevenue();
+  const { data: rankingGrossMargin } = useRankingGrossMargin();
+  const { data: rankingDividendYield } = useRankingDividendYield();
+  const { data: rankingPeRatio } = useRankingPeRatio();
   const [activeTab, setActiveTab] = useState("change");
   const [search, setSearch] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("all");
-
-  useEffect(() => {
-    if (!dailyAll) dispatch({ type: "GET_STOCK_DAILY_ALL" });
-  }, [dispatch, dailyAll]);
-
-  useEffect(() => {
-    if (activeTab === "top-volume" && !topVolume) {
-      dispatch({ type: "GET_STOCK_TOP_VOLUME" });
-    } else if (activeTab === "revenue" && !ranking?.revenue) {
-      dispatch({ type: "GET_RANKING_REVENUE" });
-    } else if (activeTab === "gross-margin" && !ranking?.grossMargin) {
-      dispatch({ type: "GET_RANKING_GROSS_MARGIN" });
-    } else if (activeTab === "dividend-yield" && !ranking?.dividendYield) {
-      dispatch({ type: "GET_RANKING_DIVIDEND_YIELD" });
-    } else if (activeTab === "pe-ratio" && !ranking?.peRatio) {
-      dispatch({ type: "GET_RANKING_PE_RATIO" });
-    }
-  }, [
-    activeTab,
-    dispatch,
-    topVolume,
-    ranking?.revenue,
-    ranking?.grossMargin,
-    ranking?.dividendYield,
-    ranking?.peRatio,
-  ]);
-
-  // 底部獨立區塊：進頁面就撈
-  useEffect(() => {
-    if (!ranking?.peRatio) dispatch({ type: "GET_RANKING_PE_RATIO" });
-    if (!ranking?.dividendYield) dispatch({ type: "GET_RANKING_DIVIDEND_YIELD" });
-    if (!ranking?.grossMargin) dispatch({ type: "GET_RANKING_GROSS_MARGIN" });
-    if (!ranking?.revenue) dispatch({ type: "GET_RANKING_REVENUE" });
-    if (!topVolume) dispatch({ type: "GET_STOCK_TOP_VOLUME" });
-  }, [
-    dispatch,
-    ranking?.peRatio,
-    ranking?.dividendYield,
-    ranking?.grossMargin,
-    ranking?.revenue,
-    topVolume,
-  ]);
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
@@ -583,45 +550,42 @@ export default function RankingClient() {
   const topVolumeRaw = topVolume?.data;
   const topVolumeData: TopVolumeDto[] = Array.isArray(topVolumeRaw) ? topVolumeRaw : [];
   const revenueData = useMemo(
-    () => filterByIndustry(Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : []),
-    [ranking?.revenue, filterByIndustry],
+    () => filterByIndustry(Array.isArray(rankingRevenue?.data) ? rankingRevenue.data : []),
+    [rankingRevenue, filterByIndustry],
   );
   const grossMarginData = useMemo(
-    () =>
-      filterByIndustry(Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : []),
-    [ranking?.grossMargin, filterByIndustry],
+    () => filterByIndustry(Array.isArray(rankingGrossMargin?.data) ? rankingGrossMargin.data : []),
+    [rankingGrossMargin, filterByIndustry],
   );
   const dividendYieldData = useMemo(
     () =>
-      filterByIndustry(
-        Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : [],
-      ),
-    [ranking?.dividendYield, filterByIndustry],
+      filterByIndustry(Array.isArray(rankingDividendYield?.data) ? rankingDividendYield.data : []),
+    [rankingDividendYield, filterByIndustry],
   );
   const peRatioData = useMemo(
-    () => filterByIndustry(Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : []),
-    [ranking?.peRatio, filterByIndustry],
+    () => filterByIndustry(Array.isArray(rankingPeRatio?.data) ? rankingPeRatio.data : []),
+    [rankingPeRatio, filterByIndustry],
   );
 
   const industries = useMemo(() => {
     let list: { industry: string }[] = [];
     switch (activeTab) {
       case "revenue":
-        list = Array.isArray(ranking?.revenue?.data) ? ranking.revenue.data : [];
+        list = Array.isArray(rankingRevenue?.data) ? rankingRevenue.data : [];
         break;
       case "gross-margin":
-        list = Array.isArray(ranking?.grossMargin?.data) ? ranking.grossMargin.data : [];
+        list = Array.isArray(rankingGrossMargin?.data) ? rankingGrossMargin.data : [];
         break;
       case "dividend-yield":
-        list = Array.isArray(ranking?.dividendYield?.data) ? ranking.dividendYield.data : [];
+        list = Array.isArray(rankingDividendYield?.data) ? rankingDividendYield.data : [];
         break;
       case "pe-ratio":
-        list = Array.isArray(ranking?.peRatio?.data) ? ranking.peRatio.data : [];
+        list = Array.isArray(rankingPeRatio?.data) ? rankingPeRatio.data : [];
         break;
     }
     const set = new Set(list.map((r) => r.industry).filter(Boolean));
     return Array.from(set).sort();
-  }, [activeTab, ranking?.revenue, ranking?.grossMargin, ranking?.dividendYield, ranking?.peRatio]);
+  }, [activeTab, rankingRevenue, rankingGrossMargin, rankingDividendYield, rankingPeRatio]);
 
   const getPeriod = () => {
     switch (activeTab) {
@@ -630,13 +594,13 @@ export default function RankingClient() {
       case "top-volume":
         return "即時成交量排行";
       case "revenue": {
-        const y = ranking?.revenue?.year;
-        const q = ranking?.revenue?.quarter;
+        const y = rankingRevenue?.year;
+        const q = rankingRevenue?.quarter;
         return y ? `${y} 年第 ${q} 季` : "";
       }
       case "gross-margin": {
-        const y = ranking?.grossMargin?.year;
-        const q = ranking?.grossMargin?.quarter;
+        const y = rankingGrossMargin?.year;
+        const q = rankingGrossMargin?.quarter;
         return y ? `${y} 年第 ${q} 季` : "";
       }
       default:
@@ -651,23 +615,23 @@ export default function RankingClient() {
       case "top-volume":
         return !topVolume;
       case "revenue":
-        return !ranking?.revenue;
+        return !rankingRevenue;
       case "gross-margin":
-        return !ranking?.grossMargin;
+        return !rankingGrossMargin;
       case "dividend-yield":
-        return !ranking?.dividendYield;
+        return !rankingDividendYield;
       case "pe-ratio":
-        return !ranking?.peRatio;
+        return !rankingPeRatio;
       default:
         return false;
     }
   };
 
   const isBottomLoading =
-    !ranking?.peRatio ||
-    !ranking?.dividendYield ||
-    !ranking?.grossMargin ||
-    !ranking?.revenue ||
+    !rankingPeRatio ||
+    !rankingDividendYield ||
+    !rankingGrossMargin ||
+    !rankingRevenue ||
     !topVolume;
 
   const showIndustryFilter = !["top-volume", "change"].includes(activeTab);
@@ -809,8 +773,8 @@ export default function RankingClient() {
               <PageHeader
                 title="毛利率排行"
                 subtitle={
-                  ranking?.grossMargin?.year
-                    ? `${ranking.grossMargin.year} 年第 ${ranking.grossMargin.quarter} 季`
+                  rankingGrossMargin?.year
+                    ? `${rankingGrossMargin.year} 年第 ${rankingGrossMargin.quarter} 季`
                     : ""
                 }
               />
@@ -825,8 +789,8 @@ export default function RankingClient() {
               <PageHeader
                 title="營收排行"
                 subtitle={
-                  ranking?.revenue?.year
-                    ? `${ranking.revenue.year} 年第 ${ranking.revenue.quarter} 季`
+                  rankingRevenue?.year
+                    ? `${rankingRevenue.year} 年第 ${rankingRevenue.quarter} 季`
                     : ""
                 }
               />

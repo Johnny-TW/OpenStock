@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
+import { useStockHistory } from "@/hooks/use-stock-query";
 import type { StockHistoryPointDto, StockHistoryResponse } from "@/type/stock";
 import styles from "./stock-history-chart.module.scss";
 
@@ -65,21 +65,10 @@ function CustomTooltip({ active, payload, label, period }: any) {
 }
 
 export function StockHistoryChart({ symbol }: StockHistoryChartProps) {
-  const dispatch = useAppDispatch();
   const [activePeriod, setActivePeriod] = useState("1m");
-  const historyData = useAppSelector(
-    (state) => state.stock?.stockHistory,
-  ) as StockHistoryResponse | null;
-
-  useEffect(() => {
-    dispatch({ type: "GET_STOCK_HISTORY", symbol, period: activePeriod });
-  }, [dispatch, symbol, activePeriod]);
-
-  useEffect(() => {
-    return () => {
-      dispatch({ type: "CLEAR_STOCK_HISTORY" });
-    };
-  }, [dispatch]);
+  const { data: historyData } = useStockHistory(symbol, activePeriod) as {
+    data: StockHistoryResponse | undefined;
+  };
 
   const chartData = useMemo(() => {
     if (!historyData?.data) return [];
