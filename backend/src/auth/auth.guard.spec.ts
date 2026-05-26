@@ -47,9 +47,7 @@ describe('AuthGuard', () => {
 
     await guard.canActivate(ctx);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const request = ctx.switchToHttp().getRequest();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(request.user).toEqual(mockPayload);
   });
 
@@ -58,7 +56,7 @@ describe('AuthGuard', () => {
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
   });
 
-  it('應在 header 格式錯誤（無 Bearer）時拋出 UnauthorizedException', async () => {
+  it('應在 header 格式錯誤(無 Bearer)時拋出 UnauthorizedException', async () => {
     const ctx = createMockContext('InvalidFormat');
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
   });

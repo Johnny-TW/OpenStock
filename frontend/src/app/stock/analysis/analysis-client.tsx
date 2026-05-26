@@ -2,23 +2,25 @@
 
 import {
   BarChart3,
+  Check,
   Loader2,
   Newspaper,
   RefreshCw,
   ShieldAlert,
   Sparkles,
-  TrendingDown,
   TrendingUp,
   Trophy,
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
+import { LightweightChart } from "@/components/charts/lightweight-chart";
 import { Badge } from "@/components/commons/badge";
 import { Button } from "@/components/commons/button";
 import { Checkbox } from "@/components/commons/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/dialog";
 import { PageHeader } from "@/components/commons/page-header/page-header";
-import { useAnalyzeMarket, useCachedAnalysis } from "@/hooks/use-analysis-query";
+import { useAnalyzeMarketStream, useCachedAnalysis } from "@/hooks/use-analysis-query";
 import { useWatchlist } from "@/hooks/use-watchlist-query";
+import tp from "./trading-plan.module.scss";
 
 interface Scores {
   fundamental: number;
@@ -55,6 +57,12 @@ interface TechnicalIndicators {
   trend: string;
   recentCloses: number[];
   recentDates?: string[];
+  momentum5d?: number;
+  momentum10d?: number;
+  momentum20d?: number;
+  candlePatterns?: string[];
+  supportLevel?: number;
+  resistanceLevel?: number;
 }
 
 interface TopPick {
@@ -113,14 +121,6 @@ function getScoreColor(score: number): string {
   return "text-red-600";
 }
 
-function getScoreBgColor(score: number): string {
-  if (score >= 90) return "bg-emerald-500";
-  if (score >= 80) return "bg-green-500";
-  if (score >= 70) return "bg-blue-500";
-  if (score >= 60) return "bg-yellow-500";
-  return "bg-red-500";
-}
-
 const SCORE_LABELS: { key: keyof Omit<Scores, "total">; label: string }[] = [
   { key: "fundamental", label: "基本面" },
   { key: "technical", label: "技術面" },
@@ -128,14 +128,6 @@ const SCORE_LABELS: { key: keyof Omit<Scores, "total">; label: string }[] = [
   { key: "news", label: "新聞面" },
   { key: "strategic", label: "戰略面" },
 ];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  題材: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  基本: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  技術: "bg-amber-400/10 text-amber-500 border-amber-400/20",
-  籌碼: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  新聞: "bg-green-500/10 text-green-400 border-green-500/20",
-};
 
 const SectionCard = React.memo(function SectionCard({
   icon,
@@ -161,168 +153,6 @@ const SectionCard = React.memo(function SectionCard({
   );
 });
 
-const ScoreBar = React.memo(function ScoreBar({ label, score }: { label: string; score: number }) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-2">
-      <span className="w-14 text-xs text-muted-foreground shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${getScoreBgColor(score)}`}
-          style={{ width: `${score}%` }}
-        />
-      </div>
-      <span className={`w-8 text-right text-xs font-semibold tabular-nums ${getScoreColor(score)}`}>
-        {score}
-      </span>
-    </div>
-  );
-});
-
-const MiniLineChart = React.memo(function MiniLineChart({
-  data,
-  dates,
-}: {
-  data: number[];
-  dates?: string[];
-}) {
-  const [hover, setHover] = useState<number | null>(null);
-  if (!data || data.length < 2) return null;
-
-  const w = 640;
-  const h = 220;
-  const pad = { top: 12, right: 16, bottom: 28, left: 44 };
-  const iw = w - pad.left - pad.right;
-  const ih = h - pad.top - pad.bottom;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-
-  const xAt = (i: number) => pad.left + (i / (data.length - 1)) * iw;
-  const yAt = (v: number) => pad.top + ih - ((v - min) / range) * ih;
-
-  const points = data.map((v, i) => `${xAt(i)},${yAt(v)}`);
-  const isUp = data[data.length - 1] >= data[0];
-  const stroke = isUp ? "#ef4444" : "#22c55e";
-  const fill = isUp ? "rgba(239,68,68,0.10)" : "rgba(34,197,94,0.10)";
-  const areaPath = `M${points[0]} L${points.join(" L")} L${pad.left + iw},${pad.top + ih} L${pad.left},${pad.top + ih} Z`;
-
-  // Y 軸刻度（5 等分）
-  const yTicks = Array.from({ length: 5 }, (_, i) => min + (range * i) / 4);
-
-  // X 軸標記：以月份交替點為主，沒有 dates 則退化為等分索引
-  type XLabel = { x: number; text: string };
-  const xLabels: XLabel[] = [];
-  if (dates && dates.length === data.length) {
-    let lastMonth = "";
-    dates.forEach((d, i) => {
-      const m = d.slice(0, 7); // YYYY-MM
-      if (m !== lastMonth) {
-        xLabels.push({ x: xAt(i), text: d.slice(5, 10) }); // MM-DD
-        lastMonth = m;
-      }
-    });
-  } else {
-    const step = Math.max(1, Math.floor(data.length / 5));
-    for (let i = 0; i < data.length; i += step) {
-      xLabels.push({ x: xAt(i), text: String(i + 1) });
-    }
-  }
-
-  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * w;
-    const idx = Math.round(((px - pad.left) / iw) * (data.length - 1));
-    if (idx >= 0 && idx < data.length) setHover(idx);
-    else setHover(null);
-  };
-
-  return (
-    <div className="relative">
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        className="w-full"
-        style={{ height: 220 }}
-        onMouseMove={handleMove}
-        onMouseLeave={() => setHover(null)}
-      >
-        {/* Y 軸虛線 + 價格標記 */}
-        {yTicks.map((v) => (
-          <g key={v}>
-            <line
-              x1={pad.left}
-              x2={pad.left + iw}
-              y1={yAt(v)}
-              y2={yAt(v)}
-              stroke="currentColor"
-              strokeOpacity={0.08}
-              strokeDasharray="3 3"
-            />
-            <text
-              x={pad.left - 6}
-              y={yAt(v)}
-              textAnchor="end"
-              dominantBaseline="middle"
-              fontSize={10}
-              fill="currentColor"
-              opacity={0.55}
-            >
-              {v.toFixed(2)}
-            </text>
-          </g>
-        ))}
-
-        {/* 面積 + 折線 */}
-        <path d={areaPath} fill={fill} />
-        <polyline points={points.join(" ")} fill="none" stroke={stroke} strokeWidth={1.8} />
-
-        {/* X 軸標記 */}
-        {xLabels.map((l) => (
-          <text
-            key={l.x}
-            x={l.x}
-            y={h - 8}
-            textAnchor="middle"
-            fontSize={10}
-            fill="currentColor"
-            opacity={0.55}
-          >
-            {l.text}
-          </text>
-        ))}
-
-        {/* Hover 十字線 + 點 */}
-        {hover !== null && (
-          <g pointerEvents="none">
-            <line
-              x1={xAt(hover)}
-              x2={xAt(hover)}
-              y1={pad.top}
-              y2={pad.top + ih}
-              stroke={stroke}
-              strokeOpacity={0.45}
-              strokeDasharray="3 3"
-            />
-            <circle cx={xAt(hover)} cy={yAt(data[hover])} r={3.5} fill={stroke} />
-          </g>
-        )}
-      </svg>
-
-      {hover !== null && (
-        <div
-          className="absolute pointer-events-none rounded border bg-popover text-popover-foreground px-2 py-1 text-[11px] shadow"
-          style={{
-            left: `calc(${(xAt(hover) / w) * 100}% + 8px)`,
-            top: 8,
-          }}
-        >
-          <div className="text-muted-foreground">{dates?.[hover] ?? `第 ${hover + 1} 筆`}</div>
-          <div className="font-mono font-semibold">{data[hover].toFixed(2)}</div>
-        </div>
-      )}
-    </div>
-  );
-});
-
 function StockDetailDialog({
   pick,
   open,
@@ -337,213 +167,448 @@ function StockDetailDialog({
   const firstPrice = closes.length > 1 ? closes[0] : lastPrice;
   const changePercent = firstPrice > 0 ? ((lastPrice - firstPrice) / firstPrice) * 100 : 0;
   const isUp = changePercent >= 0;
-  const dirConfig = getDirectionConfig(pick.direction);
+
+  const getScoreClass = (s: number) =>
+    s >= 70 ? tp.scoreHigh : s >= 50 ? tp.scoreMid : tp.scoreLow;
+  const getScoreBarColor = (s: number) => (s >= 70 ? "#22c55e" : s >= 50 ? "#eab308" : "#ef4444");
+
+  const directionLabel =
+    pick.direction === "做多" ? "多頭策略" : pick.direction === "放空" ? "空頭策略" : "觀望策略";
+  const directionClass =
+    pick.direction === "做多"
+      ? tp.strategyLong
+      : pick.direction === "放空"
+        ? tp.strategyShort
+        : tp.strategyWatch;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 [&>button:last-child]:top-3 [&>button:last-child]:right-3">
-        <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-0.5 h-5 rounded-full bg-blue-500 flex-shrink-0" />
-            <div className="min-w-0">
-              <DialogTitle className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                AI 趨勢分析報告
-              </DialogTitle>
-              <p className="text-sm font-bold truncate">
-                {pick.name} <span className="font-normal text-muted-foreground">({pick.code})</span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-5 flex-1 overflow-y-auto space-y-5">
-          {/* 綜合評分 */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  AI 綜合評分
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold ${dirConfig.color} ${dirConfig.bg} ${dirConfig.border}`}
-                >
-                  {pick.direction === "偏多" ? (
-                    <TrendingUp className="size-3" />
-                  ) : pick.direction === "偏空" ? (
-                    <TrendingDown className="size-3" />
-                  ) : null}
-                  {pick.direction}
-                </span>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-0 [&>button:last-child]:top-3 [&>button:last-child]:right-3 [&>button:last-child]:text-gray-400">
+        <div className={tp.tradingPlan}>
+          {/* Header */}
+          <div className={tp.header}>
+            <div className={tp.headerLeft}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <DialogTitle className="inline text-lg font-bold">
+                    {pick.code} {pick.name}
+                  </DialogTitle>
+                  <span>交易計畫</span>
+                </div>
+                <p>
+                  訊號：{pick.signal} · {pick.timeframe}
+                </p>
               </div>
-              <span
-                className={`text-3xl font-black tabular-nums ${getScoreColor(pick.scores.total)}`}
-              >
-                {pick.scores.total}
-                <span className="text-sm font-normal text-muted-foreground ml-1">/ 100</span>
+            </div>
+            <div className={tp.timestamp}>分析時間：{new Date().toLocaleString("zh-TW")}</div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className={tp.statsRow}>
+            <div className={tp.statsCard}>
+              <div className={tp.statsCardHeader}>
+                <span className={tp.statsCardLabel}>目前股價</span>
+              </div>
+              <span className={`${tp.statsCardValue} ${isUp ? tp.up : tp.down}`}>
+                {lastPrice || pick.entryPrice}
               </span>
             </div>
-            <div className="divide-y">
-              {SCORE_LABELS.map(({ key, label }) => (
-                <ScoreBar key={key} label={label} score={pick.scores[key]} />
-              ))}
+            <div className={tp.statsCard}>
+              <div className={tp.statsCardHeader}>
+                <span className={tp.statsCardLabel}>漲跌幅</span>
+                <span className={`${tp.statsCardTrend} ${isUp ? tp.up : tp.down}`}>
+                  {isUp ? "+" : ""}
+                  {changePercent.toFixed(2)}%
+                </span>
+              </div>
+              <span className={`${tp.statsCardValue} ${isUp ? tp.up : tp.down}`}>
+                {isUp ? "+" : ""}
+                {(
+                  Number(lastPrice || pick.entryPrice) -
+                  Number(pick.indicators?.ma20 || pick.entryPrice)
+                ).toFixed(1)}
+              </span>
+            </div>
+            <div className={tp.statsCard}>
+              <div className={tp.statsCardHeader}>
+                <span className={tp.statsCardLabel}>趨勢方向</span>
+              </div>
+              <span className={tp.statsCardValue}>{pick.indicators?.trend ?? pick.direction}</span>
+            </div>
+            <div className={tp.statsCard}>
+              <div className={tp.statsCardHeader}>
+                <span className={tp.statsCardLabel}>綜合評分</span>
+              </div>
+              <span className={`${tp.statsCardValue} ${getScoreClass(pick.scores.total)}`}>
+                {pick.scores.total}
+              </span>
             </div>
           </div>
 
           {/* 走勢圖 */}
-          {closes.length > 5 && (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
-                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  日線走勢（近一個月）
-                </span>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-sm font-bold tabular-nums ${isUp ? "text-red-500" : "text-green-500"}`}
-                  >
-                    {lastPrice}
-                  </span>
-                  <span
-                    className={`text-xs font-medium tabular-nums ${isUp ? "text-red-500" : "text-green-500"}`}
-                  >
-                    {isUp ? "+" : ""}
-                    {changePercent.toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-              <MiniLineChart data={closes} dates={pick.indicators?.recentDates} />
-            </div>
-          )}
-
-          {/* 進退場建議 */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col items-center p-3 rounded-lg border bg-muted/20">
-              <span className="text-[10px] text-muted-foreground">建議進場價</span>
-              <span className="font-mono font-bold text-base text-green-600">
-                {pick.entryPrice}
-              </span>
-            </div>
-            <div className="flex flex-col items-center p-3 rounded-lg border bg-muted/20">
-              <span className="text-[10px] text-muted-foreground">停損價</span>
-              <span className="font-mono font-bold text-base text-red-600">{pick.stopLoss}</span>
-            </div>
-            <div className="flex flex-col items-center p-3 rounded-lg border bg-muted/20">
-              <span className="text-[10px] text-muted-foreground">目標價</span>
-              <span className="font-mono font-bold text-base text-blue-600">
-                {pick.targetPrice}
-              </span>
-            </div>
+          <div className={tp.chartSection}>
+            <LightweightChart symbol={pick.code} stockName={pick.name} />
           </div>
 
-          {/* 技術指標快覽 */}
-          {pick.indicators && (
-            <div className="grid grid-cols-4 gap-2 text-xs">
-              {[
-                { label: "RSI(14)", value: pick.indicators.rsi14.toString() },
-                { label: "K / D", value: `${pick.indicators.kValue} / ${pick.indicators.dValue}` },
-                {
-                  label: "MACD",
-                  value: `${pick.indicators.macdHistogram > 0 ? "+" : ""}${pick.indicators.macdHistogram}`,
-                },
-                { label: "量比", value: `${pick.indicators.volumeRatio}x` },
-                { label: "MA5", value: pick.indicators.ma5.toString() },
-                { label: "MA20", value: pick.indicators.ma20.toString() },
-                { label: "趨勢", value: pick.indicators.trend },
-                { label: "訊號", value: pick.signal },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="flex flex-col items-center p-2 rounded border bg-muted/20"
-                >
-                  <span className="text-[9px] text-muted-foreground">{item.label}</span>
-                  <span className="font-mono font-semibold text-xs">{item.value}</span>
+          {/* Body - 可捲動 */}
+          <div className={tp.body}>
+            {/* Row 1: 趨勢判斷 + 關鍵價位 */}
+            <div className={tp.row}>
+              <div className={tp.section}>
+                <div className={tp.sectionHeader}>
+                  <span className={tp.sectionNum}>1</span>
+                  趨勢判斷
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* 看多/看空因素 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pick.bullishFactors.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/30 border-b">
-                  <div className="w-0.5 h-4 rounded-full bg-red-500" />
-                  <span className="text-sm font-bold text-red-500">看多因素</span>
+                <div className={tp.sectionBody}>
+                  <ul className={tp.trendList}>
+                    <li>趨勢方向：{pick.indicators?.trend ?? "盤整"}</li>
+                    {pick.indicators && (
+                      <>
+                        <li>
+                          均線排列：MA5={pick.indicators.ma5} / MA20={pick.indicators.ma20} / MA60=
+                          {pick.indicators.ma60}
+                        </li>
+                        <li>
+                          RSI(14)={pick.indicators.rsi14}，
+                          {pick.indicators.rsi14 > 70
+                            ? "超買區間"
+                            : pick.indicators.rsi14 < 30
+                              ? "超賣區間"
+                              : "中性區間"}
+                        </li>
+                        <li>
+                          量比={pick.indicators.volumeRatio}x，
+                          {pick.indicators.volumeRatio > 1.5
+                            ? "量能放大"
+                            : pick.indicators.volumeRatio < 0.7
+                              ? "量能萎縮"
+                              : "量能正常"}
+                        </li>
+                      </>
+                    )}
+                    {pick.indicators?.candlePatterns &&
+                      pick.indicators.candlePatterns.length > 0 && (
+                        <li>K線形態：{pick.indicators.candlePatterns.join("、")}</li>
+                      )}
+                    <li>{pick.technicalSummary}</li>
+                  </ul>
                 </div>
-                <ul className="divide-y">
-                  {pick.bullishFactors.map((f, i) => (
-                    <li key={i} className="px-4 py-3">
-                      <div className="flex items-start gap-2.5">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-red-500" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span
-                              className={`inline-block text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${CATEGORY_COLORS[f.category] ?? CATEGORY_COLORS.基本}`}
-                            >
-                              {f.category || "基本"}
-                            </span>
-                            {f.importance === "重要" && (
-                              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded font-medium bg-red-500/10 text-red-500">
-                                重要
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {f.description}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
               </div>
-            )}
 
-            {pick.bearishFactors.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/30 border-b">
-                  <div className="w-0.5 h-4 rounded-full bg-emerald-500" />
-                  <span className="text-sm font-bold text-emerald-500">看空因素</span>
+              <div className={tp.section}>
+                <div className={tp.sectionHeader}>
+                  <span className={tp.sectionNum}>2</span>
+                  關鍵價位
                 </div>
-                <ul className="divide-y">
-                  {pick.bearishFactors.map((f, i) => (
-                    <li key={i} className="px-4 py-3">
-                      <div className="flex items-start gap-2.5">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-muted-foreground/30" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span
-                              className={`inline-block text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${CATEGORY_COLORS[f.category] ?? CATEGORY_COLORS.基本}`}
-                            >
-                              {f.category || "基本"}
-                            </span>
-                            {f.importance === "重要" && (
-                              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-500">
-                                重要
+                <div className={tp.sectionBody}>
+                  {pick.indicators && (
+                    <>
+                      <div className={tp.priceLevel}>
+                        <span className={tp.levelLabel}>
+                          <span className={tp.levelDot} style={{ background: "#ef4444" }} />
+                          壓力位
+                        </span>
+                        <span className={`${tp.levelValue} ${tp.up}`}>
+                          {pick.indicators.resistanceLevel}
+                        </span>
+                      </div>
+                      <div className={tp.priceLevel}>
+                        <span className={tp.levelLabel}>
+                          <span className={tp.levelDot} style={{ background: "#ef4444" }} />
+                          目標價
+                        </span>
+                        <span className={`${tp.levelValue} ${tp.up}`}>{pick.targetPrice}</span>
+                      </div>
+                      <div className={tp.priceLevel}>
+                        <span className={tp.levelLabel}>
+                          <span className={tp.levelDot} style={{ background: "#a0aec0" }} />
+                          進場價
+                        </span>
+                        <span className={tp.levelValue}>{pick.entryPrice}</span>
+                      </div>
+                      <div className={tp.priceLevel}>
+                        <span className={tp.levelLabel}>
+                          <span className={tp.levelDot} style={{ background: "#22c55e" }} />
+                          停損位
+                        </span>
+                        <span className={`${tp.levelValue} ${tp.down}`}>{pick.stopLoss}</span>
+                      </div>
+                      <div className={tp.priceLevel}>
+                        <span className={tp.levelLabel}>
+                          <span className={tp.levelDot} style={{ background: "#22c55e" }} />
+                          支撐位
+                        </span>
+                        <span className={`${tp.levelValue} ${tp.down}`}>
+                          {pick.indicators.supportLevel}
+                        </span>
+                      </div>
+                      <div className={tp.priceLevel}>
+                        <span className={tp.levelLabel}>
+                          <span className={tp.levelDot} style={{ background: "#a0aec0" }} />
+                          20日高
+                        </span>
+                        <span className={tp.levelValue}>{pick.indicators.high20}</span>
+                      </div>
+                      <div className={tp.priceLevel}>
+                        <span className={tp.levelLabel}>
+                          <span className={tp.levelDot} style={{ background: "#a0aec0" }} />
+                          20日低
+                        </span>
+                        <span className={tp.levelValue}>{pick.indicators.low20}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: 交易策略 + AI 評分 */}
+            <div className={tp.row}>
+              <div className={tp.section}>
+                <div className={tp.sectionHeader}>
+                  <span className={tp.sectionNum}>4</span>
+                  交易策略
+                </div>
+                <div className={tp.sectionBody}>
+                  <div className={tp.strategyBlock}>
+                    <div className={`${tp.strategyTitle} ${directionClass}`}>{directionLabel}</div>
+                    <div className={tp.strategyRow}>
+                      <span className={tp.strategyKey}>進場：</span>
+                      <span className={tp.strategyVal}>{pick.entryPrice}</span>
+                    </div>
+                    <div className={tp.strategyRow}>
+                      <span className={tp.strategyKey}>停損：</span>
+                      <span className={tp.strategyVal}>{pick.stopLoss}</span>
+                    </div>
+                    <div className={tp.strategyRow}>
+                      <span className={tp.strategyKey}>目標：</span>
+                      <span className={tp.strategyVal}>{pick.targetPrice}</span>
+                    </div>
+                    <div className={tp.strategyRow}>
+                      <span className={tp.strategyKey}>時間：</span>
+                      <span className={tp.strategyVal}>{pick.timeframe}</span>
+                    </div>
+                  </div>
+                  <div className={tp.strategyBlock}>
+                    <div className={tp.strategyRow}>
+                      <span className={tp.strategyKey}>理由：</span>
+                      <span className={tp.strategyVal}>{pick.reason}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={tp.section}>
+                <div className={tp.sectionHeader}>
+                  <span className={tp.sectionNum}>5</span>
+                  AI 評分
+                </div>
+                <div className={tp.sectionBody}>
+                  {SCORE_LABELS.map(({ key, label }) => (
+                    <div key={key} className={tp.scoreRow}>
+                      <span className={tp.scoreLabel}>{label}</span>
+                      <div className={tp.scoreBar}>
+                        <div
+                          className={tp.scoreFill}
+                          style={{
+                            width: `${pick.scores[key]}%`,
+                            background: getScoreBarColor(pick.scores[key]),
+                          }}
+                        />
+                      </div>
+                      <span className={`${tp.scoreNum} ${getScoreClass(pick.scores[key])}`}>
+                        {pick.scores[key]}
+                      </span>
+                    </div>
+                  ))}
+                  <div className={tp.totalScore}>
+                    <span className={`${tp.totalNum} ${getScoreClass(pick.scores.total)}`}>
+                      {pick.scores.total}
+                    </span>
+                    <span className={tp.totalMax}>/ 100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. 進場計畫（全寬） */}
+            <div className={tp.section}>
+              <div className={tp.sectionHeader}>
+                <span className={tp.sectionNum}>6</span>
+                進場計畫（範例）
+              </div>
+              <div style={{ padding: 0 }}>
+                <table className={tp.planTable}>
+                  <thead>
+                    <tr>
+                      <th>情境</th>
+                      <th>進場條件</th>
+                      <th>進場價位</th>
+                      <th>停損</th>
+                      <th>目標1</th>
+                      <th>目標2</th>
+                      <th>盈虧比</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <span
+                          className={`${tp.planDirection} ${pick.direction === "做多" ? tp.up : tp.down}`}
+                        >
+                          {pick.direction === "做多"
+                            ? "多頭進場"
+                            : pick.direction === "放空"
+                              ? "空頭進場"
+                              : "觀望"}
+                        </span>
+                      </td>
+                      <td>{pick.signal}</td>
+                      <td>{pick.entryPrice}</td>
+                      <td className={tp.down}>{pick.stopLoss}</td>
+                      <td className={tp.up}>{pick.targetPrice}</td>
+                      <td>-</td>
+                      <td>≥2:1</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Row 3: 技術指標 + 風險管理 */}
+            <div className={tp.row}>
+              {pick.indicators && (
+                <div className={tp.section}>
+                  <div className={tp.sectionHeader}>
+                    <span className={tp.sectionNum}>7</span>
+                    技術指標
+                  </div>
+                  <div className={tp.sectionBody}>
+                    <div className={tp.indicatorGrid}>
+                      {[
+                        { label: "RSI(14)", value: pick.indicators.rsi14.toString() },
+                        {
+                          label: "K / D",
+                          value: `${pick.indicators.kValue} / ${pick.indicators.dValue}`,
+                        },
+                        {
+                          label: "MACD",
+                          value: `${pick.indicators.macdHistogram > 0 ? "+" : ""}${pick.indicators.macdHistogram}`,
+                        },
+                        { label: "量比", value: `${pick.indicators.volumeRatio}x` },
+                        { label: "MA5", value: pick.indicators.ma5.toString() },
+                        { label: "MA10", value: pick.indicators.ma10.toString() },
+                        { label: "MA20", value: pick.indicators.ma20.toString() },
+                        { label: "MA60", value: pick.indicators.ma60.toString() },
+                      ].map((item) => (
+                        <div key={item.label} className={tp.indicatorItem}>
+                          <span className={tp.indLabel}>{item.label}</span>
+                          <span className={tp.indValue}>{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className={tp.section}>
+                <div className={tp.sectionHeader}>
+                  <span className={tp.sectionNum}>8</span>
+                  風險管理 & 執行紀律
+                </div>
+                <div className={tp.sectionBody}>
+                  <ul className={tp.riskList}>
+                    <li>單筆風險：不超過總資金 2%</li>
+                    <li>停損嚴格執行，不攤平、不加碼</li>
+                    <li>盈虧比建議 ≥ 1:2</li>
+                  </ul>
+                  <ul className={tp.disciplineList} style={{ marginTop: "0.75rem" }}>
+                    <li>
+                      <span className={tp.checkIcon}>
+                        <Check size={9} />
+                      </span>
+                      進場前確認條件達成
+                    </li>
+                    <li>
+                      <span className={tp.checkIcon}>
+                        <Check size={9} />
+                      </span>
+                      嚴格執行停損停利
+                    </li>
+                    <li>
+                      <span className={tp.checkIcon}>
+                        <Check size={9} />
+                      </span>
+                      不預設立場，順勢操作
+                    </li>
+                    <li>
+                      <span className={tp.checkIcon}>
+                        <Check size={9} />
+                      </span>
+                      不因情緒影響紀律
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* 9. 看多/看空因素（全寬） */}
+            {(pick.bullishFactors.length > 0 || pick.bearishFactors.length > 0) && (
+              <div className={tp.section}>
+                <div className={tp.sectionHeader}>
+                  <span className={tp.sectionNum}>9</span>
+                  分析因素
+                </div>
+                <div className={tp.sectionBody}>
+                  <div className={tp.row}>
+                    {pick.bullishFactors.length > 0 && (
+                      <div className={tp.factorSection}>
+                        <h4 style={{ borderColor: "#ef4444", color: "#ef4444" }}>看多因素</h4>
+                        <div className={tp.factorList}>
+                          {pick.bullishFactors.map((f, i) => (
+                            <div key={i} className={tp.factorItem}>
+                              <span className={tp.factorDot} style={{ background: "#ef4444" }} />
+                              <span
+                                className={tp.factorBadge}
+                                style={{ background: "rgba(239,68,68,0.15)", color: "#ef4444" }}
+                              >
+                                {f.category}
                               </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {f.description}
-                          </p>
+                              <span>{f.description}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </li>
-                  ))}
-                </ul>
+                    )}
+                    {pick.bearishFactors.length > 0 && (
+                      <div className={tp.factorSection}>
+                        <h4 style={{ borderColor: "#22c55e", color: "#22c55e" }}>看空因素</h4>
+                        <div className={tp.factorList}>
+                          {pick.bearishFactors.map((f, i) => (
+                            <div key={i} className={tp.factorItem}>
+                              <span className={tp.factorDot} style={{ background: "#22c55e" }} />
+                              <span
+                                className={tp.factorBadge}
+                                style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}
+                              >
+                                {f.category}
+                              </span>
+                              <span>{f.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          {pick.technicalSummary && (
-            <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
-              <BarChart3 className="size-3.5 mt-0.5 shrink-0" />
-              <span>{pick.technicalSummary}</span>
-            </div>
-          )}
-
-          <div className="border rounded px-4 py-3 text-xs text-muted-foreground leading-relaxed">
-            <span className="font-semibold">免責聲明：</span>本分析結果由 AI
-            大型語言模型（Claude）生成，僅供參考，不代表任何投資建議。投資前請審慎評估風險。
+          {/* 固定底部免責聲明 */}
+          <div className={tp.disclaimer}>
+            <span>⚠</span>
+            核心原則：順勢操作，嚴設停損，控管風險，紀律執行。本分析由 AI 生成，僅供參考。
           </div>
         </div>
       </DialogContent>
@@ -566,7 +631,7 @@ const StockRankCard = React.memo(function StockRankCard({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-xl border border-white bg-white w-full p-4 flex items-center gap-4 text-left hover:shadow-md transition-all cursor-pointer"
+        className="rounded-xl border border-border bg-card w-full p-4 flex items-center gap-4 text-left hover:shadow-md hover:border-primary/40 transition-all cursor-pointer"
       >
         <span className="text-2xl w-8 text-center shrink-0">
           {typeof medal === "string" && medal.length <= 2 ? (
@@ -612,10 +677,17 @@ const StockRankCard = React.memo(function StockRankCard({
 });
 
 export default function AnalysisClient() {
-  const { data: result } = useCachedAnalysis() as { data: AnalysisResult | null | undefined };
+  const { data: cachedResult } = useCachedAnalysis() as { data: AnalysisResult | null | undefined };
   const { data: watchlist = [] } = useWatchlist();
-  const analyzeMarket = useAnalyzeMarket();
-  const loading = analyzeMarket.isPending;
+  const {
+    isStreaming,
+    statusText,
+    result: streamResult,
+    analyze,
+    abort,
+  } = useAnalyzeMarketStream();
+  const loading = isStreaming;
+  const result = (streamResult as AnalysisResult) ?? cachedResult;
   const [watchlistOnly, setWatchlistOnly] = useState(false);
 
   const handleAnalyze = useCallback(() => {
@@ -623,8 +695,8 @@ export default function AnalysisClient() {
       watchlistOnly && watchlist.length > 0
         ? { stockCodes: watchlist.map((w: any) => w.stockNo) }
         : {};
-    analyzeMarket.mutate(data);
-  }, [watchlistOnly, watchlist, analyzeMarket]);
+    analyze(data);
+  }, [watchlistOnly, watchlist, analyze]);
 
   const sortedPicks = useMemo(() => {
     if (!result?.topPicks) return [];
@@ -665,8 +737,11 @@ export default function AnalysisClient() {
         <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
           <Loader2 className="size-10 animate-spin" />
           <p className="text-sm">
-            AI 正在擷取歷史資料、計算技術指標並進行多維度深度分析，請稍候...
+            {statusText || "AI 正在擷取歷史資料、計算技術指標並進行多維度深度分析，請稍候..."}
           </p>
+          <Button variant="outline" size="sm" onClick={abort}>
+            取消
+          </Button>
         </div>
       )}
 

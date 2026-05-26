@@ -12,6 +12,21 @@ export class AnalyzeMarketDto {
   stockCodes?: string[];
 }
 
+export class ChatMessageDto {
+  @ApiProperty({ description: '股票代號', example: '2330' })
+  @IsString()
+  stockCode: string;
+
+  @ApiProperty({ description: '使用者訊息' })
+  @IsString()
+  message: string;
+
+  @ApiPropertyOptional({ description: '對話歷史' })
+  @IsOptional()
+  @IsArray()
+  history?: { role: string; content: string }[];
+}
+
 export class StockSnapshotDto {
   @ApiProperty() code: string;
   @ApiProperty() name: string;

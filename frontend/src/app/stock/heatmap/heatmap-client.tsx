@@ -65,6 +65,15 @@ function D3Treemap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 600 });
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.classList.contains("dark"));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -130,7 +139,7 @@ function D3Treemap({
                 y={group.y0}
                 width={group.x1! - group.x0!}
                 height={group.y1! - group.y0!}
-                fill="#ffffff"
+                fill={isDark ? "#1a1a1a" : "#ffffff"}
                 rx={3}
               />
               <clipPath id={`clip-group-${d.name}`}>
@@ -140,7 +149,7 @@ function D3Treemap({
                 clipPath={`url(#clip-group-${d.name})`}
                 x={group.x0! + 4}
                 y={group.y0! + 14}
-                fill="#94a3b8"
+                fill={isDark ? "#64748b" : "#94a3b8"}
                 fontSize={11}
                 fontWeight={600}
               >

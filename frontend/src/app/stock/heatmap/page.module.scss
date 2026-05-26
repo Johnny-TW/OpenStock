@@ -175,7 +175,7 @@
   flex-direction: column;
   border-radius: 0.5rem;
   border: 1px solid hsl(var(--border));
-  background: #ffffff;
+  background: hsl(var(--popover));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
@@ -318,13 +318,13 @@
 }
 
 .tooltip {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   min-width: 160px;
-  color: #1e293b;
+  color: hsl(var(--popover-foreground));
 }
 
 .tooltipTitle {

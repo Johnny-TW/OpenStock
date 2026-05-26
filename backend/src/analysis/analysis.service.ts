@@ -9,6 +9,7 @@ import {
   AnalysisFactorDto,
   AnalysisResultDto,
   AnalyzeMarketDto,
+  ChatMessageDto,
   ScoresDto,
   StockSnapshotDto,
   TechnicalIndicatorsDto,
@@ -961,7 +962,7 @@ topPicks 排序規則：
     const completion = await this.anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 16384,
-      system: systemPrompt,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -1060,5 +1061,152 @@ topPicks 排序規則：
       technicalOutlook: parsed.technicalOutlook ?? '',
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  async *analyzeMarketStream(
+    dto: AnalyzeMarketDto,
+  ): AsyncGenerator<{ text?: string; result?: AnalysisResultDto }> {
+    yield { text: '正在收集市場資料...' };
+
+    if (!dto.stockCodes || dto.stockCodes.length === 0) {
+      const cached = await this.getCachedAnalysis();
+      if (cached) {
+        yield { text: '已有今日快取，直接回傳結果' };
+        yield { result: cached };
+        return;
+      }
+    }
+
+    const [stocks, valuations, news, marketIndex, institutional, industryMap, monthlyRevenue] =
+      await Promise.all([
+        this.fetchStocks(),
+        this.fetchValuations(),
+        this.fetchNews(),
+        this.fetchMarketIndex(),
+        this.fetchInstitutional(),
+        this.fetchIndustryMap(),
+        this.fetchMonthlyRevenue(),
+      ]);
+
+    yield { text: '市場資料收集完成，正在篩選候選股票...' };
+
+    const mergedStocks = this.mergeStockData(stocks, valuations, industryMap, monthlyRevenue);
+    let targetStocks: StockSnapshotDto[];
+    if (dto.stockCodes && dto.stockCodes.length > 0) {
+      targetStocks = mergedStocks.filter((s) => dto.stockCodes!.includes(s.code));
+    } else {
+      targetStocks = this.selectCandidates(mergedStocks, institutional);
+    }
+
+    yield { text: `已篩選 ${targetStocks.length} 檔候選股票，正在計算技術指標...` };
+
+    const enrichedStocks = await this.enrichWithTechnicals(targetStocks);
+
+    yield { text: '技術指標計算完成，正在呼叫 AI 分析...' };
+
+    const marketChangePercent = this.parseMarketChangePercent(marketIndex);
+    const stocksWithRelativeStrength = enrichedStocks.map((s) => {
+      const close = parseFloat(s.closingPrice?.replace(/,/g, '') ?? '0');
+      const change = parseFloat(s.change?.replace(/,/g, '') ?? '0');
+      const prev = close - change;
+      const stockPct = prev > 0 ? (change / prev) * 100 : 0;
+      return {
+        ...s,
+        relativeStrength: Math.round((stockPct - marketChangePercent) * 100) / 100,
+      };
+    });
+
+    const allNews = [...news.twStock, ...news.usStock, ...news.international, ...news.twse];
+
+    const result = await this.callAI(
+      stocksWithRelativeStrength,
+      news,
+      marketIndex,
+      institutional,
+      allNews,
+    );
+
+    if (!dto.stockCodes || dto.stockCodes.length === 0) {
+      const today = this.getTodayDate();
+      await this.prisma.analysisCache
+        .upsert({
+          where: { date: today },
+          update: { result: JSON.parse(JSON.stringify(result)) as any },
+          create: { date: today, result: JSON.parse(JSON.stringify(result)) as any },
+        })
+        .catch((e: unknown) => this.logger.warn('快取儲存失敗', e));
+    }
+
+    yield { text: 'AI 分析完成！' };
+    yield { result };
+  }
+
+  async *chatStream(dto: ChatMessageDto): AsyncGenerator<string> {
+    const { stockCode, message, history } = dto;
+
+    let stockContext = '';
+    try {
+      const [stocks, valuations] = await Promise.all([this.fetchStocks(), this.fetchValuations()]);
+      const stock = stocks.find((s) => s.code === stockCode);
+      if (stock) {
+        const valuation = valuations[stockCode];
+        stockContext += `${stock.code} ${stock.name}：收盤 ${stock.closingPrice} 漲跌 ${stock.change} 成交量 ${stock.tradeVolume}`;
+        if (valuation) {
+          stockContext += ` 本益比 ${valuation.peRatio} 殖利率 ${valuation.dividendYield}%`;
+        }
+      }
+
+      const historyData = await this.fetchStockHistory(stockCode);
+      if (historyData.length >= 20) {
+        const indicators = this.calculateIndicators(historyData);
+        if (indicators) {
+          stockContext += `\n技術指標：MA5=${indicators.ma5} MA10=${indicators.ma10} MA20=${indicators.ma20} MA60=${indicators.ma60}`;
+          stockContext += ` RSI=${indicators.rsi14} K=${indicators.kValue} D=${indicators.dValue}`;
+          stockContext += ` MACD=${indicators.macdLine} 布林上=${indicators.bollingerUpper} 中=${indicators.bollingerMiddle} 下=${indicators.bollingerLower}`;
+          stockContext += ` 量比=${indicators.volumeRatio} 趨勢=${indicators.trend}`;
+          stockContext += ` 支撐=${indicators.supportLevel} 壓力=${indicators.resistanceLevel}`;
+          if (indicators.candlePatterns.length > 0) {
+            stockContext += ` K線形態：${indicators.candlePatterns.join('、')}`;
+          }
+        }
+      }
+    } catch {
+      this.logger.warn(`無法取得 ${stockCode} 的即時資料`);
+    }
+
+    const systemPrompt = `你是一位專業的台灣股市分析師助手。使用者正在查看股票 ${stockCode} 的頁面。
+
+你的回覆規則：
+- 使用繁體中文
+- 簡潔有重點，每次回覆控制在 300 字以內
+- 引用具體數據時必須使用提供的資料，不可憑空捏造
+- 如果沒有足夠資料回答，誠實告知
+- 提供操作建議時，一定要附帶風險提示
+
+以下是該股票的即時資料：
+${stockContext || '（目前無法取得即時資料）'}`;
+
+    const messages: { role: 'user' | 'assistant'; content: string }[] = [];
+    if (history && history.length > 0) {
+      for (const h of history.slice(-10)) {
+        if (h.role === 'user' || h.role === 'assistant') {
+          messages.push({ role: h.role, content: h.content });
+        }
+      }
+    }
+    messages.push({ role: 'user', content: message });
+
+    const stream = this.anthropic.messages.stream({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      messages,
+    });
+
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+        yield event.delta.text;
+      }
+    }
   }
 }

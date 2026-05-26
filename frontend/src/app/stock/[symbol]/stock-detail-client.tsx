@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/commons/alert-dialog";
 import { Button } from "@/components/commons/button";
+import { StockChat } from "@/components/stock-chat/stock-chat";
 import { useStockDetail } from "@/hooks/use-stock-query";
 import type { StockDetailDto } from "@/type/stock";
 import styles from "./page.module.scss";
@@ -436,6 +437,8 @@ export default function StockDetailClient({ symbol }: StockDetailClientProps) {
           </div>
         </div>
       )}
+
+      {detail && <StockChat stockCode={symbol} stockName={detail.name} />}
     </div>
   );
 }
