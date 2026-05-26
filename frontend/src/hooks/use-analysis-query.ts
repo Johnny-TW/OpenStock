@@ -51,10 +51,6 @@ export function useAnalyzeMarketStream() {
 
       setState({ isStreaming: true, statusText: "連線中...", result: null, error: null });
 
-      if (!data.forceRefresh && !data.stockCodes?.length) {
-        data = { ...data, forceRefresh: false };
-      }
-
       try {
         const baseURL = (process.env.NEXT_PUBLIC_API_HOST || "").replace(/\/$/, "");
         const token = api.defaults.headers.common.Authorization;
