@@ -106,9 +106,9 @@ function formatDateTime(iso: string) {
 const RANK_MEDALS = ["🥇", "🥈", "🥉"];
 
 function getDirectionConfig(direction: string) {
-  if (direction === "偏多")
+  if (direction === "做多")
     return { color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" };
-  if (direction === "偏空")
+  if (direction === "放空")
     return { color: "text-red-600", bg: "bg-red-50", border: "border-red-200" };
   return { color: "text-gray-600", bg: "bg-gray-50", border: "border-gray-200" };
 }
@@ -737,7 +737,9 @@ export default function AnalysisClient() {
         <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
           <Loader2 className="size-10 animate-spin" />
           <p className="text-sm">
-            {statusText || "AI 正在擷取歷史資料、計算技術指標並進行多維度深度分析，請稍候..."}
+            {statusText && !statusText.startsWith("AI 呼叫工具")
+              ? statusText
+              : "AI 正在擷取歷史資料、計算技術指標並進行多維度深度分析，請稍候..."}
           </p>
           <Button variant="outline" size="sm" onClick={abort}>
             取消

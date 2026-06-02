@@ -54,13 +54,17 @@ export function useAnalyzeMarketStream() {
       try {
         const baseURL = (process.env.NEXT_PUBLIC_API_HOST || "").replace(/\/$/, "");
         const token = api.defaults.headers.common.Authorization;
-        const res = await fetch(`${baseURL}/analysis/market/stream`, {
+        const useToolsMode = !data.stockCodes || data.stockCodes.length === 0;
+        const url = useToolsMode
+          ? `${baseURL}/analysis/market/tools/stream`
+          : `${baseURL}/analysis/market/stream`;
+        const res = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: String(token) } : {}),
           },
-          body: JSON.stringify(data),
+          body: useToolsMode ? "{}" : JSON.stringify(data),
           signal: controller.signal,
         });
 

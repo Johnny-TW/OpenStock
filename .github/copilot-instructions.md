@@ -102,3 +102,35 @@ applyTo: "**"
 - 不要寫說明文件或註解，直接給出程式碼。
 - 文案都要是繁體中文。
 - 定期進行代碼重構，確保代碼的可維護性和可讀性。
+
+# 程式碼變更後的文件同步規則
+
+每次修改程式碼後，必須依序執行以下檢查：
+
+## 1. 確認改動範圍
+
+在做任何修改之前，先確認：
+- 哪些檔案被新增 / 修改 / 刪除
+- 影響的模組（frontend / backend / 共用）
+- 是否有新增 API 端點、元件、或架構變更
+
+## 2. 判斷需要更新的 MD 文件
+
+| 改動類型 | 需同步更新的文件 |
+|----------|-----------------|
+| 新增後端 API 端點 | `backend/BACKEND.md`、`CLAUDE.md`（外部 API 區塊）、`.claude/rules/backend.md` |
+| 新增前端頁面或元件 | `frontend/FRONTEND.md`、`CLAUDE.md`（前端架構區塊）、`.claude/rules/frontend.md` |
+| 新增/修改環境變數 | `CLAUDE.md`（環境變數區塊）、`README.md`、`.env.example` |
+| 修改認證邏輯 | `CLAUDE.md`（認證架構區塊） |
+| 修改資料庫 schema | `CLAUDE.md`（資料庫區塊）、`backend/BACKEND.md` |
+| 修改 Docker / 部署設定 | `DEPLOY_GUIDE.md`、`CLAUDE.md` |
+| 修改快取策略 | `.claude/rules/backend.md`（快取規範區塊） |
+| 修改程式碼風格/Biome 設定 | `.claude/rules/code-style.md`、`BIOME_GUIDE.md` |
+
+## 3. 更新規則
+
+- 只更新**確實有變動**的段落，不要大幅改寫無關內容
+- 新增端點時，在對應 MD 的端點列表補上新路由與說明
+- 刪除功能時，同步從 MD 移除對應描述，避免文件過時
+- 若架構有重大變化，在 `CLAUDE.md` 的對應區塊補充說明
+

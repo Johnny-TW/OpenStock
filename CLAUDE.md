@@ -56,12 +56,14 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - 後端用相同的 `JWT_SECRET` 驗證（`@nestjs/jwt`）
 - 呼叫 API 帶 `Authorization: Bearer <token>`
 - 需認證的路由使用 `@UseGuards(AuthGuard)` 保護
+- Token 由 `AuthSync.tsx` 在 session 取得後呼叫 `setAccessToken()` 注入至 `api-client` 模組快取，所有 axios 請求自動帶入
 
 ## 資料庫
 
-- PostgreSQL，Docker 化，開發環境 port 5435
+- PostgreSQL（pgvector/pgvector:pg15），Docker 化，開發環境 port 5435
 - ORM：Prisma，schema 在 `backend/prisma/schema.prisma`
-- 主要 Model：`Portfolio`（持股）、`Watchlist`（自選股）
+- 主要 Model：`Portfolio`（持股）、`Watchlist`（自選股）、`NewsEmbedding`（新聞向量）
+- 啟用 `pgvector` 擴充套件，支援 1536 維向量相似度搜尋（`<=>` cosine distance）
 
 ## 快取（Redis）
 
@@ -74,11 +76,26 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - 使用方式：在 Service 注入 `@Inject(CACHE_MANAGER) private cache: Cache`
 - 啟動：根目錄執行 `docker compose up -d` 會同時啟動 Postgres 與 Redis
 
+## 前端架構
+
+- 狀態管理：**TanStack React Query**（已完全移除 Redux / Redux-Saga）
+- API 呼叫層：`src/lib/api-client.ts`（axios 封裝，`fetchAPI` / `postAPI` / `patchAPI` / `deleteAPI`）
+- React Query Hooks：`use-stock-query.ts`、`use-watchlist-query.ts`、`use-analysis-query.ts`
+- SSE 串流（AI 分析、AI 對話）直接用 `fetch` + `ReadableStream`，不走 axios
+- 通知：`sonner` toast（`Toaster` 掛在 `layout.tsx`）
+
 ## 外部 API
 
 - **TWSE OpenAPI**：`https://openapi.twse.com.tw/v1` — 股票行情、指數、新聞
 - **TWSE 報表**：`https://www.twse.com.tw/exchangeReport/` — 每日成交、估值
 - **Anthropic API**：Claude 模型，用於 AI 股市分析
+  - `POST /analysis/market/stream` — SSE 串流市場分析
+  - `POST /analysis/market` — 同步市場分析
+  - `POST /analysis/chat` — 個股 AI 對話（SSE 串流）
+  - 啟用 Prompt Caching（system prompt 標記 `cache_control: ephemeral`）降低費用
+- **OpenAI Embeddings API**：`text-embedding-3-small`（1536 維），用於新聞向量化（RAG）
+  - 新聞每日第一次分析時批次轉向量存入 `NewsEmbedding` table
+  - 分析個股時用向量相似度取代關鍵字配對，找出語意相關新聞
 
 ## Commit 規範
 
@@ -104,5 +121,6 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - `JWT_SECRET`（前後端必須一致）
 - `DATABASE_URL`（後端）
 - `ANTHROPIC_API_KEY`（後端）
+- `OPENAI_API_KEY`（後端，用於 Embedding API / RAG）
 - `REDIS_HOST` / `REDIS_PORT`（後端，未設定時自動降級為僅記憶體快取）
 - `AZURE_AD_CLIENT_ID` / `AZURE_AD_TENANT_ID`（前端）

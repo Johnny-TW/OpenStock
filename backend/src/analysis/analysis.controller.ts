@@ -61,6 +61,30 @@ export class AnalysisController {
     return this.analysisService.analyzeMarket(dto);
   }
 
+  @ApiOperation({ summary: 'AI 工具模式分析台股市場（SSE 串流）— AI 自主決定查詢哪些資料' })
+  @ApiResponse({ status: 200, description: 'SSE 串流回應，包含工具呼叫進度與最終分析結果' })
+  @Post('market/tools/stream')
+  async analyzeWithToolsStream(@Res() res: Response): Promise<void> {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      for await (const chunk of this.analysisService.analyzeMarketStreamWithTools()) {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+      res.write('data: [DONE]\n\n');
+    } catch (err) {
+      res.write(
+        `data: ${JSON.stringify({ error: err instanceof Error ? err.message : 'AI 工具分析失敗' })}\n\n`,
+      );
+    } finally {
+      res.end();
+    }
+  }
+
   @ApiOperation({ summary: '個股 AI 對話（SSE 串流）' })
   @ApiResponse({ status: 200, description: 'SSE 串流回應' })
   @Post('chat')

@@ -6,7 +6,7 @@ import { StockService } from './stock.service';
 @Module({
   imports: [
     HttpModule.register({
-      timeout: 10000,
+      timeout: 30000,
       maxRedirects: 3,
     }),
   ],

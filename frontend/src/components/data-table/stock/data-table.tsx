@@ -773,7 +773,7 @@ export function StockDataTable({
     setData((initialData ?? []).map((d, i) => ({ ...d, _rowId: i })));
   }, [initialData]);
 
-  const [activeTab, setActiveTab] = React.useState<"all" | "watchlist" | "summary">("watchlist");
+  const [activeTab, setActiveTab] = React.useState<"all" | "watchlist" | "summary">("all");
   const [activeGroup, setActiveGroup] = React.useState<string>("__all__");
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});

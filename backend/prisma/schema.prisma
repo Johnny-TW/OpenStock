@@ -61,3 +61,14 @@ model DailyStockPrice {
   @@index([date])
   @@index([code])
 }
+
+model NewsEmbedding {
+  id        Int      @id @default(autoincrement())
+  title     String
+  summary   String?
+  source    String
+  fetchedAt DateTime @default(now())
+  embedding Unsupported("vector(1536)")?
+
+  @@index([fetchedAt])
+}

@@ -34,3 +34,16 @@
 - 使用 React Query Hooks（`use-stock-query.ts`、`use-watchlist-query.ts`、`use-analysis-query.ts`）
 - 底層透過 `api-client.ts` 的 `fetchAPI` / `postAPI` / `patchAPI` / `deleteAPI` 呼叫後端
 - 呼叫後端 API 時帶 `Authorization: Bearer <token>`
+- Token 由 `AuthSync.tsx` 呼叫 `setAccessToken()` 注入至 `api-client` 模組快取，不直接存 Redux
+
+## SSE 串流
+
+- `useAnalyzeMarketStream`：AI 市場分析串流，直接用 `fetch` + `ReadableStream` 解析 SSE，不走 React Query
+- `useStockChat`：個股 AI 對話串流，維護 `messages` 狀態，逐字更新最後一則 assistant 訊息
+- SSE 端點需手動帶 `Authorization` header（無法用 axios interceptor）
+- 使用 `AbortController` 中斷串流，避免元件 unmount 後繼續寫入 state
+
+## 通知
+
+- 全域通知使用 `sonner` 的 `toast`（`toast.success` / `toast.error`）
+- `Toaster` 掛載在 `layout.tsx`，取代原有 Redux AlertDialog
