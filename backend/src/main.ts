@@ -5,6 +5,10 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { LoggingInterceptor, ResponseInterceptor } from './interceptors/response.interceptor';
 
+// 並行 HTTPS 請求（TWSE API 批次呼叫）會在同一個 TLSSocket 上掛多個 error listener，
+// 預設上限 10 不夠用，調高避免誤報 MaxListenersExceededWarning。
+process.setMaxListeners(50);
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
