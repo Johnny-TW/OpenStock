@@ -24,7 +24,7 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('EE39 StockSmart System OpenAPI')
+    .setTitle('SS01 - StockSmart System OpenAPI')
     .setDescription(
       '本平臺提供臺灣證券交易所服務 API 的二次封裝，資料來源為 [TWSE OpenAPI](https://openapi.twse.com.tw/)。\n\n' +
         '## 認證方式\n' +
@@ -68,7 +68,7 @@ async function bootstrap() {
       defaultModelExpandDepth: 2,
       displayRequestDuration: true,
     },
-    customSiteTitle: 'EE39 StockSmart System OpenAPI',
+    customSiteTitle: 'SS01 - StockSmart System OpenAPI',
     customCss: `.topbar-wrapper a::after { content: " | OpenAPI JSON"; font-size: 12px; color: #89bf04; }
       .swagger-ui .info .base-url { font-size: 14px; font-weight: bold; }`,
     customfavIcon: '',

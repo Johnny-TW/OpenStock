@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import { AuthGuard } from '../auth/auth.guard';
 import { AnalysisService } from './analysis.service';
 import { AnalysisResultDto, AnalyzeMarketDto, ChatMessageDto } from './dto/analysis.dto';
 
@@ -22,7 +23,7 @@ export class AnalysisController {
     return this.analysisService.getCachedAnalysis();
   }
 
-  @ApiOperation({ summary: 'AI 分析台股市場並推薦關注標的（SSE 串流）' })
+  @ApiOperation({ summary: 'AI 分析台股市場並推薦關注標的(SSE 串流）' })
   @ApiResponse({ status: 200, description: 'SSE 串流回應' })
   @ApiResponse({ status: 400, description: '請求參數驗證失敗' })
   @ApiResponse({ status: 401, description: '未認證' })
@@ -61,10 +62,12 @@ export class AnalysisController {
     return this.analysisService.analyzeMarket(dto);
   }
 
-  @ApiOperation({ summary: 'AI 工具模式分析台股市場（SSE 串流）— AI 自主決定查詢哪些資料' })
+  @ApiOperation({ summary: 'AI 工具模式分析台股市場(SSE 串流）— AI 自主決定查詢哪些資料' })
   @ApiResponse({ status: 200, description: 'SSE 串流回應，包含工具呼叫進度與最終分析結果' })
+  @UseGuards(AuthGuard)
   @Post('market/tools/stream')
-  async analyzeWithToolsStream(@Res() res: Response): Promise<void> {
+  async analyzeWithToolsStream(@Req() req: Request, @Res() res: Response): Promise<void> {
+    const userId = req.user?.sub ?? 'anonymous';
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -72,7 +75,7 @@ export class AnalysisController {
     res.flushHeaders();
 
     try {
-      for await (const chunk of this.analysisService.analyzeMarketStreamWithTools()) {
+      for await (const chunk of this.analysisService.analyzeMarketStreamWithTools(userId)) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
       }
       res.write('data: [DONE]\n\n');
@@ -85,7 +88,7 @@ export class AnalysisController {
     }
   }
 
-  @ApiOperation({ summary: '個股 AI 對話（SSE 串流）' })
+  @ApiOperation({ summary: '個股 AI 對話(SSE 串流）' })
   @ApiResponse({ status: 200, description: 'SSE 串流回應' })
   @Post('chat')
   async chat(@Body() dto: ChatMessageDto, @Res() res: Response): Promise<void> {

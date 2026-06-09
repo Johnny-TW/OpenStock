@@ -2,7 +2,7 @@
 # 所有 AI Agent 與開發者應遵守的共用約定
 
 project:
-  name: "EE39 StockSmart System"
+  name: "SS01 - StockSmart System"
   type: monorepo
   package_manager: pnpm
   node_version: "20"

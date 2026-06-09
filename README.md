@@ -1,4 +1,4 @@
-# EE39 StockSmart System — 台灣股市智慧分析平台
+# SS01 StockSmart System — 台灣股市智慧分析平台
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-11-e0234e?logo=nestjs)](https://nestjs.com/)
@@ -6,12 +6,24 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169e1?logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-dc382d?logo=redis)](https://redis.io/)
 
-全端 Monorepo 架構的台灣股市分析平台，整合 TWSE 證交所即時行情、產業熱力圖、AI 智慧選股、自選股管理等功能。
+> 🪧 **這是一個個人 side project**，純粹用來觀看台股、整理行情，並透過 AI 技術幫助自己理解股票波動、新聞與市場脈動。**非商業用途、不對外營利**。
+
+全端 Monorepo 架構的台灣股市分析平台，資料以 **TWSE 證交所 OpenAPI** 為主要來源，整合即時行情、產業熱力圖、AI 智慧選股、自選股管理等功能。
+
+---
+
+## 專案性質與免責聲明
+
+- 🎯 **定位**：個人興趣導向的 side project，用於學習技術與觀察台股，**不作任何商業營利用途**。
+- 📡 **資料來源**：股票行情主要透過 **TWSE 證交所 OpenAPI** 公開資料撈取，僅供個人研究與觀看。
+- 🤖 **AI 分析**：利用 AI 技術輔助理解股票波動、新聞與市場趨勢，**分析結果僅供參考**。
+- ⚠️ **投資風險**：本專案所有內容（含 AI 分析、排行、估值等）**皆非投資建議**，不構成任何買賣依據，投資決策請自行評估、風險自負。
 
 ---
 
 ## 目錄
 
+- [專案性質與免責聲明](#專案性質與免責聲明)
 - [專案架構](#專案架構)
 - [技術棧](#技術棧)
 - [功能總覽](#功能總覽)
@@ -626,4 +638,4 @@ Stage 3: runner   → 非 root 使用者執行，僅複製必要產出
 
 ## License
 
-Private — All rights reserved.
+個人 side project，僅供學習與非商業用途使用。所有股市資料版權歸 TWSE 證交所等原始來源所有，本專案不對資料正確性負責，亦不作任何商業營利。

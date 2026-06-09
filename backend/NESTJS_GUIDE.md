@@ -1010,7 +1010,7 @@ NestJS 內建 Swagger 支援，自動從程式碼產生 API 文件。
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 const config = new DocumentBuilder()
-  .setTitle('EE39 StockSmart System OpenAPI')
+  .setTitle('SS01 StockSmart System OpenAPI')
   .setDescription('台灣證券交易所 API')
   .setVersion('1.0')
   .addServer('http://localhost:3004', '本機開發')

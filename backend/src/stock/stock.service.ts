@@ -8,7 +8,18 @@ import type { Cache } from 'cache-manager';
 import { firstValueFrom } from 'rxjs';
 import YahooFinance from 'yahoo-finance2';
 
-const yahooFinance = new YahooFinance();
+const yahooFinance = new YahooFinance({
+  logger: {
+    info: (...args) => console.log(...args),
+    warn: (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('Unsupported environment')) return;
+      console.warn(...args);
+    },
+    error: (...args) => console.error(...args),
+    debug: () => {},
+    dir: (...args) => console.dir(...args),
+  },
+});
 
 import { PrismaService } from '../prisma/prisma.service';
 import {

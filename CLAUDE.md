@@ -1,4 +1,4 @@
-# CLAUDE.md — EE39 StockSmart System 專案全域說明書
+# CLAUDE.md — SS01 StockSmart System 專案全域說明書
 
 ## 語言與風格
 

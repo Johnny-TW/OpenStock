@@ -23,10 +23,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "EE39 StockSmart System",
-    template: "EE39 StockSmart System | %s",
+    default: "SS01 - StockSmart System",
+    template: "SS01 - StockSmart System | %s",
   },
-  description: "EE39 StockSmart System Application",
+  description: "SS01 - StockSmart System Application",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",

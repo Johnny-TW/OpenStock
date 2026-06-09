@@ -53,7 +53,7 @@ const AnalysisAnnotation = Annotation.Root({
 
 export type AnalysisGraphState = typeof AnalysisAnnotation.State;
 
-// Context（從 AnalysisService 注入）
+// Graph Context
 export interface AnalysisGraphContext {
   anthropic: Anthropic;
   systemPrompt: string;
@@ -70,12 +70,11 @@ export interface AnalysisGraphContext {
   extractJson: (rawText: string) => string;
 }
 
-// Graph Factory
 export function createAnalysisGraph(ctx: AnalysisGraphContext) {
   const MAX_ITERATIONS = 15;
   const BATCH_SIZE = 5;
 
-  // callModel
+  // callModel：呼叫模型並將回應追加到 messages，iteration +1
   async function callModel(state: AnalysisGraphState) {
     const response = await ctx.anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -98,7 +97,7 @@ export function createAnalysisGraph(ctx: AnalysisGraphContext) {
     };
   }
 
-  // executeTools
+  // executeTools：從最新訊息抽取 tool_use，分批呼叫 ctx.runTool，並將結果以 tool_result 格式追加到 messages
   async function executeTools(state: AnalysisGraphState) {
     const lastMsg = state.messages[state.messages.length - 1];
     const toolUseBlocks = (lastMsg.content as unknown[]).filter(
@@ -144,7 +143,7 @@ export function createAnalysisGraph(ctx: AnalysisGraphContext) {
     };
   }
 
-  // parseResult
+  // 負責從模型回應中抽取最終結果並寫入 state.finalResult
   function parseResult(state: AnalysisGraphState) {
     const lastMsg = state.messages[state.messages.length - 1];
     const textBlock = (lastMsg.content as unknown[]).find(
@@ -161,7 +160,7 @@ export function createAnalysisGraph(ctx: AnalysisGraphContext) {
     return { finalResult: ctx.buildResult(parsed, technicalsCache) };
   }
 
-  // Conditional Edge
+  // 決策下一步：根據最新訊息是否包含 tool_use 來決定下一個節點，或是結束流程
   function shouldContinue(state: AnalysisGraphState): 'executeTools' | 'parseResult' | typeof END {
     if (state.iteration >= MAX_ITERATIONS) return END;
 

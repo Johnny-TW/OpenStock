@@ -1,0 +1,12 @@
+{
+  "github-actions.workflows.validation.enabled": false,
+  "cSpell.words": [
+    "pgvector",
+    "stocksmart",
+    "openstock",
+    "NEXTAUTH",
+    "pgdata",
+    "healthcheck",
+    "isready"
+  ]
+}

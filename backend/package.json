@@ -42,11 +42,13 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "keyv": "^5.6.0",
+    "langfuse-langchain": "^3.38.20",
     "openai": "^6.39.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
-    "yahoo-finance2": "^3.14.0"
+    "yahoo-finance2": "^3.14.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

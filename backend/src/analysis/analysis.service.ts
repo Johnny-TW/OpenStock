@@ -1,8 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { AIMessage } from '@langchain/core/messages';
+import { tool } from '@langchain/core/tools';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { CallbackHandler } from 'langfuse-langchain';
 import { firstValueFrom } from 'rxjs';
+import { z } from 'zod';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StockService } from '../stock/stock.service';
@@ -124,50 +130,6 @@ export class AnalysisService {
   private readonly TWSE_VALUATION_URL =
     'https://www.twse.com.tw/exchangeReport/BWIBBU_ALL?response=json';
   private readonly TWSE_MARKET_INDEX_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/MI_INDEX';
-
-  private readonly ANALYSIS_TOOLS = [
-    {
-      name: 'get_market_overview',
-      description:
-        '取得大盤指數 + 所有上市個股今日成交(收盤價、漲跌、成交量)、估值(本益比/殖利率)、產業別、月營收年增率',
-      input_schema: { type: 'object' as const, properties: {}, required: [] as string[] },
-    },
-    {
-      name: 'get_institutional_investors',
-      description: '取得今日三大法人(外資、投信、自營商)買賣超前 20 大資料',
-      input_schema: { type: 'object' as const, properties: {}, required: [] as string[] },
-    },
-    {
-      name: 'get_news',
-      description: '取得多來源財經新聞(台股、美股、國際財經、證交所公告)，每類最多 15 則',
-      input_schema: { type: 'object' as const, properties: {}, required: [] as string[] },
-    },
-    {
-      name: 'get_stock_technicals',
-      description:
-        '取得特定股票近 3 個月 K 線歷史，計算 MA5/10/20/60、RSI14、KD、MACD、布林通道、量比、動能、K 線形態、支撐壓力位',
-      input_schema: {
-        type: 'object' as const,
-        properties: {
-          stock_code: { type: 'string' as const, description: '4 位數股票代碼，例如 2330' },
-        },
-        required: ['stock_code'],
-      },
-    },
-    {
-      name: 'search_related_news',
-      description: '語意向量搜尋與特定股票最相關的新聞(top 5)，比關鍵字配對更精準',
-      input_schema: {
-        type: 'object' as const,
-        properties: {
-          stock_code: { type: 'string' as const, description: '股票代碼' },
-          stock_name: { type: 'string' as const, description: '股票名稱' },
-          industry: { type: 'string' as const, description: '產業別(可選)' },
-        },
-        required: ['stock_code', 'stock_name'],
-      },
-    },
-  ];
 
   constructor(
     private readonly httpService: HttpService,
@@ -1081,7 +1043,7 @@ export class AnalysisService {
       - 只回傳 JSON，不要加任何前後說明`;
 
     const completion = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 16384,
       system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: prompt }],
@@ -1410,7 +1372,7 @@ export class AnalysisService {
     };
   }
 
-  async *analyzeMarketStreamWithTools(): AsyncGenerator<{
+  async *analyzeMarketStreamWithTools(userId: string): AsyncGenerator<{
     text?: string;
     result?: AnalysisResultDto;
   }> {
@@ -1418,6 +1380,93 @@ export class AnalysisService {
 
     const technicalsCache = new Map<string, TechnicalIndicators>();
     const stockDataCache = new Map<string, StockSnapshotDto>();
+
+    const llm = new ChatAnthropic({
+      model: 'claude-sonnet-4-6',
+      maxTokens: 16384,
+    });
+
+    const lgTools = [
+      tool(
+        async () =>
+          JSON.stringify(
+            await this.runTool('get_market_overview', {}, stockDataCache, technicalsCache),
+          ),
+        {
+          name: 'get_market_overview',
+          description:
+            '取得大盤指數 + 所有上市個股今日成交(收盤價、漲跌、成交量)、估值(本益比/殖利率)、產業別、月營收年增率',
+          schema: z.object({}),
+        },
+      ),
+      tool(
+        async () =>
+          JSON.stringify(
+            await this.runTool('get_institutional_investors', {}, stockDataCache, technicalsCache),
+          ),
+        {
+          name: 'get_institutional_investors',
+          description: '取得今日三大法人(外資、投信、自營商)買賣超前 20 大資料',
+          schema: z.object({}),
+        },
+      ),
+      tool(
+        async () =>
+          JSON.stringify(await this.runTool('get_news', {}, stockDataCache, technicalsCache)),
+        {
+          name: 'get_news',
+          description: '取得多來源財經新聞(台股、美股、國際財經、證交所公告)，每類最多 15 則',
+          schema: z.object({}),
+        },
+      ),
+      tool(
+        async ({ stock_code }: { stock_code: string }) =>
+          JSON.stringify(
+            await this.runTool(
+              'get_stock_technicals',
+              { stock_code },
+              stockDataCache,
+              technicalsCache,
+            ),
+          ),
+        {
+          name: 'get_stock_technicals',
+          description:
+            '取得特定股票近 3 個月 K 線歷史，計算 MA5/10/20/60、RSI14、KD、MACD、布林通道、量比、動能、K 線形態、支撐壓力位',
+          schema: z.object({
+            stock_code: z.string().describe('4 位數股票代碼，例如 2330'),
+          }),
+        },
+      ),
+      tool(
+        async ({
+          stock_code,
+          stock_name,
+          industry,
+        }: {
+          stock_code: string;
+          stock_name: string;
+          industry?: string;
+        }) =>
+          JSON.stringify(
+            await this.runTool(
+              'search_related_news',
+              { stock_code, stock_name, industry: industry ?? '' },
+              stockDataCache,
+              technicalsCache,
+            ),
+          ),
+        {
+          name: 'search_related_news',
+          description: '語意向量搜尋與特定股票最相關的新聞(top 5)，比關鍵字配對更精準',
+          schema: z.object({
+            stock_code: z.string().describe('股票代碼'),
+            stock_name: z.string().describe('股票名稱'),
+            industry: z.string().optional().describe('產業別(可選)'),
+          }),
+        },
+      ),
+    ];
 
     const systemPrompt = `你是一位擁有 20 年經驗的台灣股市專業投資分析師與技術分析專家，擅長做多與放空雙向操作。
 
@@ -1468,86 +1517,51 @@ export class AnalysisService {
 
 做多 5-8 檔、放空 3-5 檔、觀望 3-5 檔，按 direction 分組後以 total 分數排序。`;
 
-    const messages: Array<{ role: 'user' | 'assistant'; content: unknown }> = [
-      { role: 'user', content: userMessage },
-    ];
+    const agent = createReactAgent({
+      llm,
+      tools: lgTools,
+      prompt: systemPrompt,
+    });
 
-    const MAX_ITERATIONS = 15;
+    const callbacks = process.env.LANGFUSE_SECRET_KEY
+      ? [
+          new CallbackHandler({
+            userId,
+            sessionId: `market-analysis-${this.getTodayDate()}`,
+          }),
+        ]
+      : [];
 
-    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-      const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 16384,
-        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-        tools: this.ANALYSIS_TOOLS as unknown as Parameters<
-          typeof this.anthropic.messages.create
-        >[0]['tools'],
-        messages: messages as unknown as Parameters<
-          typeof this.anthropic.messages.create
-        >[0]['messages'],
-      });
+    let lastAiContent = '';
 
-      messages.push({ role: 'assistant', content: response.content });
-
-      if (response.stop_reason === 'end_turn') {
-        yield { text: 'AI 分析完成，正在解析結果...' };
-        const textBlock = response.content.find((b) => b.type === 'text');
-        const rawText =
-          textBlock && 'text' in textBlock ? (textBlock as { text: string }).text : '{}';
-        const jsonStr = this.extractJson(rawText);
-
-        let parsed: ParsedAiResult;
-        try {
-          parsed = JSON.parse(jsonStr) as ParsedAiResult;
-        } catch {
-          this.logger.error(`AI 回傳非合法 JSON:${rawText.slice(0, 300)}`);
-          throw new Error('AI 分析結果解析失敗，請重試');
+    for await (const chunk of await agent.stream(
+      { messages: [{ role: 'user', content: userMessage }] },
+      { streamMode: 'updates', recursionLimit: 50, callbacks },
+    )) {
+      if ('agent' in chunk) {
+        const msgs = (chunk as { agent: { messages: AIMessage[] } }).agent.messages;
+        const lastMsg = msgs[msgs.length - 1];
+        const toolCalls = lastMsg.tool_calls ?? [];
+        if (toolCalls.length > 0) {
+          yield { text: `AI 正在查詢市場資料(${toolCalls.length} 項)...` };
+        } else {
+          lastAiContent = typeof lastMsg.content === 'string' ? lastMsg.content : '';
         }
-
-        yield { result: this.buildResult(parsed, technicalsCache) };
-        return;
-      }
-
-      if (response.stop_reason === 'tool_use') {
-        const toolUseBlocks = (response.content as unknown[]).filter(
-          (b) => (b as { type: string }).type === 'tool_use',
-        ) as {
-          type: 'tool_use';
-          id: string;
-          name: string;
-          input: Record<string, string>;
-        }[];
-
-        yield { text: `AI 正在查詢市場資料(${toolUseBlocks.length} 項)...` };
-
-        const toolResults: { type: 'tool_result'; tool_use_id: string; content: string }[] = [];
-        const batchSize = 5;
-        for (let i = 0; i < toolUseBlocks.length; i += batchSize) {
-          if (i > 0) await this.delay(300);
-          const batch = toolUseBlocks.slice(i, i + batchSize);
-          const batchResults = await Promise.all(
-            batch.map(async (block) => {
-              const result = await this.runTool(
-                block.name,
-                block.input,
-                stockDataCache,
-                technicalsCache,
-              );
-              return {
-                type: 'tool_result' as const,
-                tool_use_id: block.id,
-                content: JSON.stringify(result),
-              };
-            }),
-          );
-          toolResults.push(...batchResults);
-        }
-
-        messages.push({ role: 'user', content: toolResults });
       }
     }
 
-    throw new Error('AI 工具分析超過最大迭代次數');
+    yield { text: 'AI 分析完成，正在解析結果...' };
+
+    const jsonStr = this.extractJson(lastAiContent);
+    let parsed: ParsedAiResult;
+    try {
+      parsed = JSON.parse(jsonStr) as ParsedAiResult;
+    } catch {
+      this.logger.error(`AI 回傳非合法 JSON:${lastAiContent.slice(0, 300)}`);
+      throw new Error('AI 分析結果解析失敗，請重試');
+    }
+
+    yield { result: this.buildResult(parsed, technicalsCache) };
   }
 
   async *chatStream(dto: ChatMessageDto): AsyncGenerator<string> {
@@ -1628,7 +1642,7 @@ ${stockContext || '(目前無法取得即時資料)'}`;
     messages.push({ role: 'user', content: message });
 
     const stream = this.anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       messages,
