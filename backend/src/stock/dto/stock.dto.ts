@@ -1,4 +1,22 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+
+export const STOCK_DAILY_SORT_FIELDS = [
+  'code',
+  'name',
+  'closingPrice',
+  'change',
+  'changePercent',
+  'openingPrice',
+  'highestPrice',
+  'lowestPrice',
+  'tradeVolume',
+  'tradeValue',
+  'transaction',
+] as const;
+
+export type StockDailySortField = (typeof STOCK_DAILY_SORT_FIELDS)[number];
 
 export interface TwseResponse {
   stat: string;
@@ -62,6 +80,93 @@ export class StockDailyAllResponse {
 
   @ApiProperty({ example: 980, description: '資料總筆數' })
   total: number;
+}
+
+// 分頁查詢參數（含搜尋、產業篩選、排序）
+export class StockDailyQueryDto {
+  @ApiPropertyOptional({ example: 1, minimum: 1, description: '頁碼，從 1 開始，預設 1' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiPropertyOptional({
+    example: 20,
+    minimum: 1,
+    maximum: 200,
+    description: '每頁筆數，預設 20，最多 200',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  pageSize?: number = 20;
+
+  @ApiPropertyOptional({ example: '台積電', description: '搜尋代號或名稱（模糊比對）' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ example: '半導體業', description: '產業別篩選，未帶或 all 表示全部' })
+  @IsOptional()
+  @IsString()
+  industry?: string;
+
+  @ApiPropertyOptional({
+    example: 'tradeValue',
+    enum: STOCK_DAILY_SORT_FIELDS,
+    description: '排序欄位',
+  })
+  @IsOptional()
+  @IsIn(STOCK_DAILY_SORT_FIELDS as unknown as string[])
+  sortBy?: StockDailySortField;
+
+  @ApiPropertyOptional({
+    example: 'desc',
+    enum: ['asc', 'desc'],
+    description: '排序方向，預設 desc',
+  })
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortDir?: 'asc' | 'desc' = 'desc';
+}
+
+// 分頁回應（上市個股日成交資訊）
+export class StockDailyPagedResponse {
+  @ApiProperty({ type: [StockDailyDto], description: '當頁個股成交資訊陣列' })
+  data: StockDailyDto[];
+
+  @ApiProperty({ example: 980, description: '篩選後的資料總筆數' })
+  total: number;
+
+  @ApiProperty({ example: 1, description: '當前頁碼' })
+  page: number;
+
+  @ApiProperty({ example: 20, description: '每頁筆數' })
+  pageSize: number;
+
+  @ApiProperty({ example: 49, description: '總頁數' })
+  totalPages: number;
+
+  @ApiProperty({ example: '20260311', description: '資料日期' })
+  date: string;
+
+  @ApiProperty({ example: '115年03月 每日收盤行情', description: '報表標題' })
+  title: string;
+
+  @ApiProperty({ type: [String], description: '全部產業別清單（供下拉選單使用）' })
+  industries: string[];
+}
+
+// 全市場漲跌前 N 名（供首頁圖表使用）
+export class TopMoversResponse {
+  @ApiProperty({ type: [StockDailyDto], description: '漲幅前 N 名' })
+  gainers: StockDailyDto[];
+
+  @ApiProperty({ type: [StockDailyDto], description: '跌幅前 N 名' })
+  losers: StockDailyDto[];
 }
 
 // 上市個股日本益比、殖利率及股價淨值比

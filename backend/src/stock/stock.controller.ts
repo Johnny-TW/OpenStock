@@ -12,9 +12,13 @@ import {
   PeRatioRankingResponse,
   RevenueRankingResponse,
   StockDailyAllResponse,
+  StockDailyDto,
+  StockDailyPagedResponse,
+  StockDailyQueryDto,
   StockDetailResponse,
   StockHistoryResponse,
   StockValuationResponse,
+  TopMoversResponse,
   TopVolumeResponse,
 } from './dto/stock.dto';
 import { StockService } from './stock.service';
@@ -34,6 +38,49 @@ export class StockController {
   @Get('daily-all')
   async getDailyAll(): Promise<StockDailyAllResponse> {
     return this.stockService.getDailyAll();
+  }
+
+  @ApiTags('證券交易')
+  @ApiOperation({
+    summary: '上市個股日成交資訊（分頁）',
+    description:
+      '後端分頁版本，每次只回傳指定頁碼與筆數的資料，並支援搜尋、產業篩選、排序。\n\n' +
+      '範例：`?page=1&pageSize=20` 取第 1 頁 20 筆、`?search=台積&sortBy=tradeValue&sortDir=desc` 搜尋並排序。\n\n' +
+      '資料來源：TWSE `exchangeReport/STOCK_DAY_ALL`（後端篩選/排序/切片，重用快取）',
+  })
+  @ApiResponse({ status: 200, description: '成功取得分頁個股日成交資訊' })
+  @Get('daily-all/paged')
+  async getDailyAllPaged(@Query() query: StockDailyQueryDto): Promise<StockDailyPagedResponse> {
+    return this.stockService.getDailyAllPaged(query);
+  }
+
+  @ApiTags('證券交易')
+  @ApiOperation({
+    summary: '全市場漲跌前 5 名',
+    description: '回傳全市場漲幅與跌幅前 5 名，供首頁圖表使用，避免前端載入全部資料。',
+  })
+  @ApiResponse({ status: 200, description: '成功取得漲跌前 5 名' })
+  @Get('daily-all/top-movers')
+  async getTopMovers(): Promise<TopMoversResponse> {
+    return this.stockService.getTopMovers();
+  }
+
+  @ApiTags('證券交易')
+  @ApiOperation({
+    summary: '依代號批次取得個股日成交資訊',
+    description:
+      '傳入逗號分隔的股票代號，回傳對應的當日成交資訊。供自選股頁面只撈取被收藏的個股。\n\n' +
+      '範例：`?codes=2330,2317,2454`',
+  })
+  @ApiQuery({ name: 'codes', required: true, description: '逗號分隔的股票代號，如 2330,2317' })
+  @ApiResponse({ status: 200, description: '成功取得指定個股資訊' })
+  @Get('daily-all/by-codes')
+  async getDailyByCodes(@Query('codes') codes?: string): Promise<StockDailyDto[]> {
+    const list = (codes ?? '')
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+    return this.stockService.getDailyByCodes(list);
   }
 
   @ApiTags('證券交易')

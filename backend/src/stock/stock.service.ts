@@ -45,12 +45,16 @@ import {
   RevenueRankingResponse,
   StockDailyAllResponse,
   StockDailyDto,
+  StockDailyPagedResponse,
+  StockDailyQueryDto,
+  type StockDailySortField,
   StockDetailDto,
   StockDetailResponse,
   StockHistoryPointDto,
   StockHistoryResponse,
   StockValuationDto,
   StockValuationResponse,
+  TopMoversResponse,
   TopVolumeDto,
   TopVolumeResponse,
   TwseResponse,
@@ -198,6 +202,105 @@ export class StockService implements OnModuleInit {
     };
     await this.cacheManager.set('stock:daily-all', result, StockService.CACHE_TTL.DAILY);
     return result;
+  }
+
+  private changePercentOf(stock: StockDailyDto): number {
+    const closing = this.parseNumber(stock.closingPrice);
+    const change = this.parseNumber(stock.change);
+    const prev = closing - change;
+    return prev > 0 ? (change / prev) * 100 : 0;
+  }
+
+  private compareStock(
+    a: StockDailyDto,
+    b: StockDailyDto,
+    sortBy: StockDailySortField,
+    sortDir: 'asc' | 'desc',
+  ): number {
+    let cmp: number;
+    if (sortBy === 'code' || sortBy === 'name') {
+      cmp = a[sortBy].localeCompare(b[sortBy]);
+    } else if (sortBy === 'changePercent') {
+      cmp = this.changePercentOf(a) - this.changePercentOf(b);
+    } else {
+      cmp = this.parseNumber(a[sortBy]) - this.parseNumber(b[sortBy]);
+    }
+    return sortDir === 'asc' ? cmp : -cmp;
+  }
+
+  async getDailyAllPaged(query: StockDailyQueryDto): Promise<StockDailyPagedResponse> {
+    const { page = 1, pageSize = 20, search, industry, sortBy, sortDir = 'desc' } = query;
+    const all = await this.getDailyAll();
+
+    const industries = Array.from(new Set(all.data.map((s) => s.industry).filter(Boolean))).sort(
+      (a, b) => a.localeCompare(b),
+    );
+
+    let list = all.data;
+
+    const keyword = search?.trim().toLowerCase();
+    if (keyword) {
+      list = list.filter(
+        (s) => s.code.toLowerCase().includes(keyword) || s.name.toLowerCase().includes(keyword),
+      );
+    }
+
+    if (industry && industry !== 'all') {
+      list = list.filter((s) => s.industry === industry);
+    }
+
+    if (sortBy) {
+      list = [...list].sort((a, b) => this.compareStock(a, b, sortBy, sortDir));
+    }
+
+    const total = list.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(Math.max(page, 1), totalPages);
+    const start = (safePage - 1) * pageSize;
+    const data = list.slice(start, start + pageSize);
+
+    return {
+      data,
+      total,
+      page: safePage,
+      pageSize,
+      totalPages,
+      date: all.date,
+      title: all.title,
+      industries,
+    };
+  }
+
+  async getTopMovers(count = 5): Promise<TopMoversResponse> {
+    const all = await this.getDailyAll();
+    const valid = all.data
+      .map((s) => ({
+        stock: s,
+        pct: this.changePercentOf(s),
+        close: this.parseNumber(s.closingPrice),
+      }))
+      .filter((x) => x.close > 0);
+
+    const gainers = valid
+      .filter((x) => x.pct > 0)
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, count)
+      .map((x) => x.stock);
+
+    const losers = valid
+      .filter((x) => x.pct < 0)
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, count)
+      .map((x) => x.stock);
+
+    return { gainers, losers };
+  }
+
+  async getDailyByCodes(codes: string[]): Promise<StockDailyDto[]> {
+    if (!codes.length) return [];
+    const all = await this.getDailyAll();
+    const wanted = new Set(codes.map((c) => c.trim()));
+    return all.data.filter((s) => wanted.has(s.code));
   }
 
   async getValuation(): Promise<StockValuationResponse> {
