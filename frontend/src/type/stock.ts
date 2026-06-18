@@ -31,6 +31,44 @@ export interface StockDailyAllResponse {
   total: number;
 }
 
+export type StockDailySortField =
+  | "code"
+  | "name"
+  | "closingPrice"
+  | "change"
+  | "changePercent"
+  | "openingPrice"
+  | "highestPrice"
+  | "lowestPrice"
+  | "tradeVolume"
+  | "tradeValue"
+  | "transaction";
+
+export interface StockDailyQuery {
+  page: number;
+  pageSize: number;
+  search?: string;
+  industry?: string;
+  sortBy?: StockDailySortField;
+  sortDir?: "asc" | "desc";
+}
+
+export interface StockDailyPagedResponse {
+  data: StockDailyDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  date: string;
+  title: string;
+  industries: string[];
+}
+
+export interface TopMoversResponse {
+  gainers: StockDailyDto[];
+  losers: StockDailyDto[];
+}
+
 /** 個股本益比、殖利率、股價淨值比 DTO */
 export interface StockValuationDto {
   code: string;

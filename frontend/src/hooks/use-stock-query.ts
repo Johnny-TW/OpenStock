@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { fetchAPI } from "@/lib/api-client";
 import type {
   AllNewsResponse,
@@ -11,9 +11,13 @@ import type {
   PeRatioRankingResponse,
   RevenueRankingResponse,
   StockDailyAllResponse,
+  StockDailyDto,
+  StockDailyPagedResponse,
+  StockDailyQuery,
   StockDetailResponse,
   StockHistoryResponse,
   StockValuationResponse,
+  TopMoversResponse,
   TopVolumeResponse,
 } from "@/type/stock";
 
@@ -29,6 +33,42 @@ export function useStockDailyAll() {
   return useQuery({
     queryKey: ["stock", "daily-all"],
     queryFn: () => fetchAPI<StockDailyAllResponse>("stock/daily-all"),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useStockDailyPaged(query: StockDailyQuery) {
+  const { page, pageSize, search, industry, sortBy, sortDir } = query;
+  return useQuery({
+    queryKey: ["stock", "daily-all", "paged", page, pageSize, search, industry, sortBy, sortDir],
+    queryFn: () =>
+      fetchAPI<StockDailyPagedResponse>("stock/daily-all/paged", {
+        page,
+        pageSize,
+        search: search || undefined,
+        industry: industry && industry !== "all" ? industry : undefined,
+        sortBy: sortBy || undefined,
+        sortDir: sortBy ? sortDir : undefined,
+      }),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useTopMovers() {
+  return useQuery({
+    queryKey: ["stock", "daily-all", "top-movers"],
+    queryFn: () => fetchAPI<TopMoversResponse>("stock/daily-all/top-movers"),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useStockDailyByCodes(codes: string[]) {
+  return useQuery({
+    queryKey: ["stock", "daily-all", "by-codes", codes],
+    queryFn: () =>
+      fetchAPI<StockDailyDto[]>("stock/daily-all/by-codes", { codes: codes.join(",") }),
+    enabled: codes.length > 0,
     staleTime: 5 * 60 * 1000,
   });
 }
