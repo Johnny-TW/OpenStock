@@ -11,8 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/commons/card";
-import { Input } from "@/components/commons/input";
-import { Label } from "@/components/commons/label";
 import { azure_ad, google } from "@/images";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +39,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">系統登入</CardTitle>
-          <CardDescription>使用電子郵件或 Microsoft 帳號登入</CardDescription>
+          <CardDescription>使用 Microsoft 或 Google 帳號登入</CardDescription>
         </CardHeader>
         <CardContent>
           {errorMessage && (
@@ -49,52 +47,26 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               {errorMessage}
             </div>
           )}
-          <form>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-3">
-                <Label htmlFor="email">電子郵件</Label>
-                <Input id="email" type="email" placeholder="name@example.com" required />
-              </div>
-              <div className="grid gap-3">
-                <div className="flex items-center">
-                  <Label htmlFor="password">密碼</Label>
-                  <a
-                    href="#"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    忘記密碼？
-                  </a>
-                </div>
-                <Input id="password" type="password" required />
-              </div>
-              <Button type="submit" className="w-full">
-                登入
-              </Button>
-              <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-                <span className="relative z-10 bg-card px-2 text-muted-foreground">
-                  或使用以下方式
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-3"
-                onClick={handleAzureLogin}
-              >
-                <Image src={azure_ad} alt="Azure AD" width={24} height={24} />
-                使用 Microsoft 帳號登入
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-3"
-                onClick={handleGoogleLogin}
-              >
-                <Image src={google} alt="Google" width={20} height={20} />
-                使用 Google 帳號登入
-              </Button>
-            </div>
-          </form>
+          <div className="flex flex-col gap-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-3"
+              onClick={handleAzureLogin}
+            >
+              <Image src={azure_ad} alt="Azure AD" width={24} height={24} />
+              使用 Microsoft 帳號登入
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-3"
+              onClick={handleGoogleLogin}
+            >
+              <Image src={google} alt="Google" width={20} height={20} />
+              使用 Google 帳號登入
+            </Button>
+          </div>
         </CardContent>
       </Card>
       <div className="text-muted-foreground text-center text-xs text-balance">

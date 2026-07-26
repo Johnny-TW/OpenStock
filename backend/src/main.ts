@@ -75,17 +75,51 @@ async function bootstrap() {
     customJsStr: `
       setTimeout(() => {
         const info = document.querySelector('.info');
-        if (info && !document.querySelector('.custom-json-link')) {
-          const link = document.createElement('a');
-          link.className = 'custom-json-link';
-          link.href = '/api/docs-json';
-          link.target = '_blank';
-          link.style.cssText = 'display:inline-block;margin-top:8px;font-size:13px;text-decoration:underline;';
-          link.textContent = '/api/docs-json';
-          const desc = info.querySelector('.description');
-          if (desc) desc.parentNode.insertBefore(link, desc);
-          else info.appendChild(link);
-        }
+        if (!info || document.querySelector('.custom-json-toolbar')) return;
+
+        const btnStyle = 'display:inline-flex;align-items:center;gap:4px;margin:8px 8px 0 0;padding:6px 12px;font-size:13px;font-weight:600;color:#fff;background:#89bf04;border:none;border-radius:6px;cursor:pointer;';
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'custom-json-toolbar';
+
+        const openBtn = document.createElement('button');
+        openBtn.textContent = '🔗 開啟 JSON';
+        openBtn.style.cssText = btnStyle;
+        openBtn.onclick = () => window.open('/api/docs-json', '_blank');
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = '⬇️ 下載 JSON';
+        downloadBtn.style.cssText = btnStyle.replace('#89bf04', '#4a90d9');
+        downloadBtn.onclick = async () => {
+          const res = await fetch('/api/docs-json');
+          const data = await res.json();
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'openapi.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = '📋 複製 JSON';
+        copyBtn.style.cssText = btnStyle.replace('#89bf04', '#6b7280');
+        copyBtn.onclick = async () => {
+          const res = await fetch('/api/docs-json');
+          const data = await res.json();
+          await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+          copyBtn.textContent = '✅ 已複製';
+          setTimeout(() => { copyBtn.textContent = '📋 複製 JSON'; }, 1500);
+        };
+
+        toolbar.appendChild(openBtn);
+        toolbar.appendChild(downloadBtn);
+        toolbar.appendChild(copyBtn);
+
+        const desc = info.querySelector('.description');
+        if (desc) desc.parentNode.insertBefore(toolbar, desc);
+        else info.appendChild(toolbar);
       }, 500);
     `,
   });

@@ -2,7 +2,7 @@
 
 import * as d3 from "d3";
 import { Check, ChevronDown, Info } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from "recharts";
 import { type ChartConfig, ChartContainer } from "@/components/commons/chart";
 import { PageHeader } from "@/components/commons/page-header/page-header";
@@ -54,7 +54,7 @@ type TreemapNode = d3.HierarchyRectangularNode<HierarchyData | IndustryNode | St
 
 type ViewMode = "all" | "industry";
 
-function D3Treemap({
+const D3Treemap = memo(function D3Treemap({
   data,
   onStockHover,
   onStockLeave,
@@ -241,7 +241,7 @@ function D3Treemap({
       </svg>
     </div>
   );
-}
+});
 
 function IndustryFilter({
   industries,

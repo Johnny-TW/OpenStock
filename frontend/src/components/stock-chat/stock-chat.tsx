@@ -1,10 +1,20 @@
 "use client";
 
 import { Bot, Loader2, Send, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/commons/button";
-import { useStockChat } from "@/hooks/use-analysis-query";
+import { type ChatMessage, useStockChat } from "@/hooks/use-analysis-query";
 import styles from "./stock-chat.module.scss";
+
+const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage }) {
+  return (
+    <div
+      className={`${styles.message} ${msg.role === "user" ? styles.userMsg : styles.assistantMsg}`}
+    >
+      <div className={styles.msgContent}>{msg.content}</div>
+    </div>
+  );
+});
 
 interface StockChatProps {
   stockCode: string;
@@ -97,12 +107,7 @@ export function StockChat({ stockCode, stockName }: StockChatProps) {
         )}
 
         {messages.map((msg, i) => (
-          <div
-            key={`${msg.role}-${i}`}
-            className={`${styles.message} ${msg.role === "user" ? styles.userMsg : styles.assistantMsg}`}
-          >
-            <div className={styles.msgContent}>{msg.content}</div>
-          </div>
+          <MessageBubble key={`${msg.role}-${i}`} msg={msg} />
         ))}
 
         {isLoading && messages[messages.length - 1]?.role !== "assistant" && (

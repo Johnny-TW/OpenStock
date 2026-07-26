@@ -76,19 +76,21 @@ export function createAnalysisGraph(ctx: AnalysisGraphContext) {
 
   // callModel：呼叫模型並將回應追加到 messages，iteration +1
   async function callModel(state: AnalysisGraphState) {
-    const response = await ctx.anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 16384,
-      system: [
-        {
-          type: 'text',
-          text: ctx.systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      tools: ctx.analysisTools as Parameters<typeof ctx.anthropic.messages.create>[0]['tools'],
-      messages: state.messages as Parameters<typeof ctx.anthropic.messages.create>[0]['messages'],
-    });
+    const response = await ctx.anthropic.messages
+      .stream({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 16384,
+        system: [
+          {
+            type: 'text',
+            text: ctx.systemPrompt,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        tools: ctx.analysisTools as Parameters<typeof ctx.anthropic.messages.stream>[0]['tools'],
+        messages: state.messages as Parameters<typeof ctx.anthropic.messages.stream>[0]['messages'],
+      })
+      .finalMessage();
 
     return {
       messages: [{ role: 'assistant' as const, content: response.content }],

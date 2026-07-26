@@ -1042,12 +1042,14 @@ export class AnalysisService {
       - 所有文字使用繁體中文
       - 只回傳 JSON，不要加任何前後說明`;
 
-    const completion = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 16384,
-      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const completion = await this.anthropic.messages
+      .stream({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 32000,
+        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: prompt }],
+      })
+      .finalMessage();
 
     const textBlock = completion.content.find((b) => b.type === 'text');
     const rawText = textBlock && 'text' in textBlock ? textBlock.text : '{}';
@@ -1383,7 +1385,8 @@ export class AnalysisService {
 
     const llm = new ChatAnthropic({
       model: 'claude-sonnet-4-6',
-      maxTokens: 16384,
+      maxTokens: 32000,
+      streaming: true,
     });
 
     const lgTools = [
@@ -1545,7 +1548,17 @@ export class AnalysisService {
         if (toolCalls.length > 0) {
           yield { text: `AI 正在查詢市場資料(${toolCalls.length} 項)...` };
         } else {
-          lastAiContent = typeof lastMsg.content === 'string' ? lastMsg.content : '';
+          const content = lastMsg.content;
+          lastAiContent =
+            typeof content === 'string'
+              ? content
+              : content
+                  .filter(
+                    (b): b is { type: 'text'; text: string } =>
+                      typeof b === 'object' && b !== null && 'type' in b && b.type === 'text',
+                  )
+                  .map((b) => b.text)
+                  .join('');
         }
       }
     }
@@ -1561,7 +1574,18 @@ export class AnalysisService {
       throw new Error('AI 分析結果解析失敗，請重試');
     }
 
-    yield { result: this.buildResult(parsed, technicalsCache) };
+    const result = this.buildResult(parsed, technicalsCache);
+
+    const today = this.getTodayDate();
+    await this.prisma.analysisCache
+      .upsert({
+        where: { date: today },
+        update: { result: JSON.parse(JSON.stringify(result)) as any },
+        create: { date: today, result: JSON.parse(JSON.stringify(result)) as any },
+      })
+      .catch((e: unknown) => this.logger.warn('快取儲存失敗', e));
+
+    yield { result };
   }
 
   async *chatStream(dto: ChatMessageDto): AsyncGenerator<string> {

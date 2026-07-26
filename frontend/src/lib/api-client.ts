@@ -6,6 +6,10 @@ export function setAccessToken(token: string | null) {
   cachedToken = token;
 }
 
+export function getAccessToken(): string | null {
+  return cachedToken;
+}
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_HOST,
   timeout: 300000,

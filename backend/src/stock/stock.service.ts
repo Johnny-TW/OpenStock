@@ -150,6 +150,47 @@ export class StockService implements OnModuleInit {
     return result;
   }
 
+  private async fetchDailyAll(): Promise<TwseResponse> {
+    const { data } = await firstValueFrom(
+      this.httpService.get<string | TwseResponse>(this.TWSE_DAILY_ALL_URL, {
+        responseType: 'text',
+      }),
+    );
+    if (typeof data === 'object') return data;
+    const text = data.trim();
+    if (text.startsWith('{')) return JSON.parse(text) as TwseResponse;
+    return this.parseDailyAllCsv(text);
+  }
+
+  private parseDailyAllCsv(text: string): TwseResponse {
+    const lines = text.split(/\r?\n/);
+    const fields = (lines[0] ?? '').split(',').slice(1);
+    const data: string[][] = [];
+    let rocDate = '';
+
+    for (const line of lines.slice(1)) {
+      if (!line.startsWith('"')) continue;
+      const cols = line.replace(/^"|"[,\s]*$/g, '').split('","');
+      if (cols.length < fields.length + 1) continue;
+      rocDate = cols[0];
+      data.push(cols.slice(1));
+    }
+
+    const date = rocDate ? `${Number(rocDate.slice(0, 3)) + 1911}${rocDate.slice(3)}` : '';
+    const title = rocDate
+      ? `${rocDate.slice(0, 3)}年${rocDate.slice(3, 5)}月${rocDate.slice(5, 7)}日 每日收盤行情（全部）`
+      : '';
+
+    return {
+      stat: data.length ? 'OK' : 'EMPTY',
+      date,
+      title,
+      fields,
+      data,
+      notes: [],
+    };
+  }
+
   async getDailyAll(): Promise<StockDailyAllResponse> {
     const cached = await this.cacheManager.get<StockDailyAllResponse>('stock:daily-all');
     if (cached) {
@@ -159,10 +200,7 @@ export class StockService implements OnModuleInit {
     this.logger.debug('Cache MISS: stock:daily-all');
     this.logger.log('Fetching TWSE daily stock data...');
 
-    const [{ data }, industryMap] = await Promise.all([
-      firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
-      this.getIndustryMap(),
-    ]);
+    const [data, industryMap] = await Promise.all([this.fetchDailyAll(), this.getIndustryMap()]);
 
     if (data.stat !== 'OK' || !Array.isArray(data.data)) {
       this.logger.warn(
@@ -326,11 +364,11 @@ export class StockService implements OnModuleInit {
       const stocks: StockValuationDto[] = data.data.map((row) => ({
         code: row[0],
         name: row[1],
-        dividendYield: row[2],
-        dividendYear: row[3],
-        peRatio: row[4],
-        pbRatio: row[5],
-        financialYear: row[6],
+        peRatio: row[2],
+        dividendYield: row[3],
+        pbRatio: row[4],
+        dividendYear: '',
+        financialYear: '',
       }));
 
       return {
@@ -471,9 +509,7 @@ export class StockService implements OnModuleInit {
   private async getTwseStockName(code: string): Promise<string> {
     const now = Date.now();
     if (!this.stockNameCache || now - this.stockNameCacheTime >= this.INDUSTRY_CACHE_TTL) {
-      const { data } = await firstValueFrom(
-        this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL),
-      );
+      const data = await this.fetchDailyAll();
       const map = new Map<string, string>();
       if (data.stat === 'OK' && data.data) {
         for (const row of data.data) {
@@ -776,10 +812,7 @@ export class StockService implements OnModuleInit {
   async saveDailyStockPrices(): Promise<number> {
     this.logger.log('排程：開始儲存每日收盤資料...');
 
-    const [{ data }, industryMap] = await Promise.all([
-      firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
-      this.getIndustryMap(),
-    ]);
+    const [data, industryMap] = await Promise.all([this.fetchDailyAll(), this.getIndustryMap()]);
 
     if (data.stat !== 'OK' || !data.data?.length) {
       this.logger.warn('排程：TWSE 資料異常，跳過本次儲存');
@@ -848,10 +881,7 @@ export class StockService implements OnModuleInit {
     return this.cachedFetch(`stock:heatmap:${period}`, StockService.CACHE_TTL.HEATMAP, async () => {
       this.logger.log(`Fetching heatmap data (period: ${period})...`);
 
-      const [{ data }, industryMap] = await Promise.all([
-        firstValueFrom(this.httpService.get<TwseResponse>(this.TWSE_DAILY_ALL_URL)),
-        this.getIndustryMap(),
-      ]);
+      const [data, industryMap] = await Promise.all([this.fetchDailyAll(), this.getIndustryMap()]);
 
       if (data.stat !== 'OK' || !Array.isArray(data.data)) {
         return { data: [], total: 0, date: '' };

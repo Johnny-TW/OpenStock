@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import api, { fetchAPI, postAPI } from "@/lib/api-client";
+import { fetchAPI, getAccessToken, postAPI } from "@/lib/api-client";
 
 export function useCachedAnalysis() {
   return useQuery({
@@ -53,7 +53,7 @@ export function useAnalyzeMarketStream() {
 
       try {
         const baseURL = (process.env.NEXT_PUBLIC_API_HOST || "").replace(/\/$/, "");
-        const token = api.defaults.headers.common.Authorization;
+        const token = getAccessToken();
         const useToolsMode = !data.stockCodes || data.stockCodes.length === 0;
         const url = useToolsMode
           ? `${baseURL}/analysis/market/tools/stream`
@@ -62,7 +62,7 @@ export function useAnalyzeMarketStream() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { Authorization: String(token) } : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: useToolsMode ? "{}" : JSON.stringify(data),
           signal: controller.signal,
@@ -102,7 +102,9 @@ export function useAnalyzeMarketStream() {
                 setState((s) => ({ ...s, result: parsed.result }));
                 queryClient.setQueryData(["analysis", "market"], parsed.result);
               }
-            } catch {}
+            } catch (err) {
+              console.warn("SSE 片段解析失敗，已略過", payload, err);
+            }
           }
         }
 
@@ -126,7 +128,7 @@ export function useAnalyzeMarketStream() {
   return { ...state, analyze, abort };
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
@@ -135,81 +137,85 @@ export function useStockChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
 
-  const sendMessage = useCallback(
-    async (stockCode: string, message: string) => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
-      const userMsg: ChatMessage = { role: "user", content: message };
-      setMessages((prev) => [...prev, userMsg]);
-      setIsLoading(true);
+  const sendMessage = useCallback(async (stockCode: string, message: string) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-      try {
-        const baseURL = (process.env.NEXT_PUBLIC_API_HOST || "").replace(/\/$/, "");
-        const token = api.defaults.headers.common.Authorization;
-        const history = messages.slice(-10);
+    const userMsg: ChatMessage = { role: "user", content: message };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
 
-        const res = await fetch(`${baseURL}/analysis/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: String(token) } : {}),
-          },
-          body: JSON.stringify({ stockCode, message, history }),
-          signal: controller.signal,
-        });
+    try {
+      const baseURL = (process.env.NEXT_PUBLIC_API_HOST || "").replace(/\/$/, "");
+      const token = getAccessToken();
+      const history = messagesRef.current.slice(-10);
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("無法讀取串流");
+      const res = await fetch(`${baseURL}/analysis/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ stockCode, message, history }),
+        signal: controller.signal,
+      });
 
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let assistantText = "";
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("無法讀取串流");
 
-        setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantText = "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const payload = line.slice(6).trim();
-            if (payload === "[DONE]") break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-            try {
-              const parsed = JSON.parse(payload);
-              if (parsed.error) {
-                toast.error(parsed.error);
-                break;
-              }
-              if (parsed.text) {
-                assistantText += parsed.text;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { role: "assistant", content: assistantText };
-                  return updated;
-                });
-              }
-            } catch {}
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed.error) {
+              toast.error(parsed.error);
+              break;
+            }
+            if (parsed.text) {
+              assistantText += parsed.text;
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { role: "assistant", content: assistantText };
+                return updated;
+              });
+            }
+          } catch (err) {
+            console.warn("SSE 片段解析失敗，已略過", payload, err);
           }
         }
-      } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        toast.error("AI 對話失敗");
-      } finally {
-        setIsLoading(false);
       }
-    },
-    [messages],
-  );
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      toast.error("AI 對話失敗");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const clearMessages = useCallback(() => setMessages([]), []);
 

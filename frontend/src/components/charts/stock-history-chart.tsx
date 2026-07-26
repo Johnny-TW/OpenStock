@@ -138,10 +138,10 @@ export function StockHistoryChart({ symbol }: StockHistoryChartProps) {
                   <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="displayDate"
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
@@ -149,7 +149,7 @@ export function StockHistoryChart({ symbol }: StockHistoryChartProps) {
               />
               <YAxis
                 domain={[minPrice, maxPrice]}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
                 width={60}
@@ -175,7 +175,7 @@ export function StockHistoryChart({ symbol }: StockHistoryChartProps) {
               <Tooltip content={<CustomTooltip period={activePeriod} />} />
               <Bar
                 dataKey="volume"
-                fill="hsl(var(--muted-foreground))"
+                fill="var(--muted-foreground)"
                 opacity={0.3}
                 radius={[1, 1, 0, 0]}
               />
