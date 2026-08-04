@@ -18,6 +18,11 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import {
+  useAddWatchlist,
+  useRemoveWatchlist,
+  useUpdateWatchlistGroup,
+} from "@/api/use-watchlist-query";
 import { Badge } from "@/components/commons/badge";
 import { Button } from "@/components/commons/button";
 import {
@@ -53,11 +58,6 @@ import {
 } from "@/components/commons/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs";
 import { parseNumber } from "@/components/data-table/shared";
-import {
-  useAddWatchlist,
-  useRemoveWatchlist,
-  useUpdateWatchlistGroup,
-} from "@/hooks/use-watchlist-query";
 import type { StockDailyDto, StockDailySortField, WatchlistItem } from "@/type/stock";
 
 function getChangeColor(change: string): string {

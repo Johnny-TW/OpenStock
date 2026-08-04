@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useStockDetail } from "@/api/use-stock-query";
 import { LightweightChart } from "@/components/charts/lightweight-chart";
 import {
   AlertDialog,
@@ -25,7 +26,6 @@ import {
 } from "@/components/commons/alert-dialog";
 import { Button } from "@/components/commons/button";
 import { StockChat } from "@/components/stock-chat/stock-chat";
-import { useStockDetail } from "@/hooks/use-stock-query";
 import type { StockDetailDto } from "@/type/stock";
 import styles from "./page.module.scss";
 

@@ -10,12 +10,8 @@ import {
   type ColumnDef,
   ColumnFiltersState,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type SortingState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table";
 import * as React from "react";
 import { Badge } from "@/components/commons/badge";
@@ -37,6 +33,10 @@ import {
   TableRow,
 } from "@/components/commons/table";
 import { parseNumber, SortHeader } from "@/components/data-table/shared";
+import {
+  type StockTableFeatures,
+  stockTableFeatures,
+} from "@/components/data-table/table-features";
 import type { StockValuationDto } from "@/type/stock";
 
 function getDividendYieldColor(value: string): string {
@@ -47,7 +47,7 @@ function getDividendYieldColor(value: string): string {
   return "";
 }
 
-const columns: ColumnDef<StockValuationDto>[] = [
+const columns: ColumnDef<StockTableFeatures, StockValuationDto>[] = [
   {
     accessorKey: "code",
     header: "證券代號",
@@ -67,22 +67,21 @@ const columns: ColumnDef<StockValuationDto>[] = [
         {row.original.dividendYield}
       </div>
     ),
-    sortingFn: (a, b) =>
-      parseNumber(a.original.dividendYield) - parseNumber(b.original.dividendYield),
+    sortFn: (a, b) => parseNumber(a.original.dividendYield) - parseNumber(b.original.dividendYield),
     size: 110,
   },
   {
     accessorKey: "peRatio",
     header: "本益比",
     cell: ({ row }) => <div className="text-right font-mono">{row.original.peRatio}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.peRatio) - parseNumber(b.original.peRatio),
+    sortFn: (a, b) => parseNumber(a.original.peRatio) - parseNumber(b.original.peRatio),
     size: 100,
   },
   {
     accessorKey: "pbRatio",
     header: "股價淨值比",
     cell: ({ row }) => <div className="text-right font-mono">{row.original.pbRatio}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.pbRatio) - parseNumber(b.original.pbRatio),
+    sortFn: (a, b) => parseNumber(a.original.pbRatio) - parseNumber(b.original.pbRatio),
     size: 110,
   },
   {
@@ -109,19 +108,16 @@ export function StockValuationTable({ data, title }: StockValuationTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: stockTableFeatures,
     data,
     columns,
     state: { sorting, globalFilter, columnFilters },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 20 },
+      pagination: { pageIndex: 0, pageSize: 20 },
     },
   });
 
@@ -190,7 +186,7 @@ export function StockValuationTable({ data, title }: StockValuationTableProps) {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>每頁</span>
           <Select
-            value={String(table.getState().pagination.pageSize)}
+            value={String(table.state.pagination.pageSize)}
             onValueChange={(v) => table.setPageSize(Number(v))}
           >
             <SelectTrigger className="h-8 w-16">
@@ -226,7 +222,7 @@ export function StockValuationTable({ data, title }: StockValuationTableProps) {
             <IconChevronLeft className="size-4" />
           </Button>
           <span className="text-sm text-muted-foreground px-2">
-            {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+            {table.state.pagination.pageIndex + 1} / {table.getPageCount()}
           </span>
           <Button
             variant="outline"

@@ -2,8 +2,8 @@
 
 import { Bot, Loader2, Send, Trash2, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { type ChatMessage, useStockChat } from "@/api/use-analysis-query";
 import { Button } from "@/components/commons/button";
-import { type ChatMessage, useStockChat } from "@/hooks/use-analysis-query";
 import styles from "./stock-chat.module.scss";
 
 const MessageBubble = memo(function MessageBubble({ msg }: { msg: ChatMessage }) {

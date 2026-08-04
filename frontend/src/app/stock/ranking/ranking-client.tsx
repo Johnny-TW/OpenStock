@@ -3,15 +3,20 @@
 import {
   type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
+  type RowData,
   type SortingState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table";
 import { Loader2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import {
+  useRankingDividendYield,
+  useRankingGrossMargin,
+  useRankingPeRatio,
+  useRankingRevenue,
+  useStockDailyAll,
+  useTopVolume,
+} from "@/api/use-stock-query";
 import { Badge } from "@/components/commons/badge";
 import { Input } from "@/components/commons/input";
 import { PageHeader } from "@/components/commons/page-header/page-header";
@@ -33,13 +38,9 @@ import {
 import { Tabs, TabsContent } from "@/components/commons/tabs";
 import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
 import {
-  useRankingDividendYield,
-  useRankingGrossMargin,
-  useRankingPeRatio,
-  useRankingRevenue,
-  useStockDailyAll,
-  useTopVolume,
-} from "@/hooks/use-stock-query";
+  type StockTableFeatures,
+  stockTableFeatures,
+} from "@/components/data-table/table-features";
 import type {
   DividendYieldRankingDto,
   GrossMarginRankingDto,
@@ -77,7 +78,7 @@ interface ChangeRankItem {
   industry: string;
 }
 
-const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
+const changeRankColumns: ColumnDef<StockTableFeatures, ChangeRankItem>[] = [
   {
     accessorKey: "rank",
     header: "排名",
@@ -97,8 +98,7 @@ const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
     accessorKey: "closingPrice",
     header: "收盤價",
     cell: ({ row }) => <div className="text-right">{row.original.closingPrice}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
+    sortFn: (a, b) => parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
     size: 90,
   },
   {
@@ -114,7 +114,7 @@ const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
         </div>
       );
     },
-    sortingFn: (a, b) => a.original.changePct - b.original.changePct,
+    sortFn: (a, b) => a.original.changePct - b.original.changePct,
     size: 100,
   },
   {
@@ -131,17 +131,17 @@ const changeRankColumns: ColumnDef<ChangeRankItem>[] = [
     accessorKey: "tradeVolume",
     header: "成交量",
     cell: ({ row }) => <div className="text-right">{row.original.tradeVolume}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.tradeVolume) - parseNumber(b.original.tradeVolume),
+    sortFn: (a, b) => parseNumber(a.original.tradeVolume) - parseNumber(b.original.tradeVolume),
     size: 100,
   },
 ];
 
-const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
+const topVolumeColumns: ColumnDef<StockTableFeatures, TopVolumeDto>[] = [
   {
     accessorKey: "rank",
     header: "排名",
     cell: ({ row }) => <span>{row.original.rank}</span>,
-    sortingFn: (a, b) => parseNumber(a.original.rank) - parseNumber(b.original.rank),
+    sortFn: (a, b) => parseNumber(a.original.rank) - parseNumber(b.original.rank),
     size: 60,
   },
   {
@@ -161,38 +161,35 @@ const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
     accessorKey: "tradeVolume",
     header: "成交量",
     cell: ({ row }) => <div className="text-right">{row.original.tradeVolume}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.tradeVolume) - parseNumber(b.original.tradeVolume),
+    sortFn: (a, b) => parseNumber(a.original.tradeVolume) - parseNumber(b.original.tradeVolume),
     size: 120,
   },
   {
     accessorKey: "openingPrice",
     header: "開盤",
     cell: ({ row }) => <div className="text-right">{row.original.openingPrice}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.openingPrice) - parseNumber(b.original.openingPrice),
+    sortFn: (a, b) => parseNumber(a.original.openingPrice) - parseNumber(b.original.openingPrice),
     size: 90,
   },
   {
     accessorKey: "highestPrice",
     header: "最高",
     cell: ({ row }) => <div className="text-right">{row.original.highestPrice}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.highestPrice) - parseNumber(b.original.highestPrice),
+    sortFn: (a, b) => parseNumber(a.original.highestPrice) - parseNumber(b.original.highestPrice),
     size: 90,
   },
   {
     accessorKey: "lowestPrice",
     header: "最低",
     cell: ({ row }) => <div className="text-right">{row.original.lowestPrice}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.lowestPrice) - parseNumber(b.original.lowestPrice),
+    sortFn: (a, b) => parseNumber(a.original.lowestPrice) - parseNumber(b.original.lowestPrice),
     size: 90,
   },
   {
     accessorKey: "closingPrice",
     header: "收盤",
     cell: ({ row }) => <div className="text-right">{row.original.closingPrice}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
+    sortFn: (a, b) => parseNumber(a.original.closingPrice) - parseNumber(b.original.closingPrice),
     size: 90,
   },
   {
@@ -204,7 +201,7 @@ const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
         {row.original.change}
       </div>
     ),
-    sortingFn: (a, b) => {
+    sortFn: (a, b) => {
       const aVal = parseNumber(a.original.change) * (a.original.direction === "-" ? -1 : 1);
       const bVal = parseNumber(b.original.change) * (b.original.direction === "-" ? -1 : 1);
       return aVal - bVal;
@@ -213,7 +210,7 @@ const topVolumeColumns: ColumnDef<TopVolumeDto>[] = [
   },
 ];
 
-const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
+const revenueColumns: ColumnDef<StockTableFeatures, RevenueRankingDto>[] = [
   {
     accessorKey: "code",
     header: "代號",
@@ -227,7 +224,7 @@ const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
     accessorKey: "revenue",
     header: "營業收入",
     cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.revenue)}</div>,
-    sortingFn: (a, b) => a.original.revenue - b.original.revenue,
+    sortFn: (a, b) => a.original.revenue - b.original.revenue,
     size: 120,
   },
   {
@@ -238,7 +235,7 @@ const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
         {formatCurrency(row.original.operatingIncome)}
       </div>
     ),
-    sortingFn: (a, b) => a.original.operatingIncome - b.original.operatingIncome,
+    sortFn: (a, b) => a.original.operatingIncome - b.original.operatingIncome,
     size: 120,
   },
   {
@@ -249,7 +246,7 @@ const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
         {formatCurrency(row.original.netIncome)}
       </div>
     ),
-    sortingFn: (a, b) => a.original.netIncome - b.original.netIncome,
+    sortFn: (a, b) => a.original.netIncome - b.original.netIncome,
     size: 120,
   },
   {
@@ -262,12 +259,12 @@ const revenueColumns: ColumnDef<RevenueRankingDto>[] = [
         {row.original.eps.toFixed(2)}
       </div>
     ),
-    sortingFn: (a, b) => a.original.eps - b.original.eps,
+    sortFn: (a, b) => a.original.eps - b.original.eps,
     size: 80,
   },
 ];
 
-const grossMarginColumns: ColumnDef<GrossMarginRankingDto>[] = [
+const grossMarginColumns: ColumnDef<StockTableFeatures, GrossMarginRankingDto>[] = [
   {
     accessorKey: "code",
     header: "代號",
@@ -287,21 +284,21 @@ const grossMarginColumns: ColumnDef<GrossMarginRankingDto>[] = [
         {row.original.grossMarginRate.toFixed(2)}%
       </div>
     ),
-    sortingFn: (a, b) => a.original.grossMarginRate - b.original.grossMarginRate,
+    sortFn: (a, b) => a.original.grossMarginRate - b.original.grossMarginRate,
     size: 100,
   },
   {
     accessorKey: "revenue",
     header: "營業收入",
     cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.revenue)}</div>,
-    sortingFn: (a, b) => a.original.revenue - b.original.revenue,
+    sortFn: (a, b) => a.original.revenue - b.original.revenue,
     size: 120,
   },
   {
     accessorKey: "cost",
     header: "營業成本",
     cell: ({ row }) => <div className="text-right">{formatCurrency(row.original.cost)}</div>,
-    sortingFn: (a, b) => a.original.cost - b.original.cost,
+    sortFn: (a, b) => a.original.cost - b.original.cost,
     size: 120,
   },
   {
@@ -312,12 +309,12 @@ const grossMarginColumns: ColumnDef<GrossMarginRankingDto>[] = [
         {formatCurrency(row.original.grossProfit)}
       </div>
     ),
-    sortingFn: (a, b) => a.original.grossProfit - b.original.grossProfit,
+    sortFn: (a, b) => a.original.grossProfit - b.original.grossProfit,
     size: 120,
   },
 ];
 
-const dividendYieldColumns: ColumnDef<DividendYieldRankingDto>[] = [
+const dividendYieldColumns: ColumnDef<StockTableFeatures, DividendYieldRankingDto>[] = [
   {
     accessorKey: "code",
     header: "代號",
@@ -337,7 +334,7 @@ const dividendYieldColumns: ColumnDef<DividendYieldRankingDto>[] = [
         {row.original.dividendYield.toFixed(2)}%
       </div>
     ),
-    sortingFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
+    sortFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
     size: 100,
   },
   {
@@ -348,7 +345,7 @@ const dividendYieldColumns: ColumnDef<DividendYieldRankingDto>[] = [
         {row.original.peRatio > 0 ? row.original.peRatio.toFixed(2) : "-"}
       </div>
     ),
-    sortingFn: (a, b) => a.original.peRatio - b.original.peRatio,
+    sortFn: (a, b) => a.original.peRatio - b.original.peRatio,
     size: 100,
   },
   {
@@ -359,12 +356,12 @@ const dividendYieldColumns: ColumnDef<DividendYieldRankingDto>[] = [
         {row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}
       </div>
     ),
-    sortingFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
+    sortFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
     size: 110,
   },
 ];
 
-const peRatioColumns: ColumnDef<PeRatioRankingDto>[] = [
+const peRatioColumns: ColumnDef<StockTableFeatures, PeRatioRankingDto>[] = [
   {
     accessorKey: "code",
     header: "代號",
@@ -384,7 +381,7 @@ const peRatioColumns: ColumnDef<PeRatioRankingDto>[] = [
         {row.original.peRatio.toFixed(2)}
       </div>
     ),
-    sortingFn: (a, b) => a.original.peRatio - b.original.peRatio,
+    sortFn: (a, b) => a.original.peRatio - b.original.peRatio,
     size: 100,
   },
   {
@@ -395,7 +392,7 @@ const peRatioColumns: ColumnDef<PeRatioRankingDto>[] = [
         {row.original.dividendYield > 0 ? `${row.original.dividendYield.toFixed(2)}%` : "-"}
       </div>
     ),
-    sortingFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
+    sortFn: (a, b) => a.original.dividendYield - b.original.dividendYield,
     size: 100,
   },
   {
@@ -406,35 +403,32 @@ const peRatioColumns: ColumnDef<PeRatioRankingDto>[] = [
         {row.original.pbRatio > 0 ? row.original.pbRatio.toFixed(2) : "-"}
       </div>
     ),
-    sortingFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
+    sortFn: (a, b) => a.original.pbRatio - b.original.pbRatio,
     size: 110,
   },
 ];
 
-function RankingTable<T>({
+function RankingTable<T extends RowData>({
   data,
   columns,
   globalFilter,
   defaultSorting,
 }: {
   data: T[];
-  columns: ColumnDef<T, unknown>[];
+  columns: ColumnDef<StockTableFeatures, T>[];
   globalFilter: string;
   defaultSorting: SortingState;
 }) {
   const [sorting, setSorting] = useState<SortingState>(defaultSorting);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: stockTableFeatures,
     data,
     columns,
     state: { sorting, globalFilter },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 10 },
+      pagination: { pageIndex: 0, pageSize: 10 },
     },
   });
 

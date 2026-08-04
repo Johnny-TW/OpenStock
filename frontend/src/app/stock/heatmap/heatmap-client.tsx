@@ -4,10 +4,10 @@ import * as d3 from "d3";
 import { Check, ChevronDown, Info } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from "recharts";
+import { useHeatmap } from "@/api/use-stock-query";
 import { type ChartConfig, ChartContainer } from "@/components/commons/chart";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useHeatmap } from "@/hooks/use-stock-query";
 import type { HeatmapIndustryDto } from "@/type/stock";
 import styles from "./page.module.scss";
 

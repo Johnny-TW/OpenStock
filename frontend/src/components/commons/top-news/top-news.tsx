@@ -3,7 +3,7 @@
 import { ArrowRight, ExternalLink, Flame } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useAllNews } from "@/hooks/use-stock-query";
+import { useAllNews } from "@/api/use-stock-query";
 import type { NewsDto } from "@/type/stock";
 import styles from "./top-news.module.scss";
 

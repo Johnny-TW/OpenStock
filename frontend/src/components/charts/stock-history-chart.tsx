@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useStockHistory } from "@/hooks/use-stock-query";
+import { useStockHistory } from "@/api/use-stock-query";
 import type { StockHistoryPointDto, StockHistoryResponse } from "@/type/stock";
 import styles from "./stock-history-chart.module.scss";
 

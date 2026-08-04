@@ -11,7 +11,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useStockHistory } from "@/hooks/use-stock-query";
+import { useStockHistory } from "@/api/use-stock-query";
 import type { StockHistoryPointDto, StockHistoryResponse } from "@/type/stock";
 import styles from "./lightweight-chart.module.scss";
 

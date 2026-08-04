@@ -9,7 +9,7 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
 } from "@tabler/icons-react";
-import { useReactTable } from "@tanstack/react-table";
+import type { RowData } from "@tanstack/react-table";
 import { Button } from "@/components/commons/button";
 import {
   Select,
@@ -18,18 +18,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/commons/select";
+import type { StockColumn, StockTable } from "@/components/data-table/table-features";
 
 export function parseNumber(value: string): number {
   if (!value || value === "-" || value === "--") return 0;
   return parseFloat(value.replace(/,/g, "")) || 0;
 }
 
-export function SortHeader<T>({
+export function SortHeader<T extends RowData>({
   column,
   label,
   className,
 }: {
-  column: ReturnType<ReturnType<typeof useReactTable<T>>["getColumn"]>;
+  column: StockColumn<T>;
   label: string;
   className?: string;
 }) {
@@ -54,13 +55,13 @@ export function SortHeader<T>({
   );
 }
 
-export function Pagination<T>({ table }: { table: ReturnType<typeof useReactTable<T>> }) {
+export function Pagination<T extends RowData>({ table }: { table: StockTable<T> }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>每頁</span>
         <Select
-          value={String(table.getState().pagination.pageSize)}
+          value={String(table.state.pagination.pageSize)}
           onValueChange={(v) => table.setPageSize(Number(v))}
         >
           <SelectTrigger className="h-8 w-16">
@@ -96,7 +97,7 @@ export function Pagination<T>({ table }: { table: ReturnType<typeof useReactTabl
           <IconChevronLeft className="size-4" />
         </Button>
         <span className="text-sm text-muted-foreground px-2">
-          {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+          {table.state.pagination.pageIndex + 1} / {table.getPageCount()}
         </span>
         <Button
           variant="outline"

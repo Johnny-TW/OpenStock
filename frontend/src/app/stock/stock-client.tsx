@@ -3,12 +3,12 @@
 import { Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
+import { useStockDailyByCodes, useStockDailyPaged, useTopMovers } from "@/api/use-stock-query";
+import { useWatchlist } from "@/api/use-watchlist-query";
 import { MarketIndexChart } from "@/components/commons/market-index-chart/market-index-chart";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { TopNews } from "@/components/commons/top-news/top-news";
 import { StockDataTable } from "@/components/data-table/stock/data-table";
-import { useStockDailyByCodes, useStockDailyPaged, useTopMovers } from "@/hooks/use-stock-query";
-import { useWatchlist } from "@/hooks/use-watchlist-query";
 import type { StockDailySortField } from "@/type/stock";
 
 export default function StockClient() {

@@ -4,12 +4,9 @@ import { IconActivity, IconClock, IconCurrencyDollar } from "@tabler/icons-react
 import {
   type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
+  type RowData,
   type SortingState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table";
 import { Loader2, TrendingDown, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -27,6 +24,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  useIndexHistory,
+  useIntraday,
+  useMarketIndex,
+  useStockDailyAll,
+} from "@/api/use-stock-query";
 import { Badge } from "@/components/commons/badge";
 import {
   Card,
@@ -55,11 +58,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs";
 import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
 import {
-  useIndexHistory,
-  useIntraday,
-  useMarketIndex,
-  useStockDailyAll,
-} from "@/hooks/use-stock-query";
+  type StockTable,
+  type StockTableFeatures,
+  stockTableFeatures,
+} from "@/components/data-table/table-features";
 import type { IndexHistoryDto, IntradayTickDto, MarketIndexDto } from "@/type/stock";
 
 // 圖表配置：定義不同圖表類型的顏色和標籤
@@ -83,7 +85,7 @@ function getChangeColor(val: string) {
   return "text-red-500";
 }
 
-const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
+const marketIndexColumns: ColumnDef<StockTableFeatures, MarketIndexDto>[] = [
   {
     accessorKey: "name",
     header: "指數名稱",
@@ -95,8 +97,7 @@ const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
     accessorKey: "closingIndex",
     header: "收盤指數",
     cell: ({ row }) => <div className="text-right">{row.original.closingIndex}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
+    sortFn: (a, b) => parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
     size: 120,
   },
   {
@@ -107,8 +108,7 @@ const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
         {row.original.direction} {row.original.changePoints}
       </div>
     ),
-    sortingFn: (a, b) =>
-      parseNumber(a.original.changePoints) - parseNumber(b.original.changePoints),
+    sortFn: (a, b) => parseNumber(a.original.changePoints) - parseNumber(b.original.changePoints),
     size: 120,
   },
   {
@@ -119,14 +119,13 @@ const marketIndexColumns: ColumnDef<MarketIndexDto>[] = [
         {row.original.changePercent}%
       </div>
     ),
-    sortingFn: (a, b) =>
-      parseNumber(a.original.changePercent) - parseNumber(b.original.changePercent),
+    sortFn: (a, b) => parseNumber(a.original.changePercent) - parseNumber(b.original.changePercent),
     size: 120,
   },
 ];
 
 // 歷史指數表格欄位定義，包含日期、開盤、最高、最低、收盤等欄位，並定義排序函數
-const historyColumns: ColumnDef<IndexHistoryDto>[] = [
+const historyColumns: ColumnDef<StockTableFeatures, IndexHistoryDto>[] = [
   {
     accessorKey: "date",
     header: "日期",
@@ -137,31 +136,28 @@ const historyColumns: ColumnDef<IndexHistoryDto>[] = [
     accessorKey: "openingIndex",
     header: "開盤指數",
     cell: ({ row }) => <div className="text-right">{row.original.openingIndex}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.openingIndex) - parseNumber(b.original.openingIndex),
+    sortFn: (a, b) => parseNumber(a.original.openingIndex) - parseNumber(b.original.openingIndex),
     size: 120,
   },
   {
     accessorKey: "highestIndex",
     header: "最高指數",
     cell: ({ row }) => <div className="text-right text-red-500">{row.original.highestIndex}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.highestIndex) - parseNumber(b.original.highestIndex),
+    sortFn: (a, b) => parseNumber(a.original.highestIndex) - parseNumber(b.original.highestIndex),
     size: 120,
   },
   {
     accessorKey: "lowestIndex",
     header: "最低指數",
     cell: ({ row }) => <div className="text-right text-green-500">{row.original.lowestIndex}</div>,
-    sortingFn: (a, b) => parseNumber(a.original.lowestIndex) - parseNumber(b.original.lowestIndex),
+    sortFn: (a, b) => parseNumber(a.original.lowestIndex) - parseNumber(b.original.lowestIndex),
     size: 120,
   },
   {
     accessorKey: "closingIndex",
     header: "收盤指數",
     cell: ({ row }) => <div className="text-right font-semibold">{row.original.closingIndex}</div>,
-    sortingFn: (a, b) =>
-      parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
+    sortFn: (a, b) => parseNumber(a.original.closingIndex) - parseNumber(b.original.closingIndex),
     size: 120,
   },
 ];
@@ -232,7 +228,7 @@ function IntradayChartSection({ list }: { list: IntradayTickDto[] }) {
                 content={
                   <ChartTooltipContent
                     labelFormatter={(label) => `時間：${label}`}
-                    formatter={(value) => value.toLocaleString()}
+                    formatter={(value) => Number(value ?? 0).toLocaleString()}
                   />
                 }
               />
@@ -432,30 +428,24 @@ export default function MarketOverviewClient() {
     return { up, down, flat, total };
   }, [dailyAll?.data]);
 
-  const indexTable = useReactTable({
+  const indexTable = useTable({
+    features: stockTableFeatures,
     data: indexList,
     columns: marketIndexColumns,
     state: { sorting: indexSorting, globalFilter: indexFilter },
     onSortingChange: setIndexSorting,
     onGlobalFilterChange: setIndexFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
 
-  const historyTable = useReactTable({
+  const historyTable = useTable({
+    features: stockTableFeatures,
     data: historyList,
     columns: historyColumns,
     state: { sorting: historySorting, globalFilter: historyFilter },
     onSortingChange: setHistorySorting,
     onGlobalFilterChange: setHistoryFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
 
   const isLoading = !marketIndex || !intraday || !indexHistory;
@@ -785,12 +775,12 @@ function IndustryRadialSection({ indices }: { indices: MarketIndexDto[] }) {
 }
 
 // 資料表渲染器，使用 React Table 的 table 實例和欄位定義來渲染表格
-function DataTableRenderer<T>({
+function DataTableRenderer<T extends RowData>({
   table,
   columns,
 }: {
-  table: ReturnType<typeof useReactTable<T>>;
-  columns: ColumnDef<T, unknown>[];
+  table: StockTable<T>;
+  columns: ColumnDef<StockTableFeatures, T>[];
 }) {
   return (
     <div className="overflow-auto border-t">

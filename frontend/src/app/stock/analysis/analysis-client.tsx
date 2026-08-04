@@ -12,14 +12,14 @@ import {
   Trophy,
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
+import { useAnalyzeMarketStream, useCachedAnalysis } from "@/api/use-analysis-query";
+import { useWatchlist } from "@/api/use-watchlist-query";
 import { LightweightChart } from "@/components/charts/lightweight-chart";
 import { Badge } from "@/components/commons/badge";
 import { Button } from "@/components/commons/button";
 import { Checkbox } from "@/components/commons/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/dialog";
 import { PageHeader } from "@/components/commons/page-header/page-header";
-import { useAnalyzeMarketStream, useCachedAnalysis } from "@/hooks/use-analysis-query";
-import { useWatchlist } from "@/hooks/use-watchlist-query";
 import tp from "./trading-plan.module.scss";
 
 interface Scores {
