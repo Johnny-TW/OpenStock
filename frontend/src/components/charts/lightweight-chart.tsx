@@ -12,7 +12,7 @@ import {
 } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStockHistory } from "@/api/use-stock-query";
-import type { StockHistoryPointDto, StockHistoryResponse } from "@/type/stock";
+import type { StockHistoryPointDto, StockHistoryResponse } from "@/types/stock";
 import styles from "./lightweight-chart.module.scss";
 
 const PERIODS = [

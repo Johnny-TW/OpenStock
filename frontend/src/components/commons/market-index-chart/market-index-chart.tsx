@@ -3,7 +3,7 @@
 import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import type { StockDailyDto } from "@/type/stock";
+import type { StockDailyDto } from "@/types/stock";
 import styles from "./market-index-chart.module.scss";
 
 const TOP_COUNT = 5;

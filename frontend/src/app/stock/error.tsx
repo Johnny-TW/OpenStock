@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Button } from "@/components/commons/button";
+import { Button } from "@/components/ui/button";
 
 export default function StockError({
   error,

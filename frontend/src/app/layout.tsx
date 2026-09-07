@@ -5,11 +5,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../styles/globals.css";
 import DialogProvider from "@/components/commons/dialog-provider";
-import AuthLayout from "@/components/layouts/AuthLayout";
-import AuthSync from "@/providers/AuthSync";
-import PermissionGuard from "@/providers/PermissionGuard";
-import QueryProvider from "@/providers/QueryProvider";
-import SessionProvider from "@/providers/SessionProvider";
+import AuthLayout from "@/components/layouts/auth-layout";
+import AuthSync from "@/providers/auth-sync";
+import PermissionGuard from "@/providers/permission-guard";
+import QueryProvider from "@/providers/query-provider";
+import SessionProvider from "@/providers/session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

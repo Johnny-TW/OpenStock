@@ -25,42 +25,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@components/*": [
-        "./src/components/*"
-      ],
-      "@config/*": [
-        "./src/config/*"
-      ],
-      "@constants/*": [
-        "./src/constants/*"
-      ],
-      "@hooks/*": [
-        "./src/hooks/*"
-      ],
-      "@images/*": [
-        "./src/images/*"
-      ],
-      "@lib/*": [
-        "./src/lib/*"
-      ],
-      "@providers/*": [
-        "./src/providers/*"
-      ],
-      "@redux/*": [
-        "./src/redux/*"
-      ],
-      "@server/*": [
-        "./src/server/*"
-      ],
-      "@styles/*": [
-        "./src/styles/*"
-      ],
-      "@type/*": [
-        "./src/type/*"
-      ],
-      "@utils/*": [
-        "./src/utils/*"
       ]
     }
   },

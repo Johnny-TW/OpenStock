@@ -2,7 +2,7 @@
 
 ## 技術棧
 
-- React 19 + Next.js 15 + TypeScript
+- React 19 + Next.js 16 + TypeScript 7
 - 樣式：SCSS 優先，Tailwind CSS 輔助
 - UI 元件庫：shadcn/ui
 - 狀態管理：TanStack React Query
@@ -14,14 +14,16 @@
 
 新頁面建在 `src/app/stock/` 下，每個頁面包含：
 
-- `page.tsx` — 路由和頁面結構
-- `content.tsx` — 頁面內容和邏輯
+- `page.tsx` — 路由和頁面結構（Server Component）
+- `<頁面名>-client.tsx` — 頁面內容和互動邏輯（Client Component）
 - `page.module.scss` — 頁面樣式
 
 ## 元件規範
 
-- Component 放在 `src/components/` 下
-- 每個 component 獨立檔案
+- `src/components/ui/` — shadcn/ui 基礎元件，`npx shadcn add` 的安裝位置，不要手動搬走
+- `src/components/commons/` — 跨頁共用的業務元件（page-header、top-news 等）
+- `src/components/charts/`、`data-table/`、`layouts/`、`stock-chat/` — 依功能分類
+- 每個 component 獨立檔案，檔名 kebab-case
 - 優先使用 shadcn/ui 元件
 
 ## 效能
@@ -34,7 +36,7 @@
 - 使用 React Query Hooks（`use-stock-query.ts`、`use-watchlist-query.ts`、`use-analysis-query.ts`）
 - 底層透過 `api-client.ts` 的 `fetchAPI` / `postAPI` / `patchAPI` / `deleteAPI` 呼叫後端
 - 呼叫後端 API 時帶 `Authorization: Bearer <token>`
-- Token 由 `AuthSync.tsx` 呼叫 `setAccessToken()` 注入至 `api-client` 模組快取，不直接存 Redux
+- Token 由 `auth-sync.tsx` 呼叫 `setAccessToken()` 注入至 `api-client` 模組快取，不直接存 Redux
 
 ## SSE 串流
 

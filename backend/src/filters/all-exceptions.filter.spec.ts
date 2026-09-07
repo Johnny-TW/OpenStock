@@ -1,5 +1,5 @@
 import { ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 describe('AllExceptionsFilter', () => {
@@ -59,7 +59,7 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('應處理 Prisma P2002 唯一性約束', () => {
-    const exception = new PrismaClientKnownRequestError('Unique constraint', {
+    const exception = new Prisma.PrismaClientKnownRequestError('Unique constraint', {
       code: 'P2002',
       clientVersion: '5.0.0',
     });
@@ -77,7 +77,7 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('應處理 Prisma P2025 找不到記錄', () => {
-    const exception = new PrismaClientKnownRequestError('Record not found', {
+    const exception = new Prisma.PrismaClientKnownRequestError('Record not found', {
       code: 'P2025',
       clientVersion: '5.0.0',
     });
@@ -96,7 +96,7 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('應處理 Prisma P2003 外鍵約束', () => {
-    const exception = new PrismaClientKnownRequestError('Foreign key constraint', {
+    const exception = new Prisma.PrismaClientKnownRequestError('Foreign key constraint', {
       code: 'P2003',
       clientVersion: '5.0.0',
     });

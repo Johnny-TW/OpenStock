@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { watchlistKeys } from "@/api/query-keys";
 import { deleteAPI, fetchAPI, patchAPI, postAPI } from "@/lib/api-client";
-import type { WatchlistItem } from "@/type/stock";
+import type { WatchlistItem } from "@/types/stock";
 
 export function useWatchlist(enabled = true) {
   return useQuery({
-    queryKey: ["watchlist"],
+    queryKey: watchlistKeys.list(),
     queryFn: () => fetchAPI<WatchlistItem[]>("watchlist"),
     staleTime: 60 * 1000,
     enabled,
@@ -18,11 +19,8 @@ export function useAddWatchlist() {
     mutationFn: (data: { userId: string; stockNo: string; stockName: string; groupName: string }) =>
       postAPI<WatchlistItem>("watchlist", data),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+      queryClient.invalidateQueries({ queryKey: watchlistKeys.all });
       toast.success(`已加入自選股：${variables.stockName}`);
-    },
-    onError: () => {
-      toast.error("加入自選股失敗");
     },
   });
 }
@@ -33,11 +31,8 @@ export function useRemoveWatchlist() {
     mutationFn: (params: { id: number; userId: string }) =>
       deleteAPI<unknown>(`watchlist/${params.id}`, { userId: params.userId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+      queryClient.invalidateQueries({ queryKey: watchlistKeys.all });
       toast.success("已移除自選股");
-    },
-    onError: () => {
-      toast.error("移除自選股失敗");
     },
   });
 }
@@ -51,11 +46,8 @@ export function useUpdateWatchlistGroup() {
         groupName: params.groupName,
       }),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+      queryClient.invalidateQueries({ queryKey: watchlistKeys.all });
       toast.success(`已移至「${variables.groupName}」`);
-    },
-    onError: () => {
-      toast.error("更新群組失敗");
     },
   });
 }

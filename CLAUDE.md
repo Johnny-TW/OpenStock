@@ -12,8 +12,8 @@
 
 台灣股市智慧分析平台（StockSmart），Monorepo 結構，前後端分離：
 
-- **前端**：`frontend/` — Next.js 15 + React 19 + TypeScript
-- **後端**：`backend/` — NestJS 11 + Prisma + PostgreSQL
+- **前端**：`frontend/` — Next.js 16 + React 19 + TypeScript 7
+- **後端**：`backend/` — NestJS 12 + Prisma 7 + PostgreSQL
 - **套件管理**：pnpm
 - **開發埠**：前端 3003、後端 3004
 
@@ -31,6 +31,8 @@ pnpm dev:backend
 cd frontend && pnpm dev          # 開發
 cd frontend && pnpm build        # 建置
 cd frontend && pnpm lint         # Lint
+cd frontend && pnpm test         # 單元測試（Vitest）
+cd frontend && pnpm test:cov     # 測試覆蓋率（v8）
 
 # 後端
 cd backend && pnpm run start:dev # 開發（watch mode）
@@ -56,12 +58,14 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - 後端用相同的 `JWT_SECRET` 驗證（`@nestjs/jwt`）
 - 呼叫 API 帶 `Authorization: Bearer <token>`
 - 需認證的路由使用 `@UseGuards(AuthGuard)` 保護
-- Token 由 `AuthSync.tsx` 在 session 取得後呼叫 `setAccessToken()` 注入至 `api-client` 模組快取，所有 axios 請求自動帶入
+- Token 由 `auth-sync.tsx` 在 session 取得後呼叫 `setAccessToken()` 注入至 `api-client` 模組快取，所有 axios 請求自動帶入
 
 ## 資料庫
 
 - PostgreSQL（pgvector/pgvector:pg15），Docker 化，開發環境 port 5435
-- ORM：Prisma，schema 在 `backend/prisma/schema.prisma`
+- ORM：Prisma 7，schema 在 `backend/prisma/schema.prisma`
+- 連線設定：datasource 不再寫 `url`，改由 `backend/prisma.config.ts` 提供給 CLI，執行期由 `PrismaService` 注入 `@prisma/adapter-pg` driver adapter
+- `.env` 不再由 Prisma 自動載入，改在 `src/main.ts` 最上方 `import 'dotenv/config'`
 - 主要 Model：`Portfolio`（持股）、`Watchlist`（自選股）、`NewsEmbedding`（新聞向量）
 - 啟用 `pgvector` 擴充套件，支援 1536 維向量相似度搜尋（`<=>` cosine distance）
 
@@ -81,6 +85,11 @@ Azure AD（Microsoft Entra ID）→ NextAuth → 前端自簽 JWT（3h）→ 後
 - 狀態管理：**TanStack React Query**（已完全移除 Redux / Redux-Saga）
 - API 呼叫層：`src/lib/api-client.ts`（axios 封裝，`fetchAPI` / `postAPI` / `patchAPI` / `deleteAPI`）
 - React Query Hooks：`use-stock-query.ts`、`use-watchlist-query.ts`、`use-analysis-query.ts`
+- Query Key 一律取自 `src/api/query-keys.ts`（`stockKeys` / `watchlistKeys` / `analysisKeys`），禁止手寫字串陣列
+- 錯誤模型：`src/lib/api-error.ts` 的 `ApiError`（status → 繁中訊息），axios interceptor 統一轉換
+- 全域錯誤處理：`query-provider.tsx` 的 `QueryCache` / `MutationCache` `onError` 跳 toast、4xx 不重試；5xx 由 `api-error-handler.tsx` 集中攔截顯示錯誤畫面，hook 內不再各自寫 `onError`
+- API 代理：瀏覽器一律打同源 `/api/*`，由 `next.config.ts` rewrites 轉發至 `BACKEND_API_URL`（免 CORS）
+- 單元測試：Vitest + Testing Library（`vitest.config.mts`），測試檔放在該模組的 `__tests__/` 底下（如 `src/api/__tests__/query-keys.test.ts`）；E2E 走 Playwright 放 `e2e/`
 - SSE 串流（AI 分析、AI 對話）直接用 `fetch` + `ReadableStream`，不走 axios
 - 通知：`sonner` toast（`Toaster` 掛在 `layout.tsx`）
 

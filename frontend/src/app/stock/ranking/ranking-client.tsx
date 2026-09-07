@@ -17,16 +17,21 @@ import {
   useStockDailyAll,
   useTopVolume,
 } from "@/api/use-stock-query";
-import { Badge } from "@/components/commons/badge";
-import { Input } from "@/components/commons/input";
 import { PageHeader } from "@/components/commons/page-header/page-header";
+import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
+import {
+  type StockTableFeatures,
+  stockTableFeatures,
+} from "@/components/data-table/table-features";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/commons/select";
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -34,13 +39,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/commons/table";
-import { Tabs, TabsContent } from "@/components/commons/tabs";
-import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
-import {
-  type StockTableFeatures,
-  stockTableFeatures,
-} from "@/components/data-table/table-features";
+} from "@/components/ui/table";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type {
   DividendYieldRankingDto,
   GrossMarginRankingDto,
@@ -48,7 +48,7 @@ import type {
   RevenueRankingDto,
   StockDailyDto,
   TopVolumeDto,
-} from "@/type/stock";
+} from "@/types/stock";
 
 function formatCurrency(num: number): string {
   if (Math.abs(num) >= 1e8) {

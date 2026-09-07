@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/commons/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StockLoading() {
   return (

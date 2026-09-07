@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { useStockHistory } from "@/api/use-stock-query";
-import type { StockHistoryPointDto, StockHistoryResponse } from "@/type/stock";
+import type { StockHistoryPointDto, StockHistoryResponse } from "@/types/stock";
 import styles from "./stock-history-chart.module.scss";
 
 const PERIODS = [

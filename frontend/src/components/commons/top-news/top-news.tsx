@@ -4,7 +4,7 @@ import { ArrowRight, ExternalLink, Flame } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { useAllNews } from "@/api/use-stock-query";
-import type { NewsDto } from "@/type/stock";
+import type { NewsDto } from "@/types/stock";
 import styles from "./top-news.module.scss";
 
 const TOP_COUNT = 5;

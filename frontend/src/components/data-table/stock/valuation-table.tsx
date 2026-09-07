@@ -14,16 +14,21 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import * as React from "react";
-import { Badge } from "@/components/commons/badge";
-import { Button } from "@/components/commons/button";
-import { Input } from "@/components/commons/input";
+import { parseNumber, SortHeader } from "@/components/data-table/shared";
+import {
+  type StockTableFeatures,
+  stockTableFeatures,
+} from "@/components/data-table/table-features";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/commons/select";
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -31,13 +36,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/commons/table";
-import { parseNumber, SortHeader } from "@/components/data-table/shared";
-import {
-  type StockTableFeatures,
-  stockTableFeatures,
-} from "@/components/data-table/table-features";
-import type { StockValuationDto } from "@/type/stock";
+} from "@/components/ui/table";
+import type { StockValuationDto } from "@/types/stock";
 
 function getDividendYieldColor(value: string): string {
   const num = parseNumber(value);

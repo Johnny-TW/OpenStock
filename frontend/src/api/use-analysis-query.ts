@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { fetchAPI, getAccessToken, postAPI } from "@/lib/api-client";
+import { analysisKeys } from "@/api/query-keys";
+import { apiUrl, fetchAPI, getAccessToken, postAPI } from "@/lib/api-client";
+import { httpStatusMessage, isAbortError, resolveErrorMessage } from "@/lib/api-error";
 
 export function useCachedAnalysis() {
   return useQuery({
-    queryKey: ["analysis", "market"],
+    queryKey: analysisKeys.market(),
     queryFn: () => fetchAPI<unknown>("analysis/market"),
     staleTime: 10 * 60 * 1000,
   });
@@ -16,12 +18,8 @@ export function useAnalyzeMarket() {
   return useMutation({
     mutationFn: (data: { stockCodes?: string[] }) => postAPI<unknown>("analysis/market", data),
     onSuccess: (data) => {
-      queryClient.setQueryData(["analysis", "market"], data);
+      queryClient.setQueryData(analysisKeys.market(), data);
       toast.success("AI 分析完成");
-    },
-    onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : "AI 分析失敗";
-      toast.error(msg);
     },
   });
 }
@@ -52,12 +50,11 @@ export function useAnalyzeMarketStream() {
       setState({ isStreaming: true, statusText: "連線中...", result: null, error: null });
 
       try {
-        const baseURL = (process.env.NEXT_PUBLIC_API_HOST || "").replace(/\/$/, "");
         const token = getAccessToken();
         const useToolsMode = !data.stockCodes || data.stockCodes.length === 0;
-        const url = useToolsMode
-          ? `${baseURL}/analysis/market/tools/stream`
-          : `${baseURL}/analysis/market/stream`;
+        const url = apiUrl(
+          useToolsMode ? "analysis/market/tools/stream" : "analysis/market/stream",
+        );
         const res = await fetch(url, {
           method: "POST",
           headers: {
@@ -68,7 +65,7 @@ export function useAnalyzeMarketStream() {
           signal: controller.signal,
         });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(httpStatusMessage(res.status));
         const reader = res.body?.getReader();
         if (!reader) throw new Error("無法讀取串流");
 
@@ -100,7 +97,7 @@ export function useAnalyzeMarketStream() {
               }
               if (parsed.result) {
                 setState((s) => ({ ...s, result: parsed.result }));
-                queryClient.setQueryData(["analysis", "market"], parsed.result);
+                queryClient.setQueryData(analysisKeys.market(), parsed.result);
               }
             } catch (err) {
               console.warn("SSE 片段解析失敗，已略過", payload, err);
@@ -111,8 +108,8 @@ export function useAnalyzeMarketStream() {
         setState((s) => ({ ...s, isStreaming: false, statusText: "" }));
         toast.success("AI 分析完成");
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        const msg = err instanceof Error ? err.message : "AI 分析失敗";
+        if (isAbortError(err)) return;
+        const msg = resolveErrorMessage(err, "AI 分析失敗");
         setState((s) => ({ ...s, isStreaming: false, error: msg }));
         toast.error(msg);
       }
@@ -153,11 +150,10 @@ export function useStockChat() {
     setIsLoading(true);
 
     try {
-      const baseURL = (process.env.NEXT_PUBLIC_API_HOST || "").replace(/\/$/, "");
       const token = getAccessToken();
       const history = messagesRef.current.slice(-10);
 
-      const res = await fetch(`${baseURL}/analysis/chat`, {
+      const res = await fetch(apiUrl("analysis/chat"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +163,7 @@ export function useStockChat() {
         signal: controller.signal,
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(httpStatusMessage(res.status));
       const reader = res.body?.getReader();
       if (!reader) throw new Error("無法讀取串流");
 
@@ -210,8 +206,8 @@ export function useStockChat() {
         }
       }
     } catch (err) {
-      if ((err as Error).name === "AbortError") return;
-      toast.error("AI 對話失敗");
+      if (isAbortError(err)) return;
+      toast.error(resolveErrorMessage(err, "AI 對話失敗"));
     } finally {
       setIsLoading(false);
     }

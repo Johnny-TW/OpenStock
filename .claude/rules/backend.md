@@ -2,7 +2,7 @@
 
 ## 技術棧
 
-- Node.js 20 + NestJS 11 + TypeScript
+- Node.js 24 + NestJS 12 + TypeScript 6
 - ORM：Prisma（PostgreSQL + pgvector 擴充套件）
 - 快取：@nestjs/cache-manager + Keyv + Redis（雙層快取）
 - 驗證：class-validator + class-transformer

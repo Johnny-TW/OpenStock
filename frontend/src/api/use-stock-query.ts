@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { stockKeys } from "@/api/query-keys";
 import { fetchAPI } from "@/lib/api-client";
 import type {
   AllNewsResponse,
@@ -19,11 +20,11 @@ import type {
   StockValuationResponse,
   TopMoversResponse,
   TopVolumeResponse,
-} from "@/type/stock";
+} from "@/types/stock";
 
 export function useStockValuation() {
   return useQuery({
-    queryKey: ["stock", "valuation"],
+    queryKey: stockKeys.valuation(),
     queryFn: () => fetchAPI<StockValuationResponse>("stock/valuation"),
     staleTime: 5 * 60 * 1000,
   });
@@ -31,7 +32,7 @@ export function useStockValuation() {
 
 export function useStockDailyAll() {
   return useQuery({
-    queryKey: ["stock", "daily-all"],
+    queryKey: stockKeys.dailyAll(),
     queryFn: () => fetchAPI<StockDailyAllResponse>("stock/daily-all"),
     staleTime: 5 * 60 * 1000,
   });
@@ -40,7 +41,7 @@ export function useStockDailyAll() {
 export function useStockDailyPaged(query: StockDailyQuery) {
   const { page, pageSize, search, industry, sortBy, sortDir } = query;
   return useQuery({
-    queryKey: ["stock", "daily-all", "paged", page, pageSize, search, industry, sortBy, sortDir],
+    queryKey: stockKeys.dailyPaged(query),
     queryFn: () =>
       fetchAPI<StockDailyPagedResponse>("stock/daily-all/paged", {
         page,
@@ -57,7 +58,7 @@ export function useStockDailyPaged(query: StockDailyQuery) {
 
 export function useTopMovers() {
   return useQuery({
-    queryKey: ["stock", "daily-all", "top-movers"],
+    queryKey: stockKeys.topMovers(),
     queryFn: () => fetchAPI<TopMoversResponse>("stock/daily-all/top-movers"),
     staleTime: 5 * 60 * 1000,
   });
@@ -65,7 +66,7 @@ export function useTopMovers() {
 
 export function useStockDailyByCodes(codes: string[]) {
   return useQuery({
-    queryKey: ["stock", "daily-all", "by-codes", codes],
+    queryKey: stockKeys.dailyByCodes(codes),
     queryFn: () =>
       fetchAPI<StockDailyDto[]>("stock/daily-all/by-codes", { codes: codes.join(",") }),
     enabled: codes.length > 0,
@@ -75,7 +76,7 @@ export function useStockDailyByCodes(codes: string[]) {
 
 export function useAllNews() {
   return useQuery({
-    queryKey: ["stock", "news", "all"],
+    queryKey: stockKeys.news(),
     queryFn: () => fetchAPI<AllNewsResponse>("stock/news/all"),
     staleTime: 5 * 60 * 1000,
   });
@@ -83,7 +84,7 @@ export function useAllNews() {
 
 export function useHeatmap(period: string) {
   return useQuery({
-    queryKey: ["stock", "heatmap", period],
+    queryKey: stockKeys.heatmap(period),
     queryFn: () => fetchAPI<HeatmapResponse>("stock/heatmap", { period }),
     staleTime: 5 * 60 * 1000,
   });
@@ -91,7 +92,7 @@ export function useHeatmap(period: string) {
 
 export function useMarketIndex() {
   return useQuery({
-    queryKey: ["stock", "market-index"],
+    queryKey: stockKeys.marketIndex(),
     queryFn: () => fetchAPI<MarketIndexResponse>("stock/market-index"),
     staleTime: 5 * 60 * 1000,
   });
@@ -99,7 +100,7 @@ export function useMarketIndex() {
 
 export function useIntraday() {
   return useQuery({
-    queryKey: ["stock", "intraday"],
+    queryKey: stockKeys.intraday(),
     queryFn: () => fetchAPI<IntradayResponse>("stock/intraday"),
     staleTime: 60 * 1000,
   });
@@ -107,7 +108,7 @@ export function useIntraday() {
 
 export function useIndexHistory() {
   return useQuery({
-    queryKey: ["stock", "index-history"],
+    queryKey: stockKeys.indexHistory(),
     queryFn: () => fetchAPI<IndexHistoryResponse>("stock/index-history"),
     staleTime: 5 * 60 * 1000,
   });
@@ -115,7 +116,7 @@ export function useIndexHistory() {
 
 export function useTopVolume() {
   return useQuery({
-    queryKey: ["stock", "top-volume"],
+    queryKey: stockKeys.topVolume(),
     queryFn: () => fetchAPI<TopVolumeResponse>("stock/top-volume"),
     staleTime: 5 * 60 * 1000,
   });
@@ -123,7 +124,7 @@ export function useTopVolume() {
 
 export function useRankingRevenue() {
   return useQuery({
-    queryKey: ["stock", "ranking", "revenue"],
+    queryKey: stockKeys.ranking("revenue"),
     queryFn: () => fetchAPI<RevenueRankingResponse>("stock/ranking/revenue"),
     staleTime: 5 * 60 * 1000,
   });
@@ -131,7 +132,7 @@ export function useRankingRevenue() {
 
 export function useRankingGrossMargin() {
   return useQuery({
-    queryKey: ["stock", "ranking", "gross-margin"],
+    queryKey: stockKeys.ranking("gross-margin"),
     queryFn: () => fetchAPI<GrossMarginRankingResponse>("stock/ranking/gross-margin"),
     staleTime: 5 * 60 * 1000,
   });
@@ -139,7 +140,7 @@ export function useRankingGrossMargin() {
 
 export function useRankingDividendYield() {
   return useQuery({
-    queryKey: ["stock", "ranking", "dividend-yield"],
+    queryKey: stockKeys.ranking("dividend-yield"),
     queryFn: () => fetchAPI<DividendYieldRankingResponse>("stock/ranking/dividend-yield"),
     staleTime: 5 * 60 * 1000,
   });
@@ -147,7 +148,7 @@ export function useRankingDividendYield() {
 
 export function useRankingPeRatio() {
   return useQuery({
-    queryKey: ["stock", "ranking", "pe-ratio"],
+    queryKey: stockKeys.ranking("pe-ratio"),
     queryFn: () => fetchAPI<PeRatioRankingResponse>("stock/ranking/pe-ratio"),
     staleTime: 5 * 60 * 1000,
   });
@@ -155,7 +156,7 @@ export function useRankingPeRatio() {
 
 export function useStockDetail(symbol: string) {
   return useQuery({
-    queryKey: ["stock", "detail", symbol],
+    queryKey: stockKeys.detail(symbol),
     queryFn: () => fetchAPI<StockDetailResponse>("stock/detail", { symbol }),
     enabled: !!symbol,
   });
@@ -163,7 +164,7 @@ export function useStockDetail(symbol: string) {
 
 export function useStockHistory(symbol: string, period: string) {
   return useQuery({
-    queryKey: ["stock", "history", symbol, period],
+    queryKey: stockKeys.history(symbol, period),
     queryFn: () => fetchAPI<StockHistoryResponse>("stock/history", { symbol, period }),
     enabled: !!symbol,
     staleTime: 5 * 60 * 1000,

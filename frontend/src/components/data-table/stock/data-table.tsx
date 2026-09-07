@@ -23,8 +23,9 @@ import {
   useRemoveWatchlist,
   useUpdateWatchlistGroup,
 } from "@/api/use-watchlist-query";
-import { Badge } from "@/components/commons/badge";
-import { Button } from "@/components/commons/button";
+import { parseNumber } from "@/components/data-table/shared";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -32,22 +33,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/commons/dialog";
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/commons/dropdown-menu";
-import { Input } from "@/components/commons/input";
-import { Label } from "@/components/commons/label";
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/commons/select";
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -55,10 +56,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/commons/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs";
-import { parseNumber } from "@/components/data-table/shared";
-import type { StockDailyDto, StockDailySortField, WatchlistItem } from "@/type/stock";
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { StockDailyDto, StockDailySortField, WatchlistItem } from "@/types/stock";
 
 function getChangeColor(change: string): string {
   if (change.startsWith("+")) return "text-red-500";

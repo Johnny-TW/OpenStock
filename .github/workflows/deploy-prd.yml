@@ -64,6 +64,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.repo.outputs.IMAGE_PREFIX }}/frontend:latest
           build-args: |
             NEXT_PUBLIC_API_HOST=${{ vars.PRD_API_HOST }}
+            BACKEND_API_URL=${{ vars.PRD_BACKEND_API_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -99,7 +100,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 

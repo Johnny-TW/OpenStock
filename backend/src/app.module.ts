@@ -1,4 +1,4 @@
-import { CacheModule } from '@nestjs/cache-manager';
+import { type CacheManagerOptions, CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -38,7 +38,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
           );
         }
 
-        return { stores };
+        return { stores } as unknown as CacheManagerOptions;
       },
     }),
     PrismaModule,

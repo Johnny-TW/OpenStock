@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useStockDetail } from "@/api/use-stock-query";
 import { LightweightChart } from "@/components/charts/lightweight-chart";
+import { StockChat } from "@/components/stock-chat/stock-chat";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,10 +24,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/commons/alert-dialog";
-import { Button } from "@/components/commons/button";
-import { StockChat } from "@/components/stock-chat/stock-chat";
-import type { StockDetailDto } from "@/type/stock";
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import type { StockDetailDto } from "@/types/stock";
 import styles from "./page.module.scss";
 
 function formatNumber(num: number): string {

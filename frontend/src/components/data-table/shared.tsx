@@ -10,15 +10,15 @@ import {
   IconChevronsRight,
 } from "@tabler/icons-react";
 import type { RowData } from "@tanstack/react-table";
-import { Button } from "@/components/commons/button";
+import type { StockColumn, StockTable } from "@/components/data-table/table-features";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/commons/select";
-import type { StockColumn, StockTable } from "@/components/data-table/table-features";
+} from "@/components/ui/select";
 
 export function parseNumber(value: string): number {
   if (!value || value === "-" || value === "--") return 0;

@@ -3,16 +3,10 @@
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useStockValuation } from "@/api/use-stock-query";
-import { Badge } from "@/components/commons/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/commons/card";
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { StockValuationTable } from "@/components/data-table/stock/valuation-table";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 function parseNum(val: string): number {
   return parseFloat(val?.replace(/,/g, "") || "0") || 0;

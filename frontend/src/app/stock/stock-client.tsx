@@ -9,7 +9,7 @@ import { MarketIndexChart } from "@/components/commons/market-index-chart/market
 import { PageHeader } from "@/components/commons/page-header/page-header";
 import { TopNews } from "@/components/commons/top-news/top-news";
 import { StockDataTable } from "@/components/data-table/stock/data-table";
-import type { StockDailySortField } from "@/type/stock";
+import type { StockDailySortField } from "@/types/stock";
 
 export default function StockClient() {
   const { data: session } = useSession();

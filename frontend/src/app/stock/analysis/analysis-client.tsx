@@ -15,11 +15,11 @@ import React, { useCallback, useMemo, useState } from "react";
 import { useAnalyzeMarketStream, useCachedAnalysis } from "@/api/use-analysis-query";
 import { useWatchlist } from "@/api/use-watchlist-query";
 import { LightweightChart } from "@/components/charts/lightweight-chart";
-import { Badge } from "@/components/commons/badge";
-import { Button } from "@/components/commons/button";
-import { Checkbox } from "@/components/commons/checkbox";
-import { Dialog, DialogContent, DialogTitle } from "@/components/commons/dialog";
 import { PageHeader } from "@/components/commons/page-header/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import tp from "./trading-plan.module.scss";
 
 interface Scores {

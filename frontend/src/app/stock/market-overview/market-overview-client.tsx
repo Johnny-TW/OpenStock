@@ -30,7 +30,14 @@ import {
   useMarketIndex,
   useStockDailyAll,
 } from "@/api/use-stock-query";
-import { Badge } from "@/components/commons/badge";
+import { PageHeader } from "@/components/commons/page-header/page-header";
+import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
+import {
+  type StockTable,
+  type StockTableFeatures,
+  stockTableFeatures,
+} from "@/components/data-table/table-features";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -38,15 +45,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/commons/card";
+} from "@/components/ui/card";
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/commons/chart";
-import { Input } from "@/components/commons/input";
-import { PageHeader } from "@/components/commons/page-header/page-header";
+} from "@/components/ui/chart";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -54,15 +60,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/commons/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/commons/tabs";
-import { Pagination, parseNumber, SortHeader } from "@/components/data-table/shared";
-import {
-  type StockTable,
-  type StockTableFeatures,
-  stockTableFeatures,
-} from "@/components/data-table/table-features";
-import type { IndexHistoryDto, IntradayTickDto, MarketIndexDto } from "@/type/stock";
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { IndexHistoryDto, IntradayTickDto, MarketIndexDto } from "@/types/stock";
 
 // 圖表配置：定義不同圖表類型的顏色和標籤
 const intradayChartConfig = {

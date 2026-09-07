@@ -1,5 +1,5 @@
 # ---- Stage 1: 安裝依賴 ----
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
@@ -7,7 +7,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ---- Stage 2: 建置 ----
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
@@ -17,10 +17,13 @@ COPY . .
 ARG NEXT_PUBLIC_API_HOST
 ENV NEXT_PUBLIC_API_HOST=${NEXT_PUBLIC_API_HOST}
 
+ARG BACKEND_API_URL
+ENV BACKEND_API_URL=${BACKEND_API_URL}
+
 RUN pnpm build
 
 # ---- Stage 3: 執行 ----
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

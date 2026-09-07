@@ -44,7 +44,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -68,7 +68,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -92,7 +92,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
@@ -102,6 +102,36 @@ jobs:
 
       - name: Type check
         run: pnpm exec tsc --noEmit
+        working-directory: frontend
+
+  frontend-test:
+    name: Frontend Test
+    runs-on: ubuntu-latest
+    needs: [detect-changes, frontend-lint]
+    if: needs.detect-changes.outputs.frontend == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Run unit tests
+        run: pnpm test
+        working-directory: frontend
+
+      - name: Run test coverage
+        run: pnpm test:cov
         working-directory: frontend
 
   backend-test:
@@ -118,7 +148,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
 
@@ -141,7 +171,7 @@ jobs:
   frontend-build:
     name: Frontend Build
     runs-on: ubuntu-latest
-    needs: [detect-changes, frontend-typecheck]
+    needs: [detect-changes, frontend-typecheck, frontend-test]
     if: needs.detect-changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v4
@@ -152,7 +182,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
@@ -180,7 +210,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
 
@@ -209,7 +239,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Frontend — 套件漏洞掃描
         if: needs.detect-changes.outputs.frontend == 'true'
@@ -243,6 +273,7 @@ jobs:
     needs:
       - frontend-lint
       - frontend-typecheck
+      - frontend-test
       - frontend-build
       - backend-lint
       - backend-test
@@ -253,6 +284,7 @@ jobs:
         run: |
           echo "frontend-lint: ${{ needs.frontend-lint.result }}"
           echo "frontend-typecheck: ${{ needs.frontend-typecheck.result }}"
+          echo "frontend-test: ${{ needs.frontend-test.result }}"
           echo "frontend-build: ${{ needs.frontend-build.result }}"
           echo "backend-lint: ${{ needs.backend-lint.result }}"
           echo "backend-test: ${{ needs.backend-test.result }}"
@@ -263,6 +295,7 @@ jobs:
           for result in \
             "${{ needs.frontend-lint.result }}" \
             "${{ needs.frontend-typecheck.result }}" \
+            "${{ needs.frontend-test.result }}" \
             "${{ needs.frontend-build.result }}" \
             "${{ needs.backend-lint.result }}" \
             "${{ needs.backend-test.result }}" \

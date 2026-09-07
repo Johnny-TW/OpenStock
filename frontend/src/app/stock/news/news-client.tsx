@@ -4,10 +4,10 @@ import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Newspaper } from "luc
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useAllNews } from "@/api/use-stock-query";
-import { Badge } from "@/components/commons/badge";
 import { PageHeader } from "@/components/commons/page-header/page-header";
-import { Tabs, TabsList, TabsTrigger } from "@/components/commons/tabs";
-import type { NewsDto } from "@/type/stock";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { NewsDto } from "@/types/stock";
 import styles from "./page.module.scss";
 
 const PAGE_SIZE = 10;

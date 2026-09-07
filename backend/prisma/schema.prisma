@@ -6,7 +6,6 @@ generator client {
 // eslint-disable-next-line no-unused-vars
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Portfolio {

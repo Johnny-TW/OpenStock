@@ -2,7 +2,7 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/commons/button";
+import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "stocksmart-theme";
 
