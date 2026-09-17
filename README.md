@@ -146,7 +146,7 @@ nextjs-course-main/
 
 ### 前置需求
 
-- **Node.js** >= 20
+- **Node.js** >= 24.9（由 `.nvmrc` 指定，`engines` + `engine-strict` 強制）
 - **pnpm** >= 9
 - **Docker** & **Docker Compose**（用於 PostgreSQL 和 Redis）
 

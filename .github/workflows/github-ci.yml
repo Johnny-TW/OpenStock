@@ -30,6 +30,39 @@ jobs:
             backend:
               - 'backend/**'
 
+  engines-gate:
+    name: Engines Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - name: 讀取 .nvmrc 指定的 Node 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: .nvmrc 的 Node 必須滿足 engines.node
+        run: |
+          node -v
+          pnpm install --frozen-lockfile --ignore-scripts
+          echo "✅ .nvmrc 指定的 Node 版本通過 engine-strict 檢查"
+
+      - name: 切到不支援的 Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Node 20 必須被 engine-strict 擋下
+        working-directory: backend
+        run: |
+          if pnpm install --frozen-lockfile --ignore-scripts; then
+            echo "❌ Node 20 竟然安裝成功，engine-strict 沒有生效"
+            exit 1
+          fi
+          echo "✅ Node 20 已被正確擋下"
+
   frontend-lint:
     name: Frontend Lint
     runs-on: ubuntu-latest
@@ -39,12 +72,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -63,12 +94,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -87,12 +116,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
@@ -113,12 +140,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
@@ -143,12 +168,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
 
@@ -177,12 +200,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
@@ -205,12 +226,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: backend/pnpm-lock.yaml
 
@@ -234,12 +253,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .nvmrc
 
       - name: Frontend — 套件漏洞掃描
         if: needs.detect-changes.outputs.frontend == 'true'
@@ -271,6 +288,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - engines-gate
       - frontend-lint
       - frontend-typecheck
       - frontend-test
@@ -282,6 +300,7 @@ jobs:
     steps:
       - name: Check all jobs
         run: |
+          echo "engines-gate: ${{ needs.engines-gate.result }}"
           echo "frontend-lint: ${{ needs.frontend-lint.result }}"
           echo "frontend-typecheck: ${{ needs.frontend-typecheck.result }}"
           echo "frontend-test: ${{ needs.frontend-test.result }}"
@@ -293,6 +312,7 @@ jobs:
 
           # skipped 也算通過（表示該模組沒變更）
           for result in \
+            "${{ needs.engines-gate.result }}" \
             "${{ needs.frontend-lint.result }}" \
             "${{ needs.frontend-typecheck.result }}" \
             "${{ needs.frontend-test.result }}" \

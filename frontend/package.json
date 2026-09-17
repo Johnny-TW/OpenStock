@@ -2,13 +2,17 @@
   "name": "ee39-stocksmart-system",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24.9.0",
+    "pnpm": ">=9"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "biome check ./src",
-    "lint:fix": "biome check --write ./src",
-    "format": "biome format --write ./src",
+    "lint": "../node_modules/.bin/biome check ./src",
+    "lint:fix": "../node_modules/.bin/biome check --write ./src",
+    "format": "../node_modules/.bin/biome format --write ./src",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
