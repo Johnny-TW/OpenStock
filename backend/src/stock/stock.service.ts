@@ -70,7 +70,14 @@ export class StockService implements OnModuleInit {
   private readonly TWSE_VALUATION_URL =
     'https://www.twse.com.tw/exchangeReport/BWIBBU_ALL?response=json';
 
+  private readonly TWSE_MI_INDEX_URL = 'https://www.twse.com.tw/exchangeReport/MI_INDEX';
+
   private readonly OPENAPI_BASE = 'https://openapi.twse.com.tw/v1';
+
+  private static readonly BACKFILL_DAYS = 30;
+  private static readonly BACKFILL_DELAY_MS = 3000;
+  private isBackfilling = false;
+  private readonly noTradingDates = new Set<string>();
 
   private industryMapCache: Map<string, string> | null = null;
   private industryMapCacheTime = 0;
@@ -101,41 +108,10 @@ export class StockService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const taipei = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Taipei',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      weekday: 'short',
-      hour12: false,
-    }).formatToParts(new Date());
-
-    const get = (type: string) => taipei.find((p) => p.type === type)?.value ?? '';
-    const weekday = get('weekday');
-    if (weekday === 'Sat' || weekday === 'Sun') return;
-
-    const hour = Number(get('hour'));
-    if (hour < 15) {
-      this.logger.log('啟動補存：尚未收盤，跳過');
-      return;
-    }
-
-    const dateStr = `${get('year')}${get('month')}${get('day')}`;
-
-    const existing = await this.prisma.dailyStockPrice.findFirst({
-      where: { date: dateStr },
-    });
-
-    if (existing) {
-      this.logger.log(`啟動補存：${dateStr} 資料已存在，跳過`);
-      return;
-    }
-
-    this.logger.log(`啟動補存：${dateStr} 資料缺失，開始補存...`);
-    const count = await this.saveDailyStockPrices();
-    this.logger.log(`啟動補存：已補存 ${count} 筆`);
+    const { startDate, endDate } = this.getBackfillRange(StockService.BACKFILL_DAYS);
+    this.backfillDailyStockPrices(startDate, endDate).catch((err) =>
+      this.logger.error(`啟動補存失敗：${(err as Error).message}`),
+    );
   }
 
   private async cachedFetch<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
@@ -858,6 +834,157 @@ export class StockService implements OnModuleInit {
     });
 
     this.logger.log(`排程：已儲存 ${result.count} 筆收盤資料（日期 ${dateStr}）`);
+    return result.count;
+  }
+
+  private getBackfillRange(days: number): { startDate: string; endDate: string } {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Taipei',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+    const today = `${get('year')}${get('month')}${get('day')}`;
+    const endDate = Number(get('hour')) < 15 ? this.shiftDate(today, -1) : today;
+    return { startDate: this.shiftDate(endDate, -days), endDate };
+  }
+
+  private toUtcDate(dateStr: string): Date {
+    return new Date(
+      Date.UTC(
+        Number(dateStr.slice(0, 4)),
+        Number(dateStr.slice(4, 6)) - 1,
+        Number(dateStr.slice(6, 8)),
+      ),
+    );
+  }
+
+  private shiftDate(dateStr: string, days: number): string {
+    const d = this.toUtcDate(dateStr);
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10).replace(/-/g, '');
+  }
+
+  private listWeekdays(startDate: string, endDate: string): string[] {
+    const dates: string[] = [];
+    for (let cur = startDate; cur <= endDate; cur = this.shiftDate(cur, 1)) {
+      const day = this.toUtcDate(cur).getUTCDay();
+      if (day !== 0 && day !== 6) dates.push(cur);
+    }
+    return dates;
+  }
+
+  async findMissingDailyDates(startDate: string, endDate: string): Promise<string[]> {
+    const { endDate: latest } = this.getBackfillRange(0);
+    const end = endDate > latest ? latest : endDate;
+    const existing = await this.prisma.dailyStockPrice.findMany({
+      where: { date: { gte: startDate, lte: end } },
+      distinct: ['date'],
+      select: { date: true },
+    });
+    const existingSet = new Set(existing.map((r) => r.date));
+    return this.listWeekdays(startDate, end).filter(
+      (d) => !existingSet.has(d) && !this.noTradingDates.has(d),
+    );
+  }
+
+  async backfillDailyStockPrices(
+    startDate: string,
+    endDate: string,
+  ): Promise<{ date: string; count: number }[]> {
+    if (this.isBackfilling) {
+      this.logger.warn('補存：已有補存作業進行中，略過');
+      return [];
+    }
+    this.isBackfilling = true;
+    try {
+      const missing = await this.findMissingDailyDates(startDate, endDate);
+      if (!missing.length) {
+        this.logger.log(`補存：${startDate} ~ ${endDate} 資料完整，無需補存`);
+        return [];
+      }
+
+      this.logger.log(`補存：共 ${missing.length} 天缺漏，開始補存（${missing.join(', ')}）`);
+      const industryMap = await this.getIndustryMap();
+      const results: { date: string; count: number }[] = [];
+
+      for (const [i, date] of missing.entries()) {
+        if (i > 0) await new Promise((r) => setTimeout(r, StockService.BACKFILL_DELAY_MS));
+        try {
+          const count = await this.saveDailyStockPricesByDate(date, industryMap);
+          if (count === null) {
+            this.noTradingDates.add(date);
+            this.logger.log(`補存：${date} 非交易日，跳過`);
+            continue;
+          }
+          results.push({ date, count });
+          this.logger.log(`補存：${date} 已儲存 ${count} 筆`);
+        } catch (err) {
+          this.logger.warn(`補存：${date} 失敗（${(err as Error).message}），稍後重啟會再嘗試`);
+        }
+      }
+
+      this.logger.log(`補存：完成，共補 ${results.length} 個交易日`);
+      return results;
+    } finally {
+      this.isBackfilling = false;
+    }
+  }
+
+  private async saveDailyStockPricesByDate(
+    date: string,
+    industryMap: Map<string, string>,
+  ): Promise<number | null> {
+    const { data } = await firstValueFrom(
+      this.httpService.get<{
+        stat: string;
+        tables?: { fields?: string[]; data?: string[][] }[];
+      }>(this.TWSE_MI_INDEX_URL, { params: { response: 'json', date, type: 'ALLBUT0999' } }),
+    );
+
+    if (data.stat !== 'OK') return null;
+
+    const table = data.tables?.find(
+      (t) => t.fields?.includes('證券代號') && t.fields.includes('收盤價'),
+    );
+    if (!table?.fields || !table.data?.length) return null;
+
+    const col = (name: string) => table.fields!.indexOf(name);
+    const idx = {
+      code: col('證券代號'),
+      name: col('證券名稱'),
+      volume: col('成交股數'),
+      close: col('收盤價'),
+      sign: col('漲跌(+/-)'),
+      diff: col('漲跌價差'),
+    };
+
+    const records = table.data.flatMap((row) => {
+      const code = row[idx.code]?.trim();
+      const industry = industryMap.get(code);
+      const closingPrice = this.parseNumber(row[idx.close]);
+      if (!industry || closingPrice <= 0) return [];
+      const sign = row[idx.sign]?.includes('-') ? -1 : 1;
+      return [
+        {
+          date,
+          code,
+          name: row[idx.name]?.trim() ?? '',
+          closingPrice,
+          change: sign * this.parseNumber(row[idx.diff]),
+          tradeVolume: Math.round(this.parseNumber(row[idx.volume]) / 1000),
+          industry,
+        },
+      ];
+    });
+
+    const result = await this.prisma.dailyStockPrice.createMany({
+      data: records,
+      skipDuplicates: true,
+    });
     return result.count;
   }
 

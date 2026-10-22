@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   AllNewsResponse,
+  BackfillDailyDto,
+  BackfillDailyResponse,
   DividendYieldRankingResponse,
   GrossMarginRankingResponse,
   HeatmapResponse,
@@ -257,6 +259,29 @@ export class StockController {
   async saveDailyPrices(): Promise<{ count: number }> {
     const count = await this.stockService.saveDailyStockPrices();
     return { count };
+  }
+
+  @ApiTags('熱力圖')
+  @ApiOperation({
+    summary: '補存指定區間缺漏的每日收盤資料',
+    description:
+      '檢查區間內缺漏的交易日，於背景逐日從 TWSE `exchangeReport/MI_INDEX` 補存（每次間隔 3 秒）。\n\n' +
+      '區間最多 400 天，立即回傳缺漏日期清單，補存進度請看後端 log。',
+  })
+  @ApiResponse({ status: 201, description: '已開始補存' })
+  @Post('heatmap/backfill')
+  async backfillDailyPrices(@Body() dto: BackfillDailyDto): Promise<BackfillDailyResponse> {
+    const { startDate, endDate } = dto;
+    const days =
+      (Date.parse(endDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')) -
+        Date.parse(startDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'))) /
+      86400000;
+    if (Number.isNaN(days) || days < 0) throw new BadRequestException('日期區間不正確');
+    if (days > 400) throw new BadRequestException('區間最多 400 天');
+
+    const missingDates = await this.stockService.findMissingDailyDates(startDate, endDate);
+    this.stockService.backfillDailyStockPrices(startDate, endDate).catch(() => {});
+    return { missingDates, estimatedSeconds: missingDates.length * 3 };
   }
 
   @ApiTags('個股詳情')

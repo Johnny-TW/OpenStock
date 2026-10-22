@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 
 export const STOCK_DAILY_SORT_FIELDS = [
   'code',
@@ -80,6 +80,24 @@ export class StockDailyAllResponse {
 
   @ApiProperty({ example: 980, description: '資料總筆數' })
   total: number;
+}
+
+export class BackfillDailyDto {
+  @ApiProperty({ example: '20260901', description: '起始日期（YYYYMMDD）' })
+  @Matches(/^\d{8}$/, { message: 'startDate 格式需為 YYYYMMDD' })
+  startDate: string;
+
+  @ApiProperty({ example: '20261019', description: '結束日期（YYYYMMDD）' })
+  @Matches(/^\d{8}$/, { message: 'endDate 格式需為 YYYYMMDD' })
+  endDate: string;
+}
+
+export class BackfillDailyResponse {
+  @ApiProperty({ example: ['20261015', '20261016'], description: '將要補存的缺漏日期' })
+  missingDates: string[];
+
+  @ApiProperty({ example: 6, description: '預估所需秒數' })
+  estimatedSeconds: number;
 }
 
 // 分頁查詢參數（含搜尋、產業篩選、排序）
