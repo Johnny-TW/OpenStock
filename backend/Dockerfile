@@ -7,7 +7,7 @@ COPY package.json pnpm-lock.yaml prisma.config.ts ./
 COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm exec prisma generate
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm exec prisma generate
 
 # ---- Stage 2: 建置 ----
 FROM node:24-alpine AS builder
