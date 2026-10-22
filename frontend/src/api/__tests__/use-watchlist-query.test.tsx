@@ -67,7 +67,6 @@ describe("useAddWatchlist", () => {
     const { result } = renderHook(() => useAddWatchlist(), { wrapper });
 
     result.current.mutate({
-      userId: "u1",
       stockNo: "2330",
       stockName: "台積電",
       groupName: "科技",
@@ -76,7 +75,6 @@ describe("useAddWatchlist", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(postAPI).toHaveBeenCalledWith("watchlist", {
-      userId: "u1",
       stockNo: "2330",
       stockName: "台積電",
       groupName: "科技",
@@ -91,7 +89,6 @@ describe("useAddWatchlist", () => {
     const { result } = renderHook(() => useAddWatchlist(), { wrapper });
 
     result.current.mutate({
-      userId: "u1",
       stockNo: "2330",
       stockName: "台積電",
       groupName: "科技",
@@ -104,15 +101,15 @@ describe("useAddWatchlist", () => {
 });
 
 describe("useRemoveWatchlist", () => {
-  it("以 id 呼叫 delete 並帶 userId", async () => {
+  it("只以 id 呼叫 delete，不帶 userId", async () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useRemoveWatchlist(), { wrapper });
 
-    result.current.mutate({ id: 7, userId: "u1" });
+    result.current.mutate({ id: 7 });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(deleteAPI).toHaveBeenCalledWith("watchlist/7", { userId: "u1" });
+    expect(deleteAPI).toHaveBeenCalledWith("watchlist/7");
     expect(toast.success).toHaveBeenCalledWith("已移除自選股");
   });
 });
@@ -122,12 +119,11 @@ describe("useUpdateWatchlistGroup", () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useUpdateWatchlistGroup(), { wrapper });
 
-    result.current.mutate({ id: 7, userId: "u1", groupName: "金融" });
+    result.current.mutate({ id: 7, groupName: "金融" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(patchAPI).toHaveBeenCalledWith("watchlist/7/group", {
-      userId: "u1",
       groupName: "金融",
     });
     expect(toast.success).toHaveBeenCalledWith("已移至「金融」");

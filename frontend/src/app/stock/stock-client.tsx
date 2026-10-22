@@ -13,7 +13,6 @@ import type { StockDailySortField } from "@/types/stock";
 
 export default function StockClient() {
   const { data: session } = useSession();
-  const userId = (session?.user as { email?: string })?.email ?? "";
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -120,7 +119,6 @@ export default function StockClient() {
         isFetching={isFetching}
         watchlist={watchlist}
         watchlistStocks={watchlistStocks}
-        userId={userId}
       />
     </div>
   );

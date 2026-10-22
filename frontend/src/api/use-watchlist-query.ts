@@ -16,7 +16,7 @@ export function useWatchlist(enabled = true) {
 export function useAddWatchlist() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { userId: string; stockNo: string; stockName: string; groupName: string }) =>
+    mutationFn: (data: { stockNo: string; stockName: string; groupName: string }) =>
       postAPI<WatchlistItem>("watchlist", data),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: watchlistKeys.all });
@@ -28,8 +28,7 @@ export function useAddWatchlist() {
 export function useRemoveWatchlist() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (params: { id: number; userId: string }) =>
-      deleteAPI<unknown>(`watchlist/${params.id}`, { userId: params.userId }),
+    mutationFn: (params: { id: number }) => deleteAPI<unknown>(`watchlist/${params.id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: watchlistKeys.all });
       toast.success("已移除自選股");
@@ -40,11 +39,8 @@ export function useRemoveWatchlist() {
 export function useUpdateWatchlistGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (params: { id: number; userId: string; groupName: string }) =>
-      patchAPI<unknown>(`watchlist/${params.id}/group`, {
-        userId: params.userId,
-        groupName: params.groupName,
-      }),
+    mutationFn: (params: { id: number; groupName: string }) =>
+      patchAPI<unknown>(`watchlist/${params.id}/group`, { groupName: params.groupName }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: watchlistKeys.all });
       toast.success(`已移至「${variables.groupName}」`);

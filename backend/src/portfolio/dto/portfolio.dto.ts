@@ -2,10 +2,6 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsDateString, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreatePortfolioDto {
-  @ApiProperty({ description: '使用者 ID' })
-  @IsString()
-  userId: string;
-
   @ApiProperty({ description: '股票代號', example: '2330' })
   @IsString()
   stockNo: string;

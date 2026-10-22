@@ -21,10 +21,11 @@ export class PortfolioService {
     return item;
   }
 
-  async create(dto: CreatePortfolioDto) {
+  async create(userId: string, dto: CreatePortfolioDto) {
     return this.prisma.portfolio.create({
       data: {
         ...dto,
+        userId,
         buyDate: new Date(dto.buyDate),
       },
     });

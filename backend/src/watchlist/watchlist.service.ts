@@ -13,14 +13,14 @@ export class WatchlistService {
     });
   }
 
-  async create(dto: CreateWatchlistDto) {
+  async create(userId: string, dto: CreateWatchlistDto) {
     const exists = await this.prisma.watchlist.findUnique({
-      where: { userId_stockNo: { userId: dto.userId, stockNo: dto.stockNo } },
+      where: { userId_stockNo: { userId, stockNo: dto.stockNo } },
     });
     if (exists) throw new ConflictException('該股票已在自選清單中');
     return this.prisma.watchlist.create({
       data: {
-        userId: dto.userId,
+        userId,
         stockNo: dto.stockNo,
         stockName: dto.stockName,
         groupName: dto.groupName ?? '未分類',

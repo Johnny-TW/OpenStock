@@ -86,14 +86,12 @@ const WatchlistButton = React.memo(function WatchlistButton({
   allGroupNames,
   onAdd,
   onRemove,
-  userId,
 }: {
   item: StockDailyDto;
   watchlistItem: WatchlistItem | undefined;
   allGroupNames: string[];
-  onAdd: (data: { userId: string; stockNo: string; stockName: string; groupName: string }) => void;
-  onRemove: (params: { id: number; userId: string }) => void;
-  userId: string;
+  onAdd: (data: { stockNo: string; stockName: string; groupName: string }) => void;
+  onRemove: (params: { id: number }) => void;
 }) {
   const isInWatchlist = !!watchlistItem;
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -105,7 +103,7 @@ const WatchlistButton = React.memo(function WatchlistButton({
     e.stopPropagation();
     if (isInWatchlist && watchlistItem) {
       // 已在自選股，點擊則移除
-      onRemove({ id: watchlistItem.id, userId });
+      onRemove({ id: watchlistItem.id });
     } else {
       // 不在自選股，點擊則開啟加入對話框
       const defaultGroup = allGroupNames[0] ?? "未分類";
@@ -119,7 +117,7 @@ const WatchlistButton = React.memo(function WatchlistButton({
   // 確認加入自選股，呼叫 onAdd 並關閉對話框
   function handleConfirm() {
     const groupName = isCreatingNew ? newGroupName.trim() || "未分類" : selectedGroup;
-    onAdd({ userId, stockNo: item.code, stockName: item.name, groupName });
+    onAdd({ stockNo: item.code, stockName: item.name, groupName });
     setDialogOpen(false);
   }
 
@@ -198,13 +196,11 @@ function WatchlistGroupSelect({
   currentGroup,
   watchlistItem,
   onUpdateGroup,
-  userId,
   allGroupNames,
 }: {
   currentGroup: string;
   watchlistItem: WatchlistItem;
-  onUpdateGroup: (params: { id: number; userId: string; groupName: string }) => void;
-  userId: string;
+  onUpdateGroup: (params: { id: number; groupName: string }) => void;
   allGroupNames: string[];
 }) {
   const [isCreatingNew, setIsCreatingNew] = React.useState(false);
@@ -216,13 +212,13 @@ function WatchlistGroupSelect({
       setNewName("");
       return;
     }
-    onUpdateGroup({ id: watchlistItem.id, groupName: value, userId });
+    onUpdateGroup({ id: watchlistItem.id, groupName: value });
   }
 
   function handleNewGroupSubmit() {
     const name = newName.trim();
     if (!name) return;
-    onUpdateGroup({ id: watchlistItem.id, groupName: name, userId });
+    onUpdateGroup({ id: watchlistItem.id, groupName: name });
     setIsCreatingNew(false);
     setNewName("");
   }
@@ -330,16 +326,14 @@ const StockRow = React.memo(function StockRow({
   onAdd,
   onRemove,
   onRowClick,
-  userId,
 }: {
   stock: StockDailyDto;
   visibleColumns: ColumnDef[];
   watchlistItem: WatchlistItem | undefined;
   watchlistGroupNames: string[];
-  onAdd: (data: { userId: string; stockNo: string; stockName: string; groupName: string }) => void;
-  onRemove: (params: { id: number; userId: string }) => void;
+  onAdd: (data: { stockNo: string; stockName: string; groupName: string }) => void;
+  onRemove: (params: { id: number }) => void;
   onRowClick: (e: React.MouseEvent, code: string) => void;
-  userId: string;
 }) {
   return (
     <TableRow
@@ -353,7 +347,6 @@ const StockRow = React.memo(function StockRow({
           allGroupNames={watchlistGroupNames}
           onAdd={onAdd}
           onRemove={onRemove}
-          userId={userId}
         />
       </TableCell>
       {visibleColumns.map((col) => (
@@ -405,15 +398,13 @@ function WatchlistGroupSection({
   items,
   onRemove,
   onUpdateGroup,
-  userId,
   allGroupNames,
   visibleColumns,
 }: {
   groupName: string;
   items: GroupedItem[];
-  onRemove: (params: { id: number; userId: string }) => void;
-  onUpdateGroup: (params: { id: number; userId: string; groupName: string }) => void;
-  userId: string;
+  onRemove: (params: { id: number }) => void;
+  onUpdateGroup: (params: { id: number; groupName: string }) => void;
   allGroupNames: string[];
   visibleColumns: ColumnDef[];
 }) {
@@ -474,7 +465,7 @@ function WatchlistGroupSection({
               <TableRow key={stock.code}>
                 <TableCell>
                   <button
-                    onClick={() => onRemove({ id: wItem.id, userId })}
+                    onClick={() => onRemove({ id: wItem.id })}
                     className="flex items-center justify-center size-7 rounded hover:bg-muted transition-colors text-red-500 hover:text-red-600"
                   >
                     <IconHeartFilled className="size-4" />
@@ -490,7 +481,6 @@ function WatchlistGroupSection({
                     currentGroup={groupName}
                     watchlistItem={wItem}
                     onUpdateGroup={onUpdateGroup}
-                    userId={userId}
                     allGroupNames={allGroupNames}
                   />
                 </TableCell>
@@ -522,7 +512,6 @@ export function StockDataTable({
   isFetching,
   watchlist,
   watchlistStocks,
-  userId,
 }: {
   data: StockDailyDto[];
   total: number;
@@ -542,7 +531,6 @@ export function StockDataTable({
   isFetching: boolean;
   watchlist: WatchlistItem[];
   watchlistStocks: StockDailyDto[];
-  userId: string;
 }) {
   const router = useRouter();
   const addWatchlist = useAddWatchlist();
@@ -550,21 +538,21 @@ export function StockDataTable({
   const updateWatchlistGroup = useUpdateWatchlistGroup();
 
   const handleAdd = React.useCallback(
-    (d: { userId: string; stockNo: string; stockName: string; groupName: string }) => {
+    (d: { stockNo: string; stockName: string; groupName: string }) => {
       addWatchlist.mutate(d);
     },
     [addWatchlist],
   );
 
   const handleRemove = React.useCallback(
-    (params: { id: number; userId: string }) => {
+    (params: { id: number }) => {
       removeWatchlist.mutate(params);
     },
     [removeWatchlist],
   );
 
   const handleUpdateGroup = React.useCallback(
-    (params: { id: number; userId: string; groupName: string }) => {
+    (params: { id: number; groupName: string }) => {
       updateWatchlistGroup.mutate(params);
     },
     [updateWatchlistGroup],
@@ -737,7 +725,6 @@ export function StockDataTable({
                     onAdd={handleAdd}
                     onRemove={handleRemove}
                     onRowClick={handleRowClick}
-                    userId={userId}
                   />
                 ))
               ) : (
@@ -870,7 +857,6 @@ export function StockDataTable({
                     items={items}
                     onRemove={handleRemove}
                     onUpdateGroup={handleUpdateGroup}
-                    userId={userId}
                     allGroupNames={Object.keys(groupedDisplayData)}
                     visibleColumns={visibleColumns}
                   />

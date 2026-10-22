@@ -67,22 +67,22 @@ describe('PortfolioService', () => {
   describe('create', () => {
     it('應成功建立持股紀錄', async () => {
       const dto = {
-        userId: 'u1',
         stockNo: '2330',
         stockName: '台積電',
         buyPrice: 950,
         buyDate: '2024-01-15',
         shares: 100,
       };
-      const mockResult = { id: 1, ...dto, buyDate: new Date('2024-01-15') };
+      const mockResult = { id: 1, userId: 'u1', ...dto, buyDate: new Date('2024-01-15') };
       prisma.portfolio.create.mockResolvedValue(mockResult);
 
-      const result = await service.create(dto);
+      const result = await service.create('u1', dto);
 
       expect(result).toEqual(mockResult);
       expect(prisma.portfolio.create).toHaveBeenCalledWith({
         data: {
           ...dto,
+          userId: 'u1',
           buyDate: new Date('2024-01-15'),
         },
       });

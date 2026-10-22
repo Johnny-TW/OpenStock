@@ -2,10 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
 export class CreateWatchlistDto {
-  @ApiProperty({ description: '使用者 ID' })
-  @IsString()
-  userId: string;
-
   @ApiProperty({ description: '股票代號', example: '2330' })
   @IsString()
   stockNo: string;
@@ -21,10 +17,6 @@ export class CreateWatchlistDto {
 }
 
 export class UpdateWatchlistGroupDto {
-  @ApiProperty({ description: '使用者 ID' })
-  @IsString()
-  userId: string;
-
   @ApiProperty({ description: '群組名稱', example: '銀行' })
   @IsString()
   groupName: string;

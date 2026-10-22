@@ -7,31 +7,26 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Query,
+  UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiQuery,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUserId } from '../auth/current-user-id.decorator';
 import { CreateWatchlistDto, UpdateWatchlistGroupDto } from './dto/watchlist.dto';
 import { WatchlistService } from './watchlist.service';
 
 @ApiTags('自選股')
 @ApiBearerAuth('bearer')
+@UseGuards(AuthGuard)
 @Controller('watchlist')
 export class WatchlistController {
   constructor(private readonly watchlistService: WatchlistService) {}
 
   @ApiOperation({ summary: '取得我的自選股清單' })
-  @ApiQuery({ name: 'userId', description: '使用者 ID' })
   @ApiResponse({ status: 200, description: '成功取得自選股清單' })
   @ApiResponse({ status: 401, description: '未認證' })
   @Get()
-  findAll(@Query('userId') userId: string) {
+  findAll(@CurrentUserId() userId: string) {
     return this.watchlistService.findAll(userId);
   }
 
@@ -41,8 +36,8 @@ export class WatchlistController {
   @ApiResponse({ status: 401, description: '未認證' })
   @ApiResponse({ status: 409, description: '自選股已存在' })
   @Post()
-  create(@Body() dto: CreateWatchlistDto) {
-    return this.watchlistService.create(dto);
+  create(@CurrentUserId() userId: string, @Body() dto: CreateWatchlistDto) {
+    return this.watchlistService.create(userId, dto);
   }
 
   @ApiOperation({ summary: '更新自選股群組' })
@@ -51,18 +46,21 @@ export class WatchlistController {
   @ApiResponse({ status: 401, description: '未認證' })
   @ApiResponse({ status: 404, description: '自選股不存在' })
   @Patch(':id/group')
-  updateGroup(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateWatchlistGroupDto) {
-    return this.watchlistService.updateGroup(id, dto.userId, dto.groupName);
+  updateGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUserId() userId: string,
+    @Body() dto: UpdateWatchlistGroupDto,
+  ) {
+    return this.watchlistService.updateGroup(id, userId, dto.groupName);
   }
 
   @ApiOperation({ summary: '移除自選股' })
   @ApiParam({ name: 'id', description: '自選股 ID', type: Number })
-  @ApiQuery({ name: 'userId', description: '使用者 ID' })
   @ApiResponse({ status: 200, description: '成功移除自選股' })
   @ApiResponse({ status: 401, description: '未認證' })
   @ApiResponse({ status: 404, description: '自選股不存在' })
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number, @Query('userId') userId: string) {
+  remove(@Param('id', ParseIntPipe) id: number, @CurrentUserId() userId: string) {
     return this.watchlistService.remove(id, userId);
   }
 }

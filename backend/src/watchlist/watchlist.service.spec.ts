@@ -52,7 +52,6 @@ describe('WatchlistService', () => {
 
   describe('create', () => {
     const dto = {
-      userId: 'u1',
       stockNo: '2330',
       stockName: '台積電',
       groupName: '科技業',
@@ -60,11 +59,11 @@ describe('WatchlistService', () => {
 
     it('應成功新增自選股', async () => {
       prisma.watchlist.findUnique.mockResolvedValue(null);
-      prisma.watchlist.create.mockResolvedValue({ id: 1, ...dto });
+      prisma.watchlist.create.mockResolvedValue({ id: 1, userId: 'u1', ...dto });
 
-      const result = await service.create(dto);
+      const result = await service.create('u1', dto);
 
-      expect(result).toEqual({ id: 1, ...dto });
+      expect(result).toEqual({ id: 1, userId: 'u1', ...dto });
       expect(prisma.watchlist.create).toHaveBeenCalledWith({
         data: {
           userId: 'u1',
@@ -78,15 +77,14 @@ describe('WatchlistService', () => {
     it('應在股票已存在時拋出 ConflictException', async () => {
       prisma.watchlist.findUnique.mockResolvedValue({ id: 1 });
 
-      await expect(service.create(dto)).rejects.toThrow(ConflictException);
+      await expect(service.create('u1', dto)).rejects.toThrow(ConflictException);
     });
 
     it('應在未指定群組時預設為「未分類」', async () => {
       prisma.watchlist.findUnique.mockResolvedValue(null);
       prisma.watchlist.create.mockResolvedValue({ id: 2 });
 
-      await service.create({
-        userId: 'u1',
+      await service.create('u1', {
         stockNo: '2317',
         stockName: '鴻海',
       });
