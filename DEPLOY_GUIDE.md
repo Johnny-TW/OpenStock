@@ -40,7 +40,7 @@ docker compose version  # 需要 v2+
 
 ```bash
 cd backend
-docker build -t stocksmart-backend:dev .
+docker build --pull -t stocksmart-backend:dev .
 docker run --rm -p 3004:3004 \
   -e DATABASE_URL="postgresql://postgres:postgres@host.docker.internal:5435/stocksmart?schema=public" \
   -e JWT_SECRET="test-secret" \
@@ -53,7 +53,7 @@ docker run --rm -p 3004:3004 \
 
 ```bash
 cd frontend
-docker build -t stocksmart-frontend:dev \
+docker build --pull -t stocksmart-frontend:dev \
   --build-arg NEXT_PUBLIC_API_HOST=http://localhost:3004 .
 docker run --rm -p 3000:3000 stocksmart-frontend:dev
 ```
@@ -71,7 +71,7 @@ cp .env.qas.example .env.qas
 # 注意：DB_PASSWORD 請設一個安全的密碼
 
 # 啟動 QAS 環境
-docker compose -f docker-compose.qas.yml --env-file .env.qas up -d --build
+docker compose -f docker-compose.qas.yml --env-file .env.qas up -d --build --pull always
 
 # 查看 log
 docker compose -f docker-compose.qas.yml logs -f
@@ -161,7 +161,7 @@ cp .env.qas.example .env.qas
 nano .env.qas  # 編輯環境變數
 
 # 啟動
-docker compose -f docker-compose.qas.yml --env-file .env.qas up -d --build
+docker compose -f docker-compose.qas.yml --env-file .env.qas up -d --build --pull always
 ```
 
 ---
