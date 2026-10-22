@@ -182,6 +182,8 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
 
       - name: Run unit tests
         run: pnpm test
@@ -240,6 +242,8 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
 
       - name: Build
         run: pnpm build
