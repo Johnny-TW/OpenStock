@@ -13,6 +13,7 @@ const shouldProxyApi = /^https?:\/\//.test(BACKEND_API_URL);
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../"),
+  allowedDevOrigins: ["192.168.1.*"],
   async rewrites() {
     if (!shouldProxyApi) return [];
     return [
