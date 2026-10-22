@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { AuthGuard } from '../auth/auth.guard';
 import { AnalysisService } from './analysis.service';
@@ -7,6 +8,7 @@ import { AnalysisResultDto, AnalyzeMarketDto, ChatMessageDto } from './dto/analy
 
 @ApiTags('AI 股票分析')
 @ApiBearerAuth('bearer')
+@UseGuards(AuthGuard)
 @Controller('analysis')
 export class AnalysisController {
   constructor(private readonly analysisService: AnalysisService) {}
@@ -27,6 +29,7 @@ export class AnalysisController {
   @ApiResponse({ status: 200, description: 'SSE 串流回應' })
   @ApiResponse({ status: 400, description: '請求參數驗證失敗' })
   @ApiResponse({ status: 401, description: '未認證' })
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Post('market/stream')
   async analyzeStream(@Body() dto: AnalyzeMarketDto, @Res() res: Response): Promise<void> {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -57,6 +60,7 @@ export class AnalysisController {
   })
   @ApiResponse({ status: 400, description: '請求參數驗證失敗' })
   @ApiResponse({ status: 401, description: '未認證' })
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Post('market')
   analyze(@Body() dto: AnalyzeMarketDto): Promise<AnalysisResultDto> {
     return this.analysisService.analyzeMarket(dto);
@@ -64,7 +68,7 @@ export class AnalysisController {
 
   @ApiOperation({ summary: 'AI 工具模式分析台股市場(SSE 串流）— AI 自主決定查詢哪些資料' })
   @ApiResponse({ status: 200, description: 'SSE 串流回應，包含工具呼叫進度與最終分析結果' })
-  @UseGuards(AuthGuard)
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
   @Post('market/tools/stream')
   async analyzeWithToolsStream(@Req() req: Request, @Res() res: Response): Promise<void> {
     const userId = req.user?.sub ?? 'anonymous';
@@ -90,6 +94,7 @@ export class AnalysisController {
 
   @ApiOperation({ summary: '個股 AI 對話(SSE 串流）' })
   @ApiResponse({ status: 200, description: 'SSE 串流回應' })
+  @Throttle({ default: { ttl: 60_000, limit: 15 } })
   @Post('chat')
   async chat(@Body() dto: ChatMessageDto, @Res() res: Response): Promise<void> {
     res.setHeader('Content-Type', 'text/event-stream');

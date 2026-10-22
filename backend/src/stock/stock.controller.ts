@@ -1,5 +1,7 @@
-import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { BadRequestException, Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AdminGuard } from '../auth/admin.guard';
+import { AuthGuard } from '../auth/auth.guard';
 import {
   AllNewsResponse,
   BackfillDailyDto,
@@ -255,6 +257,8 @@ export class StockController {
     description: '手動觸發排程，將當日 TWSE 收盤資料存入資料庫。',
   })
   @ApiResponse({ status: 200, description: '成功儲存收盤資料' })
+  @ApiBearerAuth('bearer')
+  @UseGuards(AuthGuard, AdminGuard)
   @Post('heatmap/save-daily')
   async saveDailyPrices(): Promise<{ count: number }> {
     const count = await this.stockService.saveDailyStockPrices();
@@ -269,6 +273,8 @@ export class StockController {
       '區間最多 400 天，立即回傳缺漏日期清單，補存進度請看後端 log。',
   })
   @ApiResponse({ status: 201, description: '已開始補存' })
+  @ApiBearerAuth('bearer')
+  @UseGuards(AuthGuard, AdminGuard)
   @Post('heatmap/backfill')
   async backfillDailyPrices(@Body() dto: BackfillDailyDto): Promise<BackfillDailyResponse> {
     const { startDate, endDate } = dto;
