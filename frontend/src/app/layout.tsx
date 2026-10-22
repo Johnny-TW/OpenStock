@@ -3,6 +3,7 @@
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "../styles/globals.css";
 import DialogProvider from "@/components/commons/dialog-provider";
 import AuthLayout from "@/components/layouts/auth-layout";
@@ -33,11 +34,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -45,6 +48,7 @@ export default function RootLayout({
         <link rel="icon" href="/enbglogo.svg" />
         <link rel="shortcut icon" href="/enbglogo.svg" />
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('stocksmart-theme');var d=t?t==='dark':true;if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
           }}
